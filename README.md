@@ -133,8 +133,3 @@ flutter run
 | AI       |    |
 | UI/UX    |    |
 
----
-
-## 📄 License
-
-This project is developed for academic purposes.

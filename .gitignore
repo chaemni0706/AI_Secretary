@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+backend/AI_project/
+backend/venv/
+venv/
+
+# Environment Variables
+.env
+
+# VS Code
+.vscode/
+
+# Flutter
+frontend/.dart_tool/
+frontend/build/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

@@ -121,20 +121,3 @@ Flutter 실행
 ```bash
 flutter run
 ```
-
----
-
-## 👥 Team
-
-| 역할       | 담당 |
-| -------- | -- |
-| Frontend |    |
-| Backend  |    |
-| AI       |    |
-| UI/UX    |    |
-
----
-
-## 📄 License
-
-This project is developed for academic purposes.

@@ -135,6 +135,4 @@ flutter run
 
 ---
 
-## 📄 License
 
-This project is developed for academic purposes.

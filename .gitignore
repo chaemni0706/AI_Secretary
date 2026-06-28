@@ -33,4 +33,4 @@ backend/.env
 
 # Flutter
 frontend/.dart_tool/
-frontend/build/
+frontend/build/*.dbdiagram

@@ -35,6 +35,11 @@ Enum interaction_status {
   FAILED
 }
 
+Enum interaction_input_mode {
+  TEXT
+  VOICE
+}
+
 Enum recommendation_status {
   GENERATED
   SELECTED
@@ -46,6 +51,19 @@ Enum reminder_status {
   SCHEDULED
   SENT
   CANCELLED
+  FAILED
+}
+
+Enum planner_source_type {
+  MANUAL
+  AI
+  EXTERNAL_SYNC
+}
+
+Enum external_sync_status {
+  NOT_SYNCED
+  PENDING
+  SYNCED
   FAILED
 }
 
@@ -106,6 +124,12 @@ Table calendars {
   sync_enabled boolean [not null, default: false]
   created_at timestamp [not null]
   updated_at timestamp [not null]
+
+  indexes {
+    (external_account_id, external_calendar_id) [unique]
+  }
+
+  Note: 'Only one primary calendar per user must be guaranteed by a PostgreSQL partial unique index or application validation.'
 }
 
 // ---------------------------------------------------------------------
@@ -118,12 +142,19 @@ Table planner_items {
   title varchar(200) [not null]
   description text
   status planner_status [not null]
+  source_type planner_source_type [not null]
   priority varchar(20) [not null, default: 'NORMAL']
   sort_at timestamp [note: 'Representative time used by the integrated dashboard.']
   created_by_interaction_id uuid
+  cancelled_at timestamp
+  cancelled_by_interaction_id uuid
   created_at timestamp [not null]
   updated_at timestamp [not null]
   deleted_at timestamp
+
+  checks {
+    `cancelled_at IS NULL OR status = 'CANCELLED'` [name: 'chk_planner_items_cancelled_status']
+  }
 }
 
 Table event_details {
@@ -136,8 +167,20 @@ Table event_details {
   location_text varchar(500)
   travel_time_minutes_snapshot int
   external_event_id varchar(255)
+  external_sync_status external_sync_status [not null, default: 'NOT_SYNCED']
+  external_synced_at timestamp
+  external_etag varchar(255)
 
-  Note: 'EVENT planner item must have exactly one event_details row.'
+  indexes {
+    (calendar_id, external_event_id) [unique]
+  }
+
+  checks {
+    `end_at IS NULL OR end_at > start_at` [name: 'chk_event_details_time_range']
+    `travel_time_minutes_snapshot IS NULL OR travel_time_minutes_snapshot >= 0` [name: 'chk_event_details_travel_time_nonnegative']
+  }
+
+  Note: 'EVENT planner item must have exactly one event_details row. Internal events may have null external_event_id.'
 }
 
 Table todo_details {
@@ -162,6 +205,14 @@ Table reminders {
   context_json jsonb
   status reminder_status [not null]
   created_at timestamp [not null]
+  updated_at timestamp [not null]
+  sent_at timestamp
+  cancelled_at timestamp
+  failure_reason text
+
+  indexes {
+    (item_id, reminder_type, trigger_at, channel) [unique]
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -170,7 +221,8 @@ Table reminders {
 Table ai_interactions {
   interaction_id uuid [pk]
   user_id uuid [not null]
-  input_mode varchar(20) [not null, note: 'TEXT or VOICE']
+  input_mode interaction_input_mode [not null]
+  idempotency_key varchar(100) [not null]
   input_text_masked text
   audio_object_ref varchar(1000)
   stt_confidence decimal(5,4)
@@ -179,8 +231,18 @@ Table ai_interactions {
   constraints_json jsonb
   assistant_response_text_masked text
   status interaction_status [not null]
+  failure_reason text
+  source_timezone varchar(50) [not null]
   created_at timestamp [not null]
   completed_at timestamp
+
+  indexes {
+    (user_id, idempotency_key) [unique]
+  }
+
+  checks {
+    `input_mode <> 'VOICE' OR audio_object_ref IS NOT NULL OR input_text_masked IS NOT NULL` [name: 'chk_ai_interactions_voice_input_source']
+  }
 
   Note: 'For voice input, save the masked STT result in input_text_masked.'
 }
@@ -189,20 +251,47 @@ Table schedule_recommendations {
   recommendation_id uuid [pk]
   user_id uuid [not null]
   interaction_id uuid [not null]
+  target_calendar_id uuid [not null]
   status recommendation_status [not null]
+  accepted_candidate_id uuid
   accepted_item_id uuid
+  selection_interaction_id uuid
+  selected_at timestamp
   created_at timestamp [not null]
+  updated_at timestamp [not null]
   expires_at timestamp
+
+  indexes {
+    interaction_id [unique]
+  }
+
+  checks {
+    `expires_at IS NULL OR expires_at > created_at` [name: 'chk_schedule_recommendations_expires_after_created']
+    `status <> 'SELECTED' OR (accepted_candidate_id IS NOT NULL AND accepted_item_id IS NOT NULL AND selected_at IS NOT NULL)` [name: 'chk_schedule_recommendations_selected_has_links']
+    `status = 'SELECTED' OR (accepted_candidate_id IS NULL AND accepted_item_id IS NULL)` [name: 'chk_schedule_recommendations_unselected_has_no_acceptance']
+  }
+
+  Note: 'accepted_candidate_id must belong to the same recommendation_id; validate this in application logic because simple DBML foreign keys cannot fully enforce it.'
 }
 
 Table schedule_candidates {
   candidate_id uuid [pk]
   recommendation_id uuid [not null]
+  candidate_rank int [not null]
   start_at timestamp [not null]
   end_at timestamp [not null]
   score decimal(5,4)
   reason text
-  selected_at timestamp
+  availability_checked_at timestamp [not null]
+
+  indexes {
+    (recommendation_id, candidate_rank) [unique]
+  }
+
+  checks {
+    `end_at > start_at` [name: 'chk_schedule_candidates_time_range']
+    `score IS NULL OR (score >= 0 AND score <= 1)` [name: 'chk_schedule_candidates_score_range']
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -272,6 +361,7 @@ Ref: calendars.external_account_id > external_accounts.external_account_id
 
 Ref: planner_items.user_id > users.user_id
 Ref: planner_items.created_by_interaction_id > ai_interactions.interaction_id
+Ref: planner_items.cancelled_by_interaction_id > ai_interactions.interaction_id
 Ref: event_details.item_id - planner_items.item_id
 Ref: event_details.calendar_id > calendars.calendar_id
 Ref: todo_details.item_id - planner_items.item_id
@@ -280,7 +370,10 @@ Ref: reminders.item_id > planner_items.item_id
 Ref: ai_interactions.user_id > users.user_id
 Ref: schedule_recommendations.user_id > users.user_id
 Ref: schedule_recommendations.interaction_id > ai_interactions.interaction_id
+Ref: schedule_recommendations.target_calendar_id > calendars.calendar_id
+Ref: schedule_recommendations.accepted_candidate_id > schedule_candidates.candidate_id
 Ref: schedule_recommendations.accepted_item_id > planner_items.item_id
+Ref: schedule_recommendations.selection_interaction_id > ai_interactions.interaction_id
 Ref: schedule_candidates.recommendation_id > schedule_recommendations.recommendation_id
 
 Ref: user_memories.user_id > users.user_id

@@ -34,3 +34,4 @@ backend/.env
 # Flutter
 frontend/.dart_tool/
 frontend/build/*.dbdiagram
+*.dbdiagram

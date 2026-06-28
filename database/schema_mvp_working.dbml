@@ -1,0 +1,325 @@
+// =====================================================================
+// AI Secretary MVP ERD - Working File
+// Scope: the five priority features
+// 1) AI schedule creation and recommendation
+// 2) Calendar + To-do integrated dashboard
+// 3) Voice briefing (STT/TTS)
+// 4) Personal memory + persona-based notifications
+// 5) Emotion-based briefing and life coaching
+//
+// Design rules
+// - This file stores durable business data, not Agent source code.
+// - Store timestamps in UTC; display them using user_settings.timezone.
+// - Store masked text only when user input may contain personal data.
+// - Keep frequently searched fields as columns; use jsonb only for flexible AI payloads.
+// =====================================================================
+
+Enum planner_item_type {
+  EVENT
+  TODO
+}
+
+Enum planner_status {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+Enum interaction_status {
+  RECEIVED
+  PARSED
+  NEEDS_CONFIRMATION
+  EXECUTED
+  FAILED
+}
+
+Enum recommendation_status {
+  GENERATED
+  SELECTED
+  REJECTED
+  EXPIRED
+}
+
+Enum reminder_status {
+  SCHEDULED
+  SENT
+  CANCELLED
+  FAILED
+}
+
+// ---------------------------------------------------------------------
+// A. User and connection domain
+// ---------------------------------------------------------------------
+Table users {
+  user_id uuid [pk]
+  email varchar(255) [not null, unique]
+  display_name varchar(100)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table user_settings {
+  user_id uuid [pk]
+  timezone varchar(50) [not null, default: 'Asia/Seoul']
+  locale varchar(20) [not null, default: 'ko-KR']
+  notification_persona varchar(50)
+  default_reminder_minutes int
+  tts_enabled boolean [not null, default: false]
+  emotion_coaching_enabled boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table user_devices {
+  device_id uuid [pk]
+  user_id uuid [not null]
+  platform varchar(20) [not null, note: 'ANDROID, IOS, WEB']
+  push_token_secret_ref varchar(500) [not null]
+  notifications_enabled boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table external_accounts {
+  external_account_id uuid [pk]
+  user_id uuid [not null]
+  provider varchar(30) [not null, note: 'GOOGLE, NAVER, etc.']
+  external_user_id varchar(255) [not null]
+  credential_secret_ref varchar(500) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (provider, external_user_id) [unique]
+  }
+}
+
+Table calendars {
+  calendar_id uuid [pk]
+  user_id uuid [not null]
+  external_account_id uuid
+  external_calendar_id varchar(255)
+  name varchar(100) [not null]
+  is_primary boolean [not null, default: false]
+  sync_enabled boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// ---------------------------------------------------------------------
+// B. Calendar and To-do integrated dashboard domain
+// ---------------------------------------------------------------------
+Table planner_items {
+  item_id uuid [pk]
+  user_id uuid [not null]
+  item_type planner_item_type [not null]
+  title varchar(200) [not null]
+  description text
+  status planner_status [not null]
+  priority varchar(20) [not null, default: 'NORMAL']
+  sort_at timestamp [note: 'Representative time used by the integrated dashboard.']
+  created_by_interaction_id uuid
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  deleted_at timestamp
+}
+
+Table event_details {
+  item_id uuid [pk]
+  calendar_id uuid [not null]
+  category varchar(50)
+  start_at timestamp [not null]
+  end_at timestamp
+  is_all_day boolean [not null, default: false]
+  location_text varchar(500)
+  travel_time_minutes_snapshot int
+  external_event_id varchar(255)
+
+  Note: 'EVENT planner item must have exactly one event_details row.'
+}
+
+Table todo_details {
+  item_id uuid [pk]
+  due_at timestamp
+  scheduled_start_at timestamp
+  scheduled_end_at timestamp
+  estimated_minutes int
+  completed_at timestamp
+
+  Note: 'TODO planner item must have exactly one todo_details row.'
+}
+
+Table reminders {
+  reminder_id uuid [pk]
+  item_id uuid [not null]
+  reminder_type varchar(30) [not null, note: 'STANDARD, PREPARATION, DEPARTURE, WEATHER_CONTEXT']
+  trigger_at timestamp [not null]
+  channel varchar(20) [not null, note: 'PUSH, IN_APP, EMAIL']
+  persona_snapshot varchar(50)
+  message_text text
+  context_json jsonb
+  status reminder_status [not null]
+  created_at timestamp [not null]
+}
+
+// ---------------------------------------------------------------------
+// C. AI schedule creation and recommendation domain
+// ---------------------------------------------------------------------
+Table ai_interactions {
+  interaction_id uuid [pk]
+  user_id uuid [not null]
+  input_mode varchar(20) [not null, note: 'TEXT or VOICE']
+  input_text_masked text
+  audio_object_ref varchar(1000)
+  stt_confidence decimal(5,4)
+  intent varchar(50)
+  parsed_entities_json jsonb
+  constraints_json jsonb
+  assistant_response_text_masked text
+  status interaction_status [not null]
+  created_at timestamp [not null]
+  completed_at timestamp
+
+  Note: 'For voice input, save the masked STT result in input_text_masked.'
+}
+
+Table schedule_recommendations {
+  recommendation_id uuid [pk]
+  user_id uuid [not null]
+  interaction_id uuid [not null]
+  status recommendation_status [not null]
+  accepted_item_id uuid
+  created_at timestamp [not null]
+  expires_at timestamp
+}
+
+Table schedule_candidates {
+  candidate_id uuid [pk]
+  recommendation_id uuid [not null]
+  start_at timestamp [not null]
+  end_at timestamp [not null]
+  score decimal(5,4)
+  reason text
+  selected_at timestamp
+}
+
+// ---------------------------------------------------------------------
+// D. Personal memory and voice briefing domain
+// ---------------------------------------------------------------------
+Table user_memories {
+  memory_id uuid [pk]
+  user_id uuid [not null]
+  source_interaction_id uuid
+  memory_type varchar(50) [not null, note: 'PREFERENCE, PERSONA, PLACE, PREPARATION, PATTERN']
+  content_text text [not null]
+  confidence decimal(5,4)
+  vector_ref varchar(255)
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table briefings {
+  briefing_id uuid [pk]
+  user_id uuid [not null]
+  source_interaction_id uuid
+  briefing_type varchar(30) [not null, note: 'MORNING, DAILY, WEEKLY, ON_DEMAND']
+  period_start timestamp [not null]
+  period_end timestamp [not null]
+  content_text text [not null]
+  context_snapshot_json jsonb
+  audio_object_ref varchar(1000)
+  generated_at timestamp [not null]
+}
+
+// ---------------------------------------------------------------------
+// E. Emotion-based coaching domain
+// ---------------------------------------------------------------------
+Table emotion_logs {
+  emotion_log_id uuid [pk]
+  user_id uuid [not null]
+  source_interaction_id uuid
+  source_text_masked text
+  primary_emotion varchar(50)
+  valence decimal(5,4)
+  arousal decimal(5,4)
+  intensity decimal(5,4)
+  confidence decimal(5,4)
+  recorded_at timestamp [not null]
+}
+
+Table coaching_outputs {
+  coaching_output_id uuid [pk]
+  user_id uuid [not null]
+  emotion_log_id uuid
+  briefing_id uuid
+  content_text text [not null]
+  recommendation_json jsonb
+  safety_level varchar(30)
+  created_at timestamp [not null]
+}
+
+// ---------------------------------------------------------------------
+// Relationships
+// ---------------------------------------------------------------------
+Ref: user_settings.user_id - users.user_id
+Ref: user_devices.user_id > users.user_id
+Ref: external_accounts.user_id > users.user_id
+Ref: calendars.user_id > users.user_id
+Ref: calendars.external_account_id > external_accounts.external_account_id
+
+Ref: planner_items.user_id > users.user_id
+Ref: planner_items.created_by_interaction_id > ai_interactions.interaction_id
+Ref: event_details.item_id - planner_items.item_id
+Ref: event_details.calendar_id > calendars.calendar_id
+Ref: todo_details.item_id - planner_items.item_id
+Ref: reminders.item_id > planner_items.item_id
+
+Ref: ai_interactions.user_id > users.user_id
+Ref: schedule_recommendations.user_id > users.user_id
+Ref: schedule_recommendations.interaction_id > ai_interactions.interaction_id
+Ref: schedule_recommendations.accepted_item_id > planner_items.item_id
+Ref: schedule_candidates.recommendation_id > schedule_recommendations.recommendation_id
+
+Ref: user_memories.user_id > users.user_id
+Ref: user_memories.source_interaction_id > ai_interactions.interaction_id
+Ref: briefings.user_id > users.user_id
+Ref: briefings.source_interaction_id > ai_interactions.interaction_id
+Ref: emotion_logs.user_id > users.user_id
+Ref: emotion_logs.source_interaction_id > ai_interactions.interaction_id
+Ref: coaching_outputs.user_id > users.user_id
+Ref: coaching_outputs.emotion_log_id > emotion_logs.emotion_log_id
+Ref: coaching_outputs.briefing_id > briefings.briefing_id
+
+TableGroup user_and_connections {
+  users
+  user_settings
+  user_devices
+  external_accounts
+  calendars
+}
+
+TableGroup planner_dashboard {
+  planner_items
+  event_details
+  todo_details
+  reminders
+}
+
+TableGroup ai_schedule {
+  ai_interactions
+  schedule_recommendations
+  schedule_candidates
+}
+
+TableGroup memory_and_briefing {
+  user_memories
+  briefings
+}
+
+TableGroup emotion_coaching {
+  emotion_logs
+  coaching_outputs
+}

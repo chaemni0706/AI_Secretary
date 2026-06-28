@@ -13,7 +13,8 @@ venv/
 .env
 
 # VS Code
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 
 # Flutter
 frontend/.dart_tool/
@@ -24,3 +25,12 @@ frontend/build/
 
 # Windows
 Thumbs.db
+# Python
+backend/.venv/
+backend/.env
+**/__pycache__/
+*.pyc
+
+# Flutter
+frontend/.dart_tool/
+frontend/build/

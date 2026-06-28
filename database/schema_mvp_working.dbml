@@ -1,6 +1,6 @@
 // =====================================================================
-// AI Secretary MVP ERD - Working File
-// Scope: the five priority features
+// AI Secretary MVP ERD - Reviewed Final Working Schema
+// Scope: five priority features
 // 1) AI schedule creation and recommendation
 // 2) Calendar + To-do integrated dashboard
 // 3) Voice briefing (STT/TTS)
@@ -8,10 +8,11 @@
 // 5) Emotion-based briefing and life coaching
 //
 // Design rules
-// - This file stores durable business data, not Agent source code.
+// - Store durable business data, not Agent source code.
 // - Store timestamps in UTC; display them using user_settings.timezone.
-// - Store masked text only when user input may contain personal data.
-// - Keep frequently searched fields as columns; use jsonb only for flexible AI payloads.
+// - Store masked text when user-originated text may contain personal data.
+// - Keep frequently searched fields as columns; use jsonb for flexible AI payloads.
+// - The relational database is the source of truth; vector_ref is only a search index reference.
 // =====================================================================
 
 Enum planner_item_type {
@@ -67,6 +68,88 @@ Enum external_sync_status {
   FAILED
 }
 
+Enum todo_due_precision {
+  NONE
+  DATE_ONLY
+  DATETIME
+}
+
+Enum memory_type {
+  PREFERENCE
+  PERSONA
+  PLACE
+  PREPARATION
+  PATTERN
+  FACT
+}
+
+Enum memory_source_type {
+  EXPLICIT
+  INFERRED
+  SYSTEM
+}
+
+Enum briefing_type {
+  MORNING
+  DAILY
+  WEEKLY
+  ON_DEMAND
+}
+
+Enum briefing_status {
+  PENDING
+  GENERATING
+  READY
+  FAILED
+  EXPIRED
+}
+
+Enum tts_status {
+  NOT_REQUESTED
+  PENDING
+  READY
+  FAILED
+  DELETED
+}
+
+Enum emotion_source_type {
+  USER_TEXT
+  VOICE_TRANSCRIPT
+  SELF_REPORT
+  BRIEFING_FEEDBACK
+}
+
+Enum coaching_source {
+  EMOTION
+  BRIEFING
+}
+
+Enum coaching_status {
+  GENERATED
+  DELIVERED
+  ACCEPTED
+  DISMISSED
+  FAILED
+}
+
+Enum safety_level {
+  NORMAL
+  CAUTION
+  ESCALATE
+}
+
+Enum feedback_type {
+  LIKE
+  DISLIKE
+  EDIT
+  DISMISS
+  SNOOZE
+  ACCEPT
+  PLAY
+  COMPLETE
+  TEXT
+}
+
 // ---------------------------------------------------------------------
 // A. User and connection domain
 // ---------------------------------------------------------------------
@@ -84,20 +167,40 @@ Table user_settings {
   locale varchar(20) [not null, default: 'ko-KR']
   notification_persona varchar(50)
   default_reminder_minutes int
+  briefing_enabled boolean [not null, default: true]
+  preferred_briefing_time time
   tts_enabled boolean [not null, default: false]
+  voice_profile varchar(50)
+  memory_enabled boolean [not null, default: true]
   emotion_coaching_enabled boolean [not null, default: false]
+  sensitive_data_consent boolean [not null, default: false]
+  data_retention_days int
   created_at timestamp [not null]
   updated_at timestamp [not null]
+
+  checks {
+    `default_reminder_minutes IS NULL OR default_reminder_minutes >= 0` [name: 'chk_user_settings_reminder_nonnegative']
+    `data_retention_days IS NULL OR data_retention_days > 0` [name: 'chk_user_settings_retention_positive']
+  }
+
+  Note: 'Emotion data may be stored only when sensitive_data_consent is true. This cross-table rule must also be enforced by the application.'
 }
 
 Table user_devices {
   device_id uuid [pk]
   user_id uuid [not null]
   platform varchar(20) [not null, note: 'ANDROID, IOS, WEB']
+  device_name varchar(100)
   push_token_secret_ref varchar(500) [not null]
   notifications_enabled boolean [not null, default: true]
+  last_seen_at timestamp
   created_at timestamp [not null]
   updated_at timestamp [not null]
+
+  indexes {
+    user_id
+    (user_id, notifications_enabled)
+  }
 }
 
 Table external_accounts {
@@ -120,6 +223,8 @@ Table calendars {
   external_account_id uuid
   external_calendar_id varchar(255)
   name varchar(100) [not null]
+  color_hex varchar(7)
+  is_visible boolean [not null, default: true]
   is_primary boolean [not null, default: false]
   sync_enabled boolean [not null, default: false]
   created_at timestamp [not null]
@@ -127,6 +232,12 @@ Table calendars {
 
   indexes {
     (external_account_id, external_calendar_id) [unique]
+    (user_id, is_primary)
+    (user_id, is_visible)
+  }
+
+  checks {
+    `color_hex IS NULL OR color_hex ~ '^#[0-9A-Fa-f]{6}$'` [name: 'chk_calendars_color_hex']
   }
 
   Note: 'Only one primary calendar per user must be guaranteed by a PostgreSQL partial unique index or application validation.'
@@ -152,9 +263,16 @@ Table planner_items {
   updated_at timestamp [not null]
   deleted_at timestamp
 
+  indexes {
+    (user_id, deleted_at, status, sort_at)
+    (user_id, item_type, status)
+  }
+
   checks {
     `cancelled_at IS NULL OR status = 'CANCELLED'` [name: 'chk_planner_items_cancelled_status']
   }
+
+  Note: 'sort_at is denormalized for dashboard queries. EVENT uses event_details.start_at; scheduled TODO uses todo_details.scheduled_start_at; timed due TODO uses todo_details.due_at; untimed TODO keeps sort_at null and uses planned_date. Synchronize sort_at with detail rows in one application transaction. Item type and detail-row consistency must be validated by application logic or a PostgreSQL trigger.'
 }
 
 Table event_details {
@@ -173,6 +291,7 @@ Table event_details {
 
   indexes {
     (calendar_id, external_event_id) [unique]
+    (calendar_id, start_at, end_at)
   }
 
   checks {
@@ -180,26 +299,46 @@ Table event_details {
     `travel_time_minutes_snapshot IS NULL OR travel_time_minutes_snapshot >= 0` [name: 'chk_event_details_travel_time_nonnegative']
   }
 
-  Note: 'EVENT planner item must have exactly one event_details row. Internal events may have null external_event_id.'
+  Note: 'EVENT planner item must have exactly one event_details row. Internal events may have null external_event_id. Enforce item_type consistency in application logic or a PostgreSQL trigger.'
 }
 
 Table todo_details {
   item_id uuid [pk]
   due_at timestamp
+  due_precision todo_due_precision [not null, default: 'NONE']
+  planned_date date
   scheduled_start_at timestamp
   scheduled_end_at timestamp
   estimated_minutes int
+  started_at timestamp
   completed_at timestamp
 
-  Note: 'TODO planner item must have exactly one todo_details row.'
+  indexes {
+    planned_date
+    due_at
+    (scheduled_start_at, scheduled_end_at)
+    completed_at
+  }
+
+  checks {
+    `scheduled_end_at IS NULL OR scheduled_start_at IS NOT NULL` [name: 'chk_todo_details_end_requires_start']
+    `scheduled_end_at IS NULL OR scheduled_end_at > scheduled_start_at` [name: 'chk_todo_details_time_range']
+    `estimated_minutes IS NULL OR estimated_minutes > 0` [name: 'chk_todo_details_estimated_minutes_positive']
+    `due_precision <> 'NONE' OR due_at IS NULL` [name: 'chk_todo_details_none_has_no_due']
+    `due_precision = 'NONE' OR due_at IS NOT NULL` [name: 'chk_todo_details_due_requires_value']
+  }
+
+  Note: 'TODO planner item must have exactly one todo_details row. DATE_ONLY stores a timezone-normalized due_at while due_precision preserves that the user supplied only a date. COMPLETED requires completed_at and IN_PROGRESS requires started_at; enforce these cross-table rules in application logic or a PostgreSQL trigger.'
 }
 
 Table reminders {
   reminder_id uuid [pk]
   item_id uuid [not null]
+  generated_by_interaction_id uuid
   reminder_type varchar(30) [not null, note: 'STANDARD, PREPARATION, DEPARTURE, WEATHER_CONTEXT']
   trigger_at timestamp [not null]
   channel varchar(20) [not null, note: 'PUSH, IN_APP, EMAIL']
+  personalization_applied boolean [not null, default: false]
   persona_snapshot varchar(50)
   message_text text
   context_json jsonb
@@ -212,7 +351,16 @@ Table reminders {
 
   indexes {
     (item_id, reminder_type, trigger_at, channel) [unique]
+    (status, trigger_at)
+    (item_id, trigger_at)
   }
+
+  checks {
+    `sent_at IS NULL OR status = 'SENT'` [name: 'chk_reminders_sent_status']
+    `cancelled_at IS NULL OR status = 'CANCELLED'` [name: 'chk_reminders_cancelled_status']
+  }
+
+  Note: 'persona_snapshot preserves the notification style used at generation time. memory links are stored in reminder_memory_refs.'
 }
 
 // ---------------------------------------------------------------------
@@ -225,6 +373,9 @@ Table ai_interactions {
   idempotency_key varchar(100) [not null]
   input_text_masked text
   audio_object_ref varchar(1000)
+  audio_delete_at timestamp
+  audio_deleted_at timestamp
+  stt_language varchar(20)
   stt_confidence decimal(5,4)
   intent varchar(50)
   parsed_entities_json jsonb
@@ -238,13 +389,16 @@ Table ai_interactions {
 
   indexes {
     (user_id, idempotency_key) [unique]
+    (user_id, created_at)
   }
 
   checks {
     `input_mode <> 'VOICE' OR audio_object_ref IS NOT NULL OR input_text_masked IS NOT NULL` [name: 'chk_ai_interactions_voice_input_source']
+    `stt_confidence IS NULL OR (stt_confidence >= 0 AND stt_confidence <= 1)` [name: 'chk_ai_interactions_stt_confidence']
+    `audio_deleted_at IS NULL OR audio_delete_at IS NOT NULL` [name: 'chk_ai_interactions_audio_deletion_schedule']
   }
 
-  Note: 'For voice input, save the masked STT result in input_text_masked.'
+  Note: 'For voice input, save only the masked STT result in input_text_masked. Raw audio must use short retention and be deleted according to audio_delete_at.'
 }
 
 Table schedule_recommendations {
@@ -289,6 +443,7 @@ Table schedule_candidates {
   }
 
   checks {
+    `candidate_rank > 0` [name: 'chk_schedule_candidates_rank_positive']
     `end_at > start_at` [name: 'chk_schedule_candidates_time_range']
     `score IS NULL OR (score >= 0 AND score <= 1)` [name: 'chk_schedule_candidates_score_range']
   }
@@ -301,26 +456,104 @@ Table user_memories {
   memory_id uuid [pk]
   user_id uuid [not null]
   source_interaction_id uuid
-  memory_type varchar(50) [not null, note: 'PREFERENCE, PERSONA, PLACE, PREPARATION, PATTERN']
-  content_text text [not null]
+  memory_type memory_type [not null]
+  source_type memory_source_type [not null]
+  content_text_masked text [not null]
+  metadata_json jsonb
   confidence decimal(5,4)
-  vector_ref varchar(255)
+  vector_ref varchar(255) [note: 'Reference to pgvector or an external vector index; this row remains the source of truth.']
   is_active boolean [not null, default: true]
+  valid_from timestamp
+  valid_to timestamp
+  last_verified_at timestamp
   created_at timestamp [not null]
   updated_at timestamp [not null]
+
+  indexes {
+    (user_id, is_active)
+    (user_id, memory_type)
+    (source_interaction_id)
+  }
+
+  checks {
+    `confidence IS NULL OR (confidence >= 0 AND confidence <= 1)` [name: 'chk_user_memories_confidence']
+    `valid_to IS NULL OR valid_from IS NULL OR valid_to > valid_from` [name: 'chk_user_memories_valid_range']
+  }
+
+  Note: 'Store masked or minimized memory text. Memory extraction requires memory_enabled. Sensitive inferred memories should not be created without explicit consent.'
 }
 
 Table briefings {
   briefing_id uuid [pk]
   user_id uuid [not null]
   source_interaction_id uuid
-  briefing_type varchar(30) [not null, note: 'MORNING, DAILY, WEEKLY, ON_DEMAND']
+  generation_key varchar(100) [not null]
+  briefing_type briefing_type [not null]
+  status briefing_status [not null]
   period_start timestamp [not null]
   period_end timestamp [not null]
-  content_text text [not null]
+  content_text text
   context_snapshot_json jsonb
+  tts_status tts_status [not null, default: 'NOT_REQUESTED']
+  voice_profile_snapshot varchar(50)
   audio_object_ref varchar(1000)
+  audio_duration_seconds int
+  audio_generated_at timestamp
+  audio_delete_at timestamp
+  audio_deleted_at timestamp
+  failure_reason text
   generated_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (user_id, generation_key) [unique]
+    (user_id, generated_at)
+    (user_id, briefing_type, period_start)
+  }
+
+  checks {
+    `period_end > period_start` [name: 'chk_briefings_period_range']
+    `audio_duration_seconds IS NULL OR audio_duration_seconds >= 0` [name: 'chk_briefings_audio_duration_nonnegative']
+    `status <> 'READY' OR content_text IS NOT NULL` [name: 'chk_briefings_ready_has_content']
+    `tts_status <> 'READY' OR audio_object_ref IS NOT NULL` [name: 'chk_briefings_tts_ready_has_audio']
+    `audio_deleted_at IS NULL OR audio_delete_at IS NOT NULL` [name: 'chk_briefings_audio_deletion_schedule']
+  }
+
+  Note: 'Generated briefing audio must use short retention. voice_profile_snapshot preserves the selected TTS voice used for this output.'
+}
+
+Table reminder_memory_refs {
+  reminder_memory_ref_id uuid [pk]
+  reminder_id uuid [not null]
+  memory_id uuid [not null]
+  relevance_score decimal(5,4)
+  created_at timestamp [not null]
+
+  indexes {
+    (reminder_id, memory_id) [unique]
+    memory_id
+  }
+
+  checks {
+    `relevance_score IS NULL OR (relevance_score >= 0 AND relevance_score <= 1)` [name: 'chk_reminder_memory_refs_relevance']
+  }
+}
+
+Table briefing_memory_refs {
+  briefing_memory_ref_id uuid [pk]
+  briefing_id uuid [not null]
+  memory_id uuid [not null]
+  relevance_score decimal(5,4)
+  created_at timestamp [not null]
+
+  indexes {
+    (briefing_id, memory_id) [unique]
+    memory_id
+  }
+
+  checks {
+    `relevance_score IS NULL OR (relevance_score >= 0 AND relevance_score <= 1)` [name: 'chk_briefing_memory_refs_relevance']
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -330,24 +563,110 @@ Table emotion_logs {
   emotion_log_id uuid [pk]
   user_id uuid [not null]
   source_interaction_id uuid
+  source_type emotion_source_type [not null]
+  consent_snapshot boolean [not null]
   source_text_masked text
   primary_emotion varchar(50)
+  secondary_emotions_json jsonb
   valence decimal(5,4)
   arousal decimal(5,4)
   intensity decimal(5,4)
   confidence decimal(5,4)
+  analysis_model varchar(100)
+  analysis_version varchar(50)
   recorded_at timestamp [not null]
+  created_at timestamp [not null]
+
+  indexes {
+    (user_id, recorded_at)
+    source_interaction_id
+  }
+
+  checks {
+    `consent_snapshot = true` [name: 'chk_emotion_logs_consent_required']
+    `valence IS NULL OR (valence >= -1 AND valence <= 1)` [name: 'chk_emotion_logs_valence_range']
+    `arousal IS NULL OR (arousal >= 0 AND arousal <= 1)` [name: 'chk_emotion_logs_arousal_range']
+    `intensity IS NULL OR (intensity >= 0 AND intensity <= 1)` [name: 'chk_emotion_logs_intensity_range']
+    `confidence IS NULL OR (confidence >= 0 AND confidence <= 1)` [name: 'chk_emotion_logs_confidence_range']
+  }
+
+  Note: 'Emotion records are sensitive and non-diagnostic. Store only with consent and do not treat model output as a medical diagnosis.'
+}
+
+Table briefing_emotion_refs {
+  briefing_emotion_ref_id uuid [pk]
+  briefing_id uuid [not null]
+  emotion_log_id uuid [not null]
+  relevance_score decimal(5,4)
+  created_at timestamp [not null]
+
+  indexes {
+    (briefing_id, emotion_log_id) [unique]
+    emotion_log_id
+  }
+
+  checks {
+    `relevance_score IS NULL OR (relevance_score >= 0 AND relevance_score <= 1)` [name: 'chk_briefing_emotion_refs_relevance']
+  }
 }
 
 Table coaching_outputs {
   coaching_output_id uuid [pk]
   user_id uuid [not null]
+  source_type coaching_source [not null]
   emotion_log_id uuid
   briefing_id uuid
+  status coaching_status [not null]
   content_text text [not null]
   recommendation_json jsonb
-  safety_level varchar(30)
+  safety_level safety_level [not null, default: 'NORMAL']
+  safety_reason text
+  disclaimer_shown boolean [not null, default: false]
   created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (user_id, created_at)
+    emotion_log_id
+    briefing_id
+  }
+
+  checks {
+    `(source_type = 'EMOTION' AND emotion_log_id IS NOT NULL AND briefing_id IS NULL) OR (source_type = 'BRIEFING' AND briefing_id IS NOT NULL AND emotion_log_id IS NULL)` [name: 'chk_coaching_outputs_exact_source']
+    `safety_level <> 'ESCALATE' OR disclaimer_shown = true` [name: 'chk_coaching_outputs_escalate_disclaimer']
+  }
+
+  Note: 'Coaching is general wellbeing guidance, not diagnosis or treatment. Safety escalation must use approved wording and display a disclaimer.'
+}
+
+Table user_feedback {
+  feedback_id uuid [pk]
+  user_id uuid [not null]
+  interaction_id uuid
+  item_id uuid
+  reminder_id uuid
+  briefing_id uuid
+  coaching_output_id uuid
+  feedback_type feedback_type [not null]
+  rating smallint
+  snoozed_until timestamp
+  feedback_text_masked text
+  created_at timestamp [not null]
+
+  indexes {
+    (user_id, created_at)
+    reminder_id
+    briefing_id
+    coaching_output_id
+  }
+
+  checks {
+    `rating IS NULL OR (rating >= 1 AND rating <= 5)` [name: 'chk_user_feedback_rating_range']
+    `(CASE WHEN item_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN reminder_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN briefing_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coaching_output_id IS NOT NULL THEN 1 ELSE 0 END) = 1` [name: 'chk_user_feedback_exact_target']
+    `feedback_type <> 'SNOOZE' OR (reminder_id IS NOT NULL AND snoozed_until IS NOT NULL)` [name: 'chk_user_feedback_snooze_target']
+  }
+
+  Note: 'Feedback supports notification-persona tuning, memory verification, briefing evaluation, and coaching evaluation.'
 }
 
 // ---------------------------------------------------------------------
@@ -366,6 +685,7 @@ Ref: event_details.item_id - planner_items.item_id
 Ref: event_details.calendar_id > calendars.calendar_id
 Ref: todo_details.item_id - planner_items.item_id
 Ref: reminders.item_id > planner_items.item_id
+Ref: reminders.generated_by_interaction_id > ai_interactions.interaction_id
 
 Ref: ai_interactions.user_id > users.user_id
 Ref: schedule_recommendations.user_id > users.user_id
@@ -380,11 +700,25 @@ Ref: user_memories.user_id > users.user_id
 Ref: user_memories.source_interaction_id > ai_interactions.interaction_id
 Ref: briefings.user_id > users.user_id
 Ref: briefings.source_interaction_id > ai_interactions.interaction_id
+Ref: reminder_memory_refs.reminder_id > reminders.reminder_id
+Ref: reminder_memory_refs.memory_id > user_memories.memory_id
+Ref: briefing_memory_refs.briefing_id > briefings.briefing_id
+Ref: briefing_memory_refs.memory_id > user_memories.memory_id
+
 Ref: emotion_logs.user_id > users.user_id
 Ref: emotion_logs.source_interaction_id > ai_interactions.interaction_id
+Ref: briefing_emotion_refs.briefing_id > briefings.briefing_id
+Ref: briefing_emotion_refs.emotion_log_id > emotion_logs.emotion_log_id
 Ref: coaching_outputs.user_id > users.user_id
 Ref: coaching_outputs.emotion_log_id > emotion_logs.emotion_log_id
 Ref: coaching_outputs.briefing_id > briefings.briefing_id
+
+Ref: user_feedback.user_id > users.user_id
+Ref: user_feedback.interaction_id > ai_interactions.interaction_id
+Ref: user_feedback.item_id > planner_items.item_id
+Ref: user_feedback.reminder_id > reminders.reminder_id
+Ref: user_feedback.briefing_id > briefings.briefing_id
+Ref: user_feedback.coaching_output_id > coaching_outputs.coaching_output_id
 
 TableGroup user_and_connections {
   users
@@ -410,9 +744,13 @@ TableGroup ai_schedule {
 TableGroup memory_and_briefing {
   user_memories
   briefings
+  reminder_memory_refs
+  briefing_memory_refs
 }
 
 TableGroup emotion_coaching {
   emotion_logs
+  briefing_emotion_refs
   coaching_outputs
+  user_feedback
 }

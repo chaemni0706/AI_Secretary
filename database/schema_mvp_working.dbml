@@ -672,7 +672,7 @@ Table user_feedback {
 // ---------------------------------------------------------------------
 // Relationships
 // ---------------------------------------------------------------------
-Ref: user_settings.user_id - users.user_id
+Ref: users.user_id - user_settings.user_id
 Ref: user_devices.user_id > users.user_id
 Ref: external_accounts.user_id > users.user_id
 Ref: calendars.user_id > users.user_id
@@ -681,9 +681,9 @@ Ref: calendars.external_account_id > external_accounts.external_account_id
 Ref: planner_items.user_id > users.user_id
 Ref: planner_items.created_by_interaction_id > ai_interactions.interaction_id
 Ref: planner_items.cancelled_by_interaction_id > ai_interactions.interaction_id
-Ref: event_details.item_id - planner_items.item_id
+Ref: planner_items.item_id - event_details.item_id
 Ref: event_details.calendar_id > calendars.calendar_id
-Ref: todo_details.item_id - planner_items.item_id
+Ref: planner_items.item_id - todo_details.item_id
 Ref: reminders.item_id > planner_items.item_id
 Ref: reminders.generated_by_interaction_id > ai_interactions.interaction_id
 

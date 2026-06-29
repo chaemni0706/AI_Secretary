@@ -93,7 +93,10 @@ def _effective_priority(title: str, category: str, given: str) -> str:
     cat = (category or "etc").lower()
     if cat in rules.get("high_categories", []):
         return "high"
-    if any(kw in title for kw in rules.get("high_keywords", [])):
+    keywords = list(rules.get("high_keywords", [])) + list(
+        rules.get("briefing_high_keywords", [])
+    )
+    if any(kw in title for kw in keywords):
         return "high"
     return given or "medium"
 
@@ -143,21 +146,20 @@ def generate_briefing(req: DailyBriefingRequest) -> DailyBriefingData:
         (s, _effective_priority(s.title, s.category, s.priority)) for s in schedules
     ]
 
-    high_scheds = [s for s, p in enriched if p == "high"]
-    if high_scheds:
-        ordered = high_scheds
-    else:
-        ordered = [s for s, _ in sorted(
-            enriched, key=lambda x: (_RANK.get(x[1], 1), _to_min(x[0].start_time))
-        )]
+    # priority_order returns ALL schedules in importance order (high first,
+    # then by start time) — not only the high ones.
+    ordered_pairs = sorted(
+        enriched, key=lambda x: (_RANK.get(x[1], 1), _to_min(x[0].start_time))
+    )
+    ordered = [s for s, _ in ordered_pairs]
 
     priority_order = [
         PriorityOrderItem(
             title=s.title,
-            priority=_effective_priority(s.title, s.category, s.priority),
+            priority=eff,
             reason=_schedule_reason(s.category),
         )
-        for s in ordered
+        for s, eff in ordered_pairs
     ]
 
     high_todos = [t for t in req.todos if not t.is_done and (

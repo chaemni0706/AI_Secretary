@@ -24,6 +24,17 @@ _RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "emotion_coaching_prompt.txt"
 _EMOTION_ORDER = ["fatigue", "anxiety", "sadness", "anger", "stress", "positive"]
 
+# Diagnostic / clinical phrasings that must never appear in coaching. If an LLM
+# draft contains any of these, it is rejected and the safe template is used.
+_FORBIDDEN_TERMS = (
+    "우울증", "질환", "장애", "진단", "처방", "치료가 필요", "증상", "병이", "환자",
+)
+
+
+def _is_safe_coaching(text: str) -> bool:
+    """True when the coaching text is free of diagnostic/clinical phrasing."""
+    return not any(term in text for term in _FORBIDDEN_TERMS)
+
 
 @lru_cache(maxsize=1)
 def _rules() -> dict:
@@ -161,7 +172,11 @@ def analyze_emotion(req: EmotionAnalyzeRequest) -> EmotionAnalyzeData:
         )
     except Exception:
         llm_coaching = None
-    coaching = llm_coaching if llm_coaching else template_coaching
+    # Accept the LLM draft only when it stays non-diagnostic; else use template.
+    if llm_coaching and _is_safe_coaching(llm_coaching):
+        coaching = llm_coaching
+    else:
+        coaching = template_coaching
 
     return EmotionAnalyzeData(
         sentiment=sentiment,

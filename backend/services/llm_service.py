@@ -48,6 +48,9 @@ def generate(
             temperature=settings.LLM_TEMPERATURE if temperature is None else temperature,
         )
         text = (resp.choices[0].message.content or "").strip()
+        # Models sometimes wrap the reply in code fences or quotes; strip them so
+        # callers get a clean message body to use directly.
+        text = text.strip("`").strip().strip("\"'\u201c\u201d").strip()
         return text or None
     except Exception:
         return None

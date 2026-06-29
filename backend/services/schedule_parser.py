@@ -25,7 +25,7 @@ _RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 
 _WEEKDAY = {"월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6}
 
-# Command/verb tails to strip from the end of a title (longest first).
+# Command/verb endings to strip from the end of a title (longest first).
 _VERB_TAILS = sorted(
     [
         "잡아줘", "잡아 줘", "추가해줘", "추가 해줘", "넣어줘", "넣어 줘",
@@ -34,6 +34,21 @@ _VERB_TAILS = sorted(
     ],
     key=len,
     reverse=True,
+)
+
+# Generic filler nouns that are just noise when they trail a title
+# (e.g. "운동 일정" -> "운동"). Kept separate from the command endings above.
+_NOISE_NOUNS = ["일정", "스케줄"]
+
+# Combined trailing tokens stripped from a title, longest first.
+_TITLE_TAILS = sorted(_VERB_TAILS + _NOISE_NOUNS, key=len, reverse=True)
+
+# Duration expressions ("3시간", "1시간 30분", "30분") with an optional trailing
+# 짜리/동안/만. These are NOT clock times (start_time parsing already ignores
+# them via the 시(?!간) lookahead) and must not leak into the title. The
+# (?=\s|$) guard keeps "만" from eating into words like "만남".
+_DURATION_RE = re.compile(
+    r"(?:\d+\s*시간(?:\s*\d+\s*분)?|\d+\s*분)(?:\s*(?:짜리|동안|만)(?=\s|$))?"
 )
 
 
@@ -109,9 +124,21 @@ def _extract_date(text: str, base: datetime) -> Tuple[Optional[str], Optional[st
 # Time parsing
 # --------------------------------------------------------------------------- #
 def _extract_time(text: str) -> Tuple[Optional[str], Optional[str], bool]:
-    """Return (resolved 'HH:mm', matched expression, ambiguous)."""
+    """Return (resolved 'HH:mm', matched expression, ambiguous).
+
+    When no 오전/오후 marker is present (e.g. '3시') the hour is assumed to be
+    in the afternoon (so '3시' -> 15:00) and `ambiguous` is set True so the
+    caller can record a 'time_ambiguity' hint.
+
+    Robustness rules:
+    - Out-of-range values are rejected, not silently wrapped/clamped: the hour
+      must be 0-23 and the minute 0-59, otherwise no time is returned (so the
+      caller records a missing 'time').
+    - Duration phrases like '3시간' are NOT read as a clock time, thanks to the
+      `시(?!간)` negative lookahead.
+    """
     m = re.search(
-        r"(오전|오후|아침|저녁|밤|점심|낮|새벽)?\s*(\d{1,2})\s*시\s*(?:(\d{1,2})\s*분)?",
+        r"(오전|오후|아침|저녁|밤|점심|낮|새벽)?\s*(\d{1,2})\s*시(?!간)\s*(?:(\d{1,2})\s*분)?",
         text,
     )
     if not m:
@@ -120,6 +147,11 @@ def _extract_time(text: str) -> Tuple[Optional[str], Optional[str], bool]:
     meridiem, hour_s, minute_s = m.group(1), m.group(2), m.group(3)
     hour = int(hour_s)
     minute = int(minute_s) if minute_s else 0
+
+    # Reject out-of-range values instead of silently wrapping/clamping.
+    if not (0 <= hour <= 23) or not (0 <= minute <= 59):
+        return None, None, False
+
     ambiguous = False
 
     if meridiem in ("오전", "아침", "새벽"):
@@ -134,12 +166,11 @@ def _extract_time(text: str) -> Tuple[Optional[str], Optional[str], bool]:
         elif hour == 12:
             hour = 0
     else:
-        # no meridiem given -> assume afternoon, flag ambiguity
+        # no meridiem given -> assume afternoon, flag ambiguity ('3시' -> 15:00)
         if 1 <= hour <= 11:
             hour += 12
         ambiguous = True
 
-    hour %= 24
     return f"{hour:02d}:{minute:02d}", m.group(0).strip(), ambiguous
 
 
@@ -156,6 +187,8 @@ def _extract_title(text: str, date_expr: Optional[str], time_expr: Optional[str]
     for expr in (date_expr, time_expr):
         if expr:
             work = work.replace(expr, " ")
+    # drop duration expressions plus any trailing 짜리/동안/만 (see _DURATION_RE).
+    work = _DURATION_RE.sub(" ", work)
     # drop standalone particle 에 (e.g. "2시에" -> leftover "에")
     work = re.sub(r"(?:^|\s)에(?=\s|$)", " ", " " + work + " ")
     work = re.sub(r"\s+", " ", work).strip()
@@ -163,7 +196,7 @@ def _extract_title(text: str, date_expr: Optional[str], time_expr: Optional[str]
     changed = True
     while changed and work:
         changed = False
-        for v in _VERB_TAILS:
+        for v in _TITLE_TAILS:
             if work.endswith(v):
                 work = work[: -len(v)].strip()
                 changed = True
@@ -183,15 +216,25 @@ def _detect_category(*texts: str) -> str:
     return default
 
 
-def _detect_priority(*texts: str) -> str:
+def _detect_priority(category: str, *texts: str) -> str:
+    """Resolve priority: explicit keyword > category base > default.
+
+    Order matters:
+    1. high_keywords (마감/시험/발표 ...) always win, so a `study` item that
+       mentions '마감' becomes high.
+    2. low_keywords (휴식/산책 ...) demote to low.
+    3. otherwise fall back to the category's base priority
+       (hospital/meeting -> high, school/exercise/personal/... -> medium).
+    """
     cfg = _load_priority_rules()
     joined = " ".join(t for t in texts if t)
-    for kw in cfg.get("high_keywords", []):
-        if kw in joined:
-            return "high"
-    for kw in cfg.get("low_keywords", []):
-        if kw in joined:
-            return "low"
+    if any(kw in joined for kw in cfg.get("high_keywords", [])):
+        return "high"
+    if any(kw in joined for kw in cfg.get("low_keywords", [])):
+        return "low"
+    cat_priority = cfg.get("category_priority", {})
+    if category in cat_priority:
+        return cat_priority[category]
     return cfg.get("default", "medium")
 
 
@@ -208,13 +251,13 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
     title = _extract_title(text, date_expr, time_expr)
 
     category = _detect_category(title, re.sub(re.escape(time_expr or ""), "", text))
-    priority = _detect_priority(title, text)
+    priority = _detect_priority(category, title, text)
 
     missing: List[str] = []
     if not date_value:
         missing.append("date")
     if not start_time:
-        missing.append("start_time")
+        missing.append("time")
     if not title:
         missing.append("title")
     if ambiguous:
@@ -223,7 +266,9 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
     has_date, has_time = bool(date_value), bool(start_time)
     has_title, has_category = bool(title), category != "etc"
 
-    if has_date or has_time:
+    # Treat anything with a recognizable schedule signal (date / time / title /
+    # category) as a create_schedule intent; only a totally empty parse is unknown.
+    if has_date or has_time or has_title or has_category:
         intent = "create_schedule"
     else:
         intent = "unknown"

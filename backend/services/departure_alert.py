@@ -1,7 +1,8 @@
 """Rule-based departure / preparation planner.
 
-Computes recommended leave time, a preparation checklist (category + weather)
-and notification times. Never raises: malformed time yields leave_time=None.
+Computes a recommended leave time, a preparation checklist (category + weather,
+de-duplicated) and notification times. Never raises: a malformed start time
+yields leave_time=None with an empty notification list.
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from backend.database.schema.alert_schema import (
     ChecklistItem,
@@ -67,13 +68,21 @@ def _to_hhmm(minutes: int) -> str:
 
 
 def _build_checklist(category: str, weather: Optional[str]) -> List[ChecklistItem]:
+    """Category base items + weather extras, de-duplicated by item name."""
     rules = _checklist_rules()
     cats = rules.get("categories", {})
-    base = cats.get(category, cats.get("etc", []))
-    items = [ChecklistItem(**x) for x in base]
+    raw = list(cats.get(category, cats.get("etc", [])))
     if weather:
-        for x in rules.get("weather", {}).get(weather.lower(), []):
-            items.append(ChecklistItem(**x))
+        raw += rules.get("weather", {}).get(weather.lower(), [])
+
+    items: List[ChecklistItem] = []
+    seen: set[str] = set()
+    for x in raw:
+        name = x.get("item")
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        items.append(ChecklistItem(**x))
     return items
 
 
@@ -86,6 +95,58 @@ def _items_phrase(checklist: List[ChecklistItem]) -> str:
         return f"{a}{_eul_reul(a)}"
     a, b = names[0], names[1]
     return f"{a}{_wa_gwa(a)} {b}{_eul_reul(b)}"
+
+
+def _prep_message(offset: int, title: str, phrase: str) -> str:
+    if offset >= 60:
+        return f"{title} 준비를 시작할 시간입니다. {phrase} 미리 챙겨두세요."
+    return f"{title} 시간이 다가옵니다. {phrase} 챙기고 출발을 준비하세요."
+
+
+def _build_notifications(
+    start_min: int,
+    leave_min: int,
+    pref,
+    phrase: str,
+    title: str,
+) -> List[NotificationItem]:
+    rules = _notification_rules()
+    styles = rules.get("styles", {})
+
+    # Forgetful users are escalated to the stronger style.
+    style_name = pref.notification_style
+    if pref.forgetful:
+        style_name = rules.get("escalate_when_forgetful", "strong")
+    style = styles.get(style_name, styles.get("normal", {}))
+
+    # minute -> message (dict de-dupes identical times automatically)
+    by_time: Dict[int, str] = {}
+
+    # 1) reminders before the schedule start
+    for off in style.get("before_start_minutes", []):
+        t = start_min - off
+        if t >= 0:
+            by_time[t] = _prep_message(off, title, phrase)
+
+    # 2) the departure (leave-time) reminder wins on any time collision
+    if style.get("notify_at_leave", True):
+        by_time[leave_min] = f"지금 출발하면 {title} 시간에 맞출 수 있습니다."
+
+    # 3) late-prone users get an extra nudge shortly before leaving.
+    #    The schema exposes "forgetful" as the late-prone signal; an explicit
+    #    "late_prone" preference is honored too when present.
+    late_prone = bool(getattr(pref, "late_prone", False)) or pref.forgetful
+    if late_prone:
+        extra = rules.get("late_prone_minutes_before_leave", 10)
+        t = leave_min - extra
+        if t >= 0 and t not in by_time:
+            by_time[t] = f"곧 출발해야 합니다. {phrase} 다시 한 번 확인하세요."
+
+    # naturally ordered by time
+    return [
+        NotificationItem(time=_to_hhmm(t), message=by_time[t])
+        for t in sorted(by_time)
+    ]
 
 
 def build_departure_plan(req: DeparturePlanRequest) -> DeparturePlanData:
@@ -107,33 +168,13 @@ def build_departure_plan(req: DeparturePlanRequest) -> DeparturePlanData:
             notifications=[],
         )
 
+    # leave_time = start - travel - buffer  (e.g. 14:00 - 35 - 10 = 13:15)
     leave_min = max(0, start_min - travel - buffer)
     leave_time = _to_hhmm(leave_min)
 
-    # notification offsets (minutes before leave_time)
-    style = pref.notification_style
-    if pref.forgetful:
-        style = _notification_rules().get("escalate_when_forgetful", "strong")
-    offsets = _notification_rules().get("styles", {}).get(
-        style, _notification_rules().get("styles", {}).get("normal", [30, 0])
+    notifications = _build_notifications(
+        start_min, leave_min, pref, _items_phrase(checklist), sch.title
     )
-
-    phrase = _items_phrase(checklist)
-    title = sch.title
-    notifications: List[NotificationItem] = []
-    for off in sorted(set(offsets), reverse=True):
-        t = leave_min - off
-        if t < 0:
-            continue  # adjust: drop reminders that fall before midnight
-        if off == 0:
-            msg = f"지금 출발하면 {title} 시간에 맞출 수 있습니다."
-        elif off >= 60:
-            msg = f"{title} 준비를 시작할 시간입니다. {phrase} 미리 챙겨두세요."
-        else:
-            msg = f"{title} 전입니다. {phrase} 챙기세요."
-        notifications.append(NotificationItem(time=_to_hhmm(t), message=msg))
-
-    notifications.sort(key=lambda n: n.time)
 
     return DeparturePlanData(
         leave_time=leave_time,

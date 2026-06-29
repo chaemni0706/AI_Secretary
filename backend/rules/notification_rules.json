@@ -1,8 +1,9 @@
 {
-  "comment": "출발 시간(leave_time) 기준, 분 단위 사전 알림 오프셋. 0 = 출발 시간 알림.",
+  "comment": "before_start_minutes = 일정 시작 기준 사전 알림(분). notify_at_leave = 출발 시각 알림 여부. late_prone_minutes_before_leave = 지각 성향 시 출발 시각 N분 전 추가 알림. 중복 시각은 하나만 유지.",
   "styles": {
-    "strong": [60, 30, 0],
-    "normal": [30, 0]
+    "strong": { "before_start_minutes": [60, 30], "notify_at_leave": true },
+    "normal": { "before_start_minutes": [30], "notify_at_leave": true }
   },
-  "escalate_when_forgetful": "strong"
+  "escalate_when_forgetful": "strong",
+  "late_prone_minutes_before_leave": 10
 }

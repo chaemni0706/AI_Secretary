@@ -22,7 +22,7 @@
       "end_time": "15:00",
       "location": null,
       "memo": null,
-      "priority": "medium",
+      "priority": "high",
       "source": "ai"
     },
     "missing_fields": []

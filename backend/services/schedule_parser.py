@@ -1,0 +1,272 @@
+"""Rule-based Korean natural-language schedule parser.
+
+Extracts intent, date/time expressions, title, category and priority from a
+free-text utterance. Designed to never raise on bad input: anything it cannot
+resolve is reported via `missing_fields` instead.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from datetime import datetime, timedelta
+from functools import lru_cache
+from pathlib import Path
+from typing import List, Optional, Tuple
+
+from backend.database.schema.schedule_schema import (
+    ScheduleDraft,
+    ScheduleParseData,
+    ScheduleParseRequest,
+    ScheduleSlots,
+)
+
+_RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
+
+_WEEKDAY = {"월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6}
+
+# Command/verb tails to strip from the end of a title (longest first).
+_VERB_TAILS = sorted(
+    [
+        "잡아줘", "잡아 줘", "추가해줘", "추가 해줘", "넣어줘", "넣어 줘",
+        "알림해줘", "알림 해줘", "알려줘", "등록해줘", "만들어줘", "예약해줘",
+        "해줘", "해 줘", "있어", "줘", "좀", "해주세요", "주세요",
+    ],
+    key=len,
+    reverse=True,
+)
+
+
+@lru_cache(maxsize=1)
+def _load_category_rules() -> Tuple[list, str]:
+    with open(_RULES_DIR / "category_rules.json", encoding="utf-8") as f:
+        cfg = json.load(f)
+    return cfg.get("rules", []), cfg.get("default", "etc")
+
+
+@lru_cache(maxsize=1)
+def _load_priority_rules() -> dict:
+    with open(_RULES_DIR / "priority_rules.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _base_datetime(req: ScheduleParseRequest) -> datetime:
+    if req.current_datetime:
+        try:
+            return datetime.fromisoformat(req.current_datetime)
+        except ValueError:
+            pass
+    return datetime.now()
+
+
+# --------------------------------------------------------------------------- #
+# Date parsing
+# --------------------------------------------------------------------------- #
+def _extract_date(text: str, base: datetime) -> Tuple[Optional[str], Optional[str]]:
+    """Return (resolved 'YYYY-MM-DD', matched expression) or (None, None)."""
+    base_date = base.date()
+
+    # 다음 주 <요일> / 이번 주 <요일>
+    m = re.search(r"(다음\s*주|담주|이번\s*주|금주)\s*([월화수목금토일])요일", text)
+    if m:
+        target = _WEEKDAY[m.group(2)]
+        delta = (target - base_date.weekday()) % 7
+        this_week = base_date + timedelta(days=delta)
+        if re.match(r"다음\s*주|담주", m.group(1)):
+            this_week += timedelta(days=7)
+        return this_week.isoformat(), m.group(0)
+
+    # N월 N일
+    m = re.search(r"(\d{1,2})\s*월\s*(\d{1,2})\s*일", text)
+    if m:
+        month, day = int(m.group(1)), int(m.group(2))
+        year = base_date.year
+        try:
+            resolved = base_date.replace(year=year, month=month, day=day)
+        except ValueError:
+            return None, m.group(0)
+        # if the date already passed this year, roll to next year
+        if resolved < base_date:
+            resolved = resolved.replace(year=year + 1)
+        return resolved.isoformat(), m.group(0)
+
+    # relative day words
+    for word, offset in (("글피", 3), ("모레", 2), ("내일", 1), ("오늘", 0)):
+        if word in text:
+            return (base_date + timedelta(days=offset)).isoformat(), word
+
+    # bare weekday (e.g. 금요일) -> next occurrence (including today)
+    m = re.search(r"([월화수목금토일])요일", text)
+    if m:
+        target = _WEEKDAY[m.group(1)]
+        delta = (target - base_date.weekday()) % 7
+        return (base_date + timedelta(days=delta)).isoformat(), m.group(0)
+
+    return None, None
+
+
+# --------------------------------------------------------------------------- #
+# Time parsing
+# --------------------------------------------------------------------------- #
+def _extract_time(text: str) -> Tuple[Optional[str], Optional[str], bool]:
+    """Return (resolved 'HH:mm', matched expression, ambiguous)."""
+    m = re.search(
+        r"(오전|오후|아침|저녁|밤|점심|낮|새벽)?\s*(\d{1,2})\s*시\s*(?:(\d{1,2})\s*분)?",
+        text,
+    )
+    if not m:
+        return None, None, False
+
+    meridiem, hour_s, minute_s = m.group(1), m.group(2), m.group(3)
+    hour = int(hour_s)
+    minute = int(minute_s) if minute_s else 0
+    ambiguous = False
+
+    if meridiem in ("오전", "아침", "새벽"):
+        if hour == 12:
+            hour = 0
+    elif meridiem in ("오후", "저녁", "점심", "낮"):
+        if hour < 12:
+            hour += 12
+    elif meridiem == "밤":
+        if hour < 12:
+            hour += 12  # 밤 11시 -> 23
+        elif hour == 12:
+            hour = 0
+    else:
+        # no meridiem given -> assume afternoon, flag ambiguity
+        if 1 <= hour <= 11:
+            hour += 12
+        ambiguous = True
+
+    hour %= 24
+    return f"{hour:02d}:{minute:02d}", m.group(0).strip(), ambiguous
+
+
+def _add_one_hour(hhmm: str) -> str:
+    t = datetime.strptime(hhmm, "%H:%M") + timedelta(hours=1)
+    return t.strftime("%H:%M")
+
+
+# --------------------------------------------------------------------------- #
+# Title / category / priority
+# --------------------------------------------------------------------------- #
+def _extract_title(text: str, date_expr: Optional[str], time_expr: Optional[str]) -> str:
+    work = text
+    for expr in (date_expr, time_expr):
+        if expr:
+            work = work.replace(expr, " ")
+    # drop standalone particle 에 (e.g. "2시에" -> leftover "에")
+    work = re.sub(r"(?:^|\s)에(?=\s|$)", " ", " " + work + " ")
+    work = re.sub(r"\s+", " ", work).strip()
+
+    changed = True
+    while changed and work:
+        changed = False
+        for v in _VERB_TAILS:
+            if work.endswith(v):
+                work = work[: -len(v)].strip()
+                changed = True
+                break
+    return work.strip()
+
+
+def _detect_category(*texts: str) -> str:
+    rules, default = _load_category_rules()
+    for text in texts:
+        if not text:
+            continue
+        for rule in rules:
+            for kw in rule["keywords"]:
+                if kw in text:
+                    return rule["category"]
+    return default
+
+
+def _detect_priority(*texts: str) -> str:
+    cfg = _load_priority_rules()
+    joined = " ".join(t for t in texts if t)
+    for kw in cfg.get("high_keywords", []):
+        if kw in joined:
+            return "high"
+    for kw in cfg.get("low_keywords", []):
+        if kw in joined:
+            return "low"
+    return cfg.get("default", "medium")
+
+
+# --------------------------------------------------------------------------- #
+# Public entry point
+# --------------------------------------------------------------------------- #
+def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
+    text = (req.input or "").strip()
+    base = _base_datetime(req)
+
+    date_value, date_expr = _extract_date(text, base)
+    start_time, time_expr, ambiguous = _extract_time(text)
+    end_time = _add_one_hour(start_time) if start_time else None
+    title = _extract_title(text, date_expr, time_expr)
+
+    category = _detect_category(title, re.sub(re.escape(time_expr or ""), "", text))
+    priority = _detect_priority(title, text)
+
+    missing: List[str] = []
+    if not date_value:
+        missing.append("date")
+    if not start_time:
+        missing.append("start_time")
+    if not title:
+        missing.append("title")
+    if ambiguous:
+        missing.append("time_ambiguity")
+
+    has_date, has_time = bool(date_value), bool(start_time)
+    has_title, has_category = bool(title), category != "etc"
+
+    if has_date or has_time:
+        intent = "create_schedule"
+    else:
+        intent = "unknown"
+
+    confidence = round(
+        min(
+            0.95,
+            0.40
+            + 0.18 * has_date
+            + 0.18 * has_time
+            + 0.10 * has_title
+            + 0.08 * has_category,
+        ),
+        2,
+    )
+
+    slots = ScheduleSlots(
+        title=title or None,
+        date_expression=date_expr,
+        time_expression=time_expr,
+        date=date_value,
+        start_time=start_time,
+        end_time=end_time,
+        category=category,
+        location=None,
+    )
+
+    draft = ScheduleDraft(
+        title=title or "(제목 미정)",
+        category=category,
+        date=date_value,
+        start_time=start_time,
+        end_time=end_time,
+        location=None,
+        memo=None,
+        priority=priority,
+        source="ai",
+    )
+
+    return ScheduleParseData(
+        intent=intent,
+        confidence=confidence,
+        slots=slots,
+        schedule_draft=draft,
+        missing_fields=missing,
+    )

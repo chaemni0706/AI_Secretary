@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "message": "Backend server is running",
+  "data": {
+    "status": "ok",
+    "service": "AI Secretary Backend"
+  }
+}

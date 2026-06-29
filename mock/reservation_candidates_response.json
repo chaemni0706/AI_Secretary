@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "message": "예약 가능한 후보 시간을 찾았습니다.",
+  "data": {
+    "target_date": "2026-07-03",
+    "recommended_candidates": [
+      {
+        "candidate_id": "cand_001",
+        "start_time": "19:00",
+        "end_time": "20:00",
+        "score": 92,
+        "reason": "기존 일정 사이에 있으며 예약 소요 시간 60분을 만족합니다.",
+        "conflict": false
+      }
+    ],
+    "rejected_slots": [
+      {
+        "start_time": "18:00",
+        "end_time": "19:00",
+        "reason": "팀플 회의와 시간이 겹칩니다."
+      },
+      {
+        "start_time": "20:00",
+        "end_time": "21:00",
+        "reason": "저녁 약속과 시간이 겹칩니다."
+      }
+    ]
+  }
+}

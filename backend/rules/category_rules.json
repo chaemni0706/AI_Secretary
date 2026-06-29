@@ -1,0 +1,13 @@
+{
+  "default": "etc",
+  "rules": [
+    { "category": "hospital",   "keywords": ["병원", "진료", "치과", "검진", "내과", "치료"] },
+    { "category": "meeting",    "keywords": ["회의", "미팅", "팀플", "팀 회의", "회식 미팅"] },
+    { "category": "school",     "keywords": ["수업", "학교", "강의", "등교", "수강"] },
+    { "category": "study",      "keywords": ["과제", "공부", "시험", "마감", "스터디", "레포트"] },
+    { "category": "beauty",     "keywords": ["미용실", "커트", "네일", "파마", "염색", "헤어"] },
+    { "category": "restaurant", "keywords": ["식당", "밥", "외식", "맛집", "회식", "디너", "런치"] },
+    { "category": "exercise",   "keywords": ["운동", "헬스", "필라테스", "요가", "러닝", "수영", "PT"] },
+    { "category": "personal",   "keywords": ["친구", "약속", "데이트", "모임", "만남"] }
+  ]
+}

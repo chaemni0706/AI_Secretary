@@ -130,17 +130,26 @@ def _build_notifications(
 
     # 2) the departure (leave-time) reminder wins on any time collision
     if style.get("notify_at_leave", True):
-        by_time[leave_min] = f"지금 출발하면 {title} 시간에 맞출 수 있습니다."
+        by_time[leave_min] = f"{_to_hhmm(leave_min)}에 출발하면 {title} 시간에 맞출 수 있습니다."
 
-    # 3) late-prone users get an extra nudge shortly before leaving.
-    #    The schema exposes "forgetful" as the late-prone signal; an explicit
-    #    "late_prone" preference is honored too when present.
-    late_prone = bool(getattr(pref, "late_prone", False)) or pref.forgetful
-    if late_prone:
-        extra = rules.get("late_prone_minutes_before_leave", 10)
+    # 3) forgetful: stronger PRE-START reminders (escalated above) plus one
+    #    extra pre-departure nudge. Preserves prior forgetful behavior.
+    if pref.forgetful:
+        extra = rules.get("forgetful_extra_minutes_before_leave", 10)
         t = leave_min - extra
         if t >= 0 and t not in by_time:
             by_time[t] = f"곧 출발해야 합니다. {phrase} 다시 한 번 확인하세요."
+
+    # 4) late_prone: DEPARTURE reminders that are earlier and more frequent.
+    #    Distinct meaning from forgetful (which strengthens pre-start reminders).
+    if getattr(pref, "late_prone", False):
+        offsets = rules.get("late_prone_minutes_before_leave", [20, 10])
+        if isinstance(offsets, int):
+            offsets = [offsets]
+        for off in sorted(set(offsets), reverse=True):
+            t = leave_min - off
+            if t >= 0 and t not in by_time:
+                by_time[t] = f"출발 {off}분 전입니다. {phrase} 미리 챙기고 일찍 나설 준비를 하세요."
 
     # naturally ordered by time
     return [

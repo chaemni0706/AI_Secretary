@@ -143,3 +143,139 @@ def test_invalid_start_time_is_safe(client):
     assert data["leave_time"] is None
     assert data["notifications"] == []
     assert len(data["checklist"]) >= 1                 # checklist still built
+
+
+# --------------------------------------------------------------------------- #
+# Stage 3 — checklist coverage / leave-time / robustness / sort
+# (case1 병원+비, case3 exercise+hot dedup are already locked above.)
+# --------------------------------------------------------------------------- #
+def test_meeting_checklist(client):
+    items = _items(_post(client, category="meeting", title="팀 회의")["data"])
+    assert {"노트북", "회의자료", "충전기"}.issubset(set(items))
+
+
+def test_school_checklist(client):
+    items = _items(_post(client, category="school", title="오전 수업")["data"])
+    assert {"노트북", "교재", "필기구"}.issubset(set(items))
+
+
+def test_exercise_checklist_full(client):
+    items = _items(_post(client, category="exercise", title="헬스")["data"])
+    assert {"운동복", "물", "수건"}.issubset(set(items))
+
+
+def test_snow_and_cold_weather_items(client):
+    snow = _items(_post(client, category="etc", weather="snow")["data"])
+    assert "외투" in snow and "장갑" in snow            # 따뜻한 옷 계열
+    cold = _items(_post(client, category="etc", weather="cold")["data"])
+    assert "외투" in cold and "장갑" in cold
+
+
+def test_leave_time_calculation_14_to_1320(client):
+    data = _post(client, start="14:00", travel=30, buffer=10)["data"]
+    assert data["leave_time"] == "13:20"               # 14:00 - 30 - 10
+
+
+def _post_ctx(client, ctx):
+    r = client.post(PATH, json={
+        "schedule": {"title": "병원 예약", "category": "hospital", "start_time": "14:00"},
+        "context": ctx, "user_preference": {},
+    })
+    assert r.status_code == 200
+    return r.json()["data"]
+
+
+def test_travel_minutes_default_used_when_omitted(client):
+    data = _post_ctx(client, {"buffer_minutes": 10})    # travel default 0
+    assert data["leave_time"] == "13:50"               # 14:00 - 0 - 10
+
+
+def test_buffer_minutes_default_used_when_omitted(client):
+    data = _post_ctx(client, {"estimated_travel_minutes": 30})  # buffer default 0
+    assert data["leave_time"] == "13:30"               # 14:00 - 30 - 0
+
+
+def test_huge_travel_minutes_is_safe(client):
+    data = _post(client, start="14:00", travel=5000, buffer=0)["data"]
+    assert data["leave_time"] == "00:00"               # clamped, no error
+    assert len(data["notifications"]) >= 1
+    assert all(n["message"] for n in data["notifications"])   # no empty messages
+
+
+def test_checklist_has_no_duplicate_items(client):
+    items = _items(_post(client, category="exercise", weather="hot")["data"])
+    assert len(items) == len(set(items))               # 물(base) + 물(hot) -> 1
+
+
+def test_notifications_are_time_sorted(client):
+    for style, forgetful in (("strong", True), ("normal", False)):
+        data = _post(client, style=style, forgetful=forgetful,
+                     start="14:00", travel=35, buffer=10)["data"]
+        times = [n["time"] for n in data["notifications"]]
+        assert times == sorted(times)
+
+
+# --------------------------------------------------------------------------- #
+# Stage 3-1 — late_prone preference (A-plan: optional, additive, default False)
+# --------------------------------------------------------------------------- #
+def _post_pref(client, pref):
+    r = client.post(PATH, json={
+        "schedule": {"title": "병원 예약", "category": "hospital", "start_time": "14:00"},
+        "context": {"estimated_travel_minutes": 35, "buffer_minutes": 10},
+        "user_preference": pref,
+    })
+    assert r.status_code == 200
+    return r.json()["data"]
+
+
+def test_late_prone_adds_pre_departure_reminder(client):
+    base = _post_pref(client, {"notification_style": "normal"})
+    late = _post_pref(client, {"notification_style": "normal", "late_prone": True})
+    base_times = [n["time"] for n in base["notifications"]]
+    late_times = [n["time"] for n in late["notifications"]]
+    assert base_times == ["13:15", "13:30"]            # no extra without late_prone
+    assert "13:05" in late_times                       # leave(13:15) - 10
+    assert late_times == sorted(late_times)
+
+
+def test_late_prone_default_false_is_backward_compatible(client):
+    # omitting late_prone behaves exactly like before
+    omitted = _post_pref(client, {"notification_style": "normal"})
+    explicit_false = _post_pref(client, {"notification_style": "normal", "late_prone": False})
+    assert [n["time"] for n in omitted["notifications"]] == \
+           [n["time"] for n in explicit_false["notifications"]]
+
+
+# --------------------------------------------------------------------------- #
+# Stage 3-2 — late_prone fully separated from forgetful
+# --------------------------------------------------------------------------- #
+def _times_leq(notifs, hhmm):
+    limit = int(hhmm[:2]) * 60 + int(hhmm[3:])
+    return [n["time"] for n in notifs
+            if int(n["time"][:2]) * 60 + int(n["time"][3:]) <= limit]
+
+
+def test_late_prone_passes_schema_validation(client):
+    data = _post_pref(client, {"notification_style": "normal", "late_prone": True})
+    assert data["leave_time"] == "13:15"               # request accepted, computed
+    assert data["notifications"]
+
+
+def test_late_prone_has_more_and_earlier_departure_reminders(client):
+    normal = _post_pref(client, {"notification_style": "normal"})["notifications"]
+    late = _post_pref(client, {"notification_style": "normal", "late_prone": True})["notifications"]
+    # more reminders at/before the leave time
+    assert len(_times_leq(late, "13:15")) > len(_times_leq(normal, "13:15"))
+    # and an earlier first reminder
+    assert min(n["time"] for n in late) < min(n["time"] for n in normal)
+    assert [n["time"] for n in late] == sorted(n["time"] for n in late)
+
+
+def test_forgetful_and_late_prone_are_distinct(client):
+    forgetful = [n["time"] for n in
+                 _post_pref(client, {"notification_style": "normal", "forgetful": True})["notifications"]]
+    late = [n["time"] for n in
+            _post_pref(client, {"notification_style": "normal", "late_prone": True})["notifications"]]
+    assert forgetful != late
+    assert "13:00" in forgetful and "13:00" not in late   # forgetful: extra pre-start (60m)
+    assert "12:55" in late and "12:55" not in forgetful   # late_prone: earlier departure (20m)

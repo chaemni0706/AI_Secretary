@@ -24,6 +24,9 @@ class AlertContext(BaseModel):
 class UserPreference(BaseModel):
     notification_style: str = Field("normal", description="normal | strong")
     forgetful: bool = False
+    late_prone: bool = Field(
+        False, description="지각 성향: True면 출발 시각 N분 전 추가 알림(선택, 기본 False)"
+    )
 
 
 class ChecklistItem(BaseModel):
@@ -56,7 +59,7 @@ class DeparturePlanRequest(BaseModel):
                     "estimated_travel_minutes": 35,
                     "buffer_minutes": 10,
                 },
-                "user_preference": {"notification_style": "strong", "forgetful": True},
+                "user_preference": {"notification_style": "strong", "forgetful": True, "late_prone": True},
             }
         }
     )

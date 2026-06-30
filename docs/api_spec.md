@@ -138,7 +138,7 @@ Request:
 {
   "schedule": {"title": "병원 예약", "category": "hospital", "date": "2026-06-30", "start_time": "14:00", "location": "서울OO병원"},
   "context": {"weather": "rain", "estimated_travel_minutes": 35, "buffer_minutes": 10},
-  "user_preference": {"notification_style": "strong", "forgetful": true}
+  "user_preference": {"notification_style": "strong", "forgetful": true, "late_prone": true}
 }
 ```
 
@@ -157,15 +157,15 @@ Response `data`:
   "notifications": [
     {"time": "13:00", "message": "병원 예약 준비를 시작할 시간입니다. 신분증과 진료카드를 미리 챙겨두세요."},
     {"time": "13:05", "message": "곧 출발해야 합니다. 신분증과 진료카드를 다시 한 번 확인하세요."},
-    {"time": "13:15", "message": "지금 출발하면 병원 예약 시간에 맞출 수 있습니다."},
+    {"time": "13:15", "message": "13:15에 출발하면 병원 예약 시간에 맞출 수 있습니다."},
     {"time": "13:30", "message": "병원 예약 시간이 다가옵니다. 신분증과 진료카드를 챙기고 출발을 준비하세요."}
   ]
 }
 ```
 
 - `leave_time = start_time − estimated_travel_minutes − buffer_minutes`. 잘못된 start_time이면 `leave_time: null`, `notifications: []`.
-- weather: rain(우산)/snow(장갑)/hot(물)/cold(외투)/sunny(추가 없음). 중복 준비물은 1개로.
-- 알림: strong 또는 forgetful → 일정 60·30분 전 + 출발 시각, normal → 30분 전 + 출발 시각. forgetful은 출발 10분 전 추가. 중복 시각은 1개, 시각 오름차순.
+- weather: rain(우산)/snow(우산·외투·장갑)/hot(물·선크림)/cold(외투·장갑)/sunny(추가 없음). 중복 준비물은 1개로.
+- 알림: normal → 일정 30분 전 + 출발 시각. strong/forgetful → 일정 60·30분 전 + 출발 시각(사전 알림 강화), forgetful은 출발 10분 전 1회 추가. late_prone(선택, 기본 false) → 출발 20·10분 전 추가(출발 알림을 더 이르고 잦게). forgetful=사전 알림 강화, late_prone=출발 알림 강화로 의미가 분리됨. 중복 시각은 1개, 시각 오름차순.
 
 ---
 

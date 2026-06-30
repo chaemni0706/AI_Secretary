@@ -1,0 +1,143 @@
+// AI Secretary - On-device Source of Truth
+// Target: Flutter Drift / SQLite
+
+Table users {
+  user_id text [pk]
+  display_name text
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table user_settings {
+  user_id text [pk]
+  timezone text [not null, default: 'Asia/Seoul']
+  locale text [not null, default: 'ko-KR']
+  default_reminder_minutes integer
+  preferred_briefing_time text
+  notification_persona text
+  memory_enabled integer [not null, default: 1]
+  emotion_coaching_enabled integer [not null, default: 0]
+  sensitive_data_consent integer [not null, default: 0]
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table calendars {
+  calendar_id text [pk]
+  user_id text [not null]
+  name text [not null]
+  is_primary integer [not null, default: 0]
+  is_visible integer [not null, default: 1]
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table planner_items {
+  item_id text [pk]
+  user_id text [not null]
+  item_type text [not null, note: 'EVENT or TODO']
+  title text [not null]
+  description text
+  category text
+  status text [not null]
+  priority text [not null, default: 'MEDIUM']
+  source_type text [not null, default: 'MANUAL']
+  sort_at text
+  created_at text [not null]
+  updated_at text [not null]
+  deleted_at text
+}
+
+Table event_details {
+  item_id text [pk]
+  calendar_id text [not null]
+  start_at text [not null]
+  end_at text
+  is_all_day integer [not null, default: 0]
+  location_text text
+  travel_time_minutes integer
+  external_event_id text
+}
+
+Table todo_details {
+  item_id text [pk]
+  due_at text
+  planned_date text
+  estimated_minutes integer
+  started_at text
+  completed_at text
+}
+
+Table reminders {
+  reminder_id text [pk]
+  item_id text [not null]
+  reminder_type text [not null]
+  trigger_at text [not null]
+  channel text [not null, default: 'LOCAL_NOTIFICATION']
+  message_text text
+  context_json text
+  status text [not null, default: 'SCHEDULED']
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table user_memories {
+  memory_id text [pk]
+  user_id text [not null]
+  memory_type text [not null]
+  memory_key text [not null]
+  memory_value_masked text [not null]
+  tags_json text
+  importance real
+  confidence real
+  is_active integer [not null, default: 1]
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table emotion_logs {
+  emotion_log_id text [pk]
+  user_id text [not null]
+  source_text_masked text
+  primary_emotion text
+  confidence real
+  consent_snapshot integer [not null]
+  recorded_at text [not null]
+  created_at text [not null]
+}
+
+Table briefings {
+  briefing_id text [pk]
+  user_id text [not null]
+  briefing_type text [not null]
+  content_text text [not null]
+  context_snapshot_json text
+  delivery_channel text [not null]
+  status text [not null]
+  generated_at text [not null]
+}
+
+Table ai_local_requests {
+  request_id text [pk]
+  user_id text [not null]
+  input_mode text [not null]
+  input_text_masked text
+  intent text
+  processing_route text [not null]
+  confidence real
+  result_json text
+  status text [not null]
+  created_at text [not null]
+}
+
+Ref: users.user_id - user_settings.user_id
+Ref: calendars.user_id > users.user_id
+Ref: planner_items.user_id > users.user_id
+Ref: planner_items.item_id - event_details.item_id
+Ref: event_details.calendar_id > calendars.calendar_id
+Ref: planner_items.item_id - todo_details.item_id
+Ref: reminders.item_id > planner_items.item_id
+Ref: user_memories.user_id > users.user_id
+Ref: emotion_logs.user_id > users.user_id
+Ref: briefings.user_id > users.user_id
+Ref: ai_local_requests.user_id > users.user_id

@@ -49,3 +49,5 @@ rag/vector_db/
 *.pth
 *.onnx
 *.tflite
+runtime/
+*.sqlite

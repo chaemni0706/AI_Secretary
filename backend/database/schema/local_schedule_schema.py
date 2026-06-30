@@ -54,3 +54,21 @@ class ScheduleRead(BaseModel):
     travel_time_minutes: Optional[int] = None
     created_at: str
     updated_at: str
+
+
+class ScheduleDraftInput(BaseModel):
+    """Mirror of /ai/schedule/parse -> data.schedule_draft (paste-through)."""
+    title: Optional[str] = None
+    category: Optional[str] = None
+    date: Optional[str] = Field(None, description="'YYYY-MM-DD'")
+    start_time: Optional[str] = Field(None, description="'HH:mm' (없으면 종일 일정)")
+    end_time: Optional[str] = Field(None, description="'HH:mm'")
+    location: Optional[str] = None
+    memo: Optional[str] = None
+    priority: str = "medium"
+    source: str = "ai"
+
+
+class ScheduleFromDraftRequest(BaseModel):
+    schedule_draft: ScheduleDraftInput
+    intent: Optional[str] = Field(None, description="parse 응답의 intent (선택, 미사용 가능)")

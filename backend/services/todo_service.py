@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from backend.database import repository as repo
 from backend.database.models import TodoDetail
 from backend.database.schema.todo_schema import TodoCreate, TodoRead, TodoUpdate
+from backend.database.schema.local_schedule_schema import ScheduleDraftInput
 from backend.services import planner_mapping as pm
 
 
@@ -106,3 +107,18 @@ def delete_todo(db: Session, item_id: str) -> bool:
     ok = repo.soft_delete_planner_item(db, item_id)
     db.commit()
     return ok
+
+
+def create_todo_from_draft(
+    db: Session, draft: ScheduleDraftInput, *, user_id: str
+) -> TodoRead:
+    """Persist a parse draft as a TODO. Requires title; date maps to due_date
+    (optional). Created as not-completed."""
+    if not draft.title or not draft.title.strip():
+        raise ValueError("title이 없어 To-do를 저장할 수 없습니다.")
+    payload = TodoCreate(
+        title=draft.title, due_date=draft.date, priority=draft.priority,
+        completed=False, category=draft.category, memo=draft.memo,
+        source=draft.source,
+    )
+    return create_todo(db, payload, user_id=user_id)

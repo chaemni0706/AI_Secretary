@@ -7,6 +7,7 @@ a 500; it degrades to a sensible default instead.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -78,3 +79,11 @@ def time_from_dt(dt: Optional[str]) -> Optional[str]:
     if not dt or len(dt) < 16 or "T" not in dt:
         return None
     return dt[11:16]
+
+
+_HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d$")
+
+
+def valid_hhmm(value: Optional[str]) -> bool:
+    """True if value is a valid 'HH:mm' (00:00-23:59)."""
+    return bool(value) and bool(_HHMM_RE.match(value))

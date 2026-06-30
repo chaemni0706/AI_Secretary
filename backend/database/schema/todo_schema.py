@@ -10,6 +10,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from backend.database.schema.local_schedule_schema import ScheduleDraftInput
+
 
 class TodoCreate(BaseModel):
     title: str
@@ -43,3 +45,8 @@ class TodoRead(BaseModel):
     source: str
     created_at: str
     updated_at: str
+
+
+class TodoFromDraftRequest(BaseModel):
+    schedule_draft: ScheduleDraftInput
+    intent: Optional[str] = Field(None, description="parse 응답의 intent (예: create_todo)")

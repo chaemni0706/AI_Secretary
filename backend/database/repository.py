@@ -14,7 +14,7 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.database.models import EventDetail, PlannerItem, TodoDetail
+from backend.database.models import Calendar, EventDetail, PlannerItem, TodoDetail, User
 from backend.services.planner_mapping import now_iso
 
 
@@ -172,3 +172,25 @@ def list_todos_by_due_date(db: Session, *, user_id: str, due_date: str) -> List[
         .order_by(PlannerItem.created_at)
     )
     return list(db.execute(stmt).scalars().all())
+
+
+# --- default owner bootstrap (no auth yet) ----------------------------------
+DEFAULT_USER_ID = "local-user"
+DEFAULT_CALENDAR_ID = "local-primary"
+
+
+def ensure_default_owner(db: Session) -> tuple[str, str]:
+    """Idempotently ensure a default user + primary calendar exist, so EVENT
+    creation (which has FKs to users/calendars) works before auth is added.
+    Returns (user_id, calendar_id)."""
+    if db.get(User, DEFAULT_USER_ID) is None:
+        ts = now_iso()
+        db.add(User(user_id=DEFAULT_USER_ID, display_name="Local User",
+                    created_at=ts, updated_at=ts))
+        db.commit()
+    if db.get(Calendar, DEFAULT_CALENDAR_ID) is None:
+        ts = now_iso()
+        db.add(Calendar(calendar_id=DEFAULT_CALENDAR_ID, user_id=DEFAULT_USER_ID,
+                        name="기본 캘린더", is_primary=1, created_at=ts, updated_at=ts))
+        db.commit()
+    return DEFAULT_USER_ID, DEFAULT_CALENDAR_ID

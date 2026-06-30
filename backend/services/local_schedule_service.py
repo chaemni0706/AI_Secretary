@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from backend.database import repository as repo
 from backend.database.schema.local_schedule_schema import (
     ScheduleCreate,
+    ScheduleDraftInput,
     ScheduleRead,
     ScheduleUpdate,
 )
@@ -128,3 +129,41 @@ def delete_schedule(db: Session, item_id: str) -> bool:
     ok = repo.soft_delete_planner_item(db, item_id)
     db.commit()
     return ok
+
+
+def create_schedule_from_draft(
+    db: Session, draft: ScheduleDraftInput, *, user_id: str, calendar_id: str
+) -> ScheduleRead:
+    """Persist a parse `schedule_draft` as an EVENT.
+
+    Requires title + date. Missing start_time -> all-day event (start_at at
+    00:00, is_all_day=1). Invalid time format raises ValueError (router -> 422).
+    """
+    if not draft.title or not draft.title.strip():
+        raise ValueError("title이 없어 일정을 저장할 수 없습니다.")
+    if not draft.date:
+        raise ValueError("date가 없어 일정을 저장할 수 없습니다.")
+    if draft.start_time is not None and not pm.valid_hhmm(draft.start_time):
+        raise ValueError("start_time 포맷이 올바르지 않습니다 (HH:mm).")
+    if draft.end_time is not None and not pm.valid_hhmm(draft.end_time):
+        raise ValueError("end_time 포맷이 올바르지 않습니다 (HH:mm).")
+
+    item_id = uuid.uuid4().hex
+    is_all_day = 1 if draft.start_time is None else 0
+    start_time = draft.start_time or "00:00"
+
+    item = repo.create_planner_item(
+        db, item_id=item_id, user_id=user_id, item_type="EVENT",
+        title=draft.title, description=draft.memo, category=draft.category,
+        status="SCHEDULED", priority=pm.priority_to_db(draft.priority),
+        source_type=pm.source_to_db(draft.source),
+    )
+    repo.create_event_detail(
+        db, item_id=item_id, calendar_id=calendar_id,
+        start_at=pm.combine_date_time(draft.date, start_time),
+        end_at=pm.combine_date_time(draft.date, draft.end_time),
+        is_all_day=is_all_day, location_text=draft.location,
+    )
+    db.commit()
+    db.refresh(item)
+    return _to_read(item)

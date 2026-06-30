@@ -9,9 +9,8 @@ class TodoScreen extends StatefulWidget {
   State<TodoScreen> createState() => _TodoScreenState();
 }
 
-class _TodoScreenState extends State<TodoScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _TodoScreenState extends State<TodoScreen> {
+  int _tabIndex = 0;
 
   static const _todayTodos = [
     _TodoItem(
@@ -92,18 +91,6 @@ class _TodoScreenState extends State<TodoScreen>
   int _expandedIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: AppTheme.screenBackground,
@@ -114,12 +101,53 @@ class _TodoScreenState extends State<TodoScreen>
             _buildTabBar(),
             _buildProgressCard(),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
+              child: Stack(
                 children: [
-                  _buildTodoList(_todayTodos, showExpand: true),
-                  _buildUpcomingList(),
-                  _buildTodoList(_doneTodos, isDoneTab: true),
+                  IndexedStack(
+                    index: _tabIndex,
+                    children: [
+                      _buildTodoList(_todayTodos, showExpand: true),
+                      _buildUpcomingList(),
+                      _buildTodoList(_doneTodos, isDoneTab: true),
+                    ],
+                  ),
+                  // 고정 하단 버튼
+                  Positioned(
+                    left: 16, right: 16, bottom: 16,
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        decoration: BoxDecoration(
+                          color: AppTheme.blue,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.blue.withOpacity(0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add, color: Colors.white, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              '할 일 추가',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -174,39 +202,45 @@ class _TodoScreenState extends State<TodoScreen>
   }
 
   Widget _buildTabBar() {
+    final labels = ['오늘 4', '예정 7', '완료 12'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.separator.withOpacity(0.6)),
         ),
-        child: TabBar(
-          controller: _tabController,
-          indicator: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.07),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          children: List.generate(labels.length, (i) {
+            final isActive = i == _tabIndex;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _tabIndex = i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: isActive
+                        ? [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 6, offset: const Offset(0, 2))]
+                        : null,
+                  ),
+                  child: Text(
+                    labels[i],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                      color: isActive ? AppTheme.textPrimary : AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
-          indicatorPadding: const EdgeInsets.all(3),
-          dividerColor: Colors.transparent,
-          labelColor: AppTheme.textPrimary,
-          unselectedLabelColor: AppTheme.textSecondary,
-          labelStyle: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: const [
-            Tab(text: '오늘 4'),
-            Tab(text: '예정 7'),
-            Tab(text: '완료 12'),
-          ],
+            );
+          }),
         ),
       ),
     );

@@ -48,7 +48,7 @@ class MenuScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.75),
+          color: const Color(0xFFEEEFF5),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.separator),
           boxShadow: [
@@ -129,7 +129,7 @@ class MenuScreen extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 1.5,
+            childAspectRatio: 2.2,
             children: items
                 .map((item) => _MenuCard(item: item))
                 .toList(),
@@ -310,40 +310,29 @@ class _MenuCard extends StatelessWidget {
     return GestureDetector(
       onTap: item.onTap,
       child: GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: item.color.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(item.icon, color: item.color, size: 20),
+              child: Icon(item.icon, color: item.color, size: 18),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(item.subtitle, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+                ],
+              ),
             ),
           ],
         ),

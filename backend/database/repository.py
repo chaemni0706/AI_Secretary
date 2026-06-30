@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.database.models import (
-    Calendar, EventDetail, PlannerItem, TodoDetail, User, UserMemory,
+    Calendar, EventDetail, PlannerItem, Reminder, TodoDetail, User, UserMemory,
 )
 from backend.services.planner_mapping import now_iso
 
@@ -240,3 +240,28 @@ def upsert_memory(
         row.updated_at = ts
     db.flush()
     return row
+
+
+# --- reminders (computed notification plan persistence) ---------------------
+def replace_reminders_for_item(db: Session, *, item_id: str, reminders: List[dict]) -> int:
+    """Delete existing reminders for an item and insert the given ones.
+
+    Each dict: {reminder_type, trigger_at, message_text}. Returns count saved.
+    Caller owns the commit.
+    """
+    db.query(Reminder).filter(Reminder.item_id == item_id).delete()
+    db.flush()
+    ts = now_iso()
+    for r in reminders:
+        db.add(Reminder(
+            reminder_id=uuid.uuid4().hex, item_id=item_id,
+            reminder_type=r["reminder_type"], trigger_at=r["trigger_at"],
+            channel="LOCAL_NOTIFICATION", message_text=r.get("message_text"),
+            status="SCHEDULED", created_at=ts, updated_at=ts,
+        ))
+    db.flush()
+    return len(reminders)
+
+
+def list_reminders_for_item(db: Session, item_id: str) -> List[Reminder]:
+    return list(db.query(Reminder).filter(Reminder.item_id == item_id).all())

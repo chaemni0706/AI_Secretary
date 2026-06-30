@@ -112,6 +112,11 @@ def get_user_context(db: Session, user_id: str) -> dict:
     }
 
 
+def to_alert_preference(notification_preference: str) -> dict:
+    """Public: map a single notification_preference to alert UserPreference fields."""
+    return _to_alert_preference(notification_preference)
+
+
 def _to_alert_preference(np: str) -> dict:
     table = {
         "normal": {"notification_style": "normal", "forgetful": False, "late_prone": False},

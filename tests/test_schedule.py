@@ -335,3 +335,14 @@ def test_duration_case_keeps_real_time_and_clean_title(client):
     assert d["slots"]["start_time"] == "10:00"         # real clock time kept
     assert d["slots"]["title"] == "회의"               # duration phrase removed
     assert d["missing_fields"] == []
+
+
+def test_today_evening_friend_appointment_clean_title(client):
+    # "오늘 저녁 7시에 친구랑 약속" -> personal, 저녁 7시=19:00, clean title (no 예약/일정 leftover)
+    d = _parse(client, "오늘 저녁 7시에 친구랑 약속")
+    assert d["slots"]["date"] == "2026-06-29"          # 오늘
+    assert d["slots"]["start_time"] == "19:00"
+    assert d["slots"]["category"] == "personal"
+    assert d["schedule_draft"]["priority"] == "medium"
+    assert "약속" in d["slots"]["title"]
+    assert "예약" not in (d["slots"]["title"] or "")

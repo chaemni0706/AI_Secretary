@@ -77,3 +77,30 @@ class ReservationCandidateResponse(BaseModel):
     success: bool = True
     message: str = "OK"
     data: Optional[ReservationCandidateData] = None
+
+
+class ReservationFromStoreRequest(BaseModel):
+    """Recommend candidates using the user's SAVED schedules as busy intervals."""
+    target_date: str = Field(..., description="'YYYY-MM-DD'")
+    duration_minutes: int = 60
+    preferred_start_time: str = Field("09:00", description="'HH:mm' 창 시작")
+    preferred_end_time: str = Field("21:00", description="'HH:mm' 창 끝")
+    category: Optional[str] = None
+    user_id: Optional[str] = Field(None, description="선호(메모리) 조회용")
+    apply_preference_buffer: bool = Field(
+        False, description="True면 user 메모리의 default_buffer_minutes만큼 기존 일정 앞뒤를 비움"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "target_date": "2026-07-03",
+                "duration_minutes": 60,
+                "preferred_start_time": "13:00",
+                "preferred_end_time": "18:00",
+                "category": "beauty",
+                "user_id": "local-user",
+                "apply_preference_buffer": False,
+            }
+        }
+    )

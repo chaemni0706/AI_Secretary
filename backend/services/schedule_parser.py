@@ -30,7 +30,7 @@ _VERB_TAILS = sorted(
     [
         "잡아줘", "잡아 줘", "추가해줘", "추가 해줘", "넣어줘", "넣어 줘",
         "알림해줘", "알림 해줘", "알려줘", "등록해줘", "만들어줘", "예약해줘",
-        "해줘", "해 줘", "있어", "줘", "좀", "해주세요", "주세요",
+        "해줘", "해 줘", "있어", "줘", "좀", "해주세요", "주세요", "잡고",
     ],
     key=len,
     reverse=True,
@@ -38,10 +38,14 @@ _VERB_TAILS = sorted(
 
 # Generic filler nouns that are just noise when they trail a title
 # (e.g. "운동 일정" -> "운동"). Kept separate from the command endings above.
-_NOISE_NOUNS = ["일정", "스케줄"]
+_NOISE_NOUNS = ["일정", "스케줄", "예약"]
 
 # Combined trailing tokens stripped from a title, longest first.
 _TITLE_TAILS = sorted(_VERB_TAILS + _NOISE_NOUNS, key=len, reverse=True)
+
+# Filler tokens dropped when they LEAD a title:
+#   "예약 진료" -> "진료", "동안 회의" -> "회의", "더 회의" -> "회의".
+_LEADING_NOISE = ("예약", "일정", "스케줄", "더", "동안")
 
 # Duration expressions ("3시간", "1시간 30분", "30분") with an optional trailing
 # 짜리/동안/만. These are NOT clock times (start_time parsing already ignores
@@ -196,9 +200,16 @@ def _extract_title(text: str, date_expr: Optional[str], time_expr: Optional[str]
     changed = True
     while changed and work:
         changed = False
-        for v in _TITLE_TAILS:
+        for v in _TITLE_TAILS:                 # trailing command verbs / 일정·스케줄·예약
             if work.endswith(v):
                 work = work[: -len(v)].strip()
+                changed = True
+                break
+        if changed:
+            continue
+        for w in _LEADING_NOISE:               # leading filler tokens
+            if work == w or work.startswith(w + " "):
+                work = work[len(w):].strip()
                 changed = True
                 break
     return work.strip()

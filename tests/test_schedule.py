@@ -254,3 +254,84 @@ def test_duration_suffix_does_not_eat_words(client):
     data = _parse(client, "30분 만남 추가해줘")
     assert data["slots"]["title"] == "만남"
     assert data["slots"]["category"] == "personal"
+
+
+# --------------------------------------------------------------------------- #
+# Stage 1 — title cleanup & policy regression
+# --------------------------------------------------------------------------- #
+def test_reservation_word_not_left_in_title(client):
+    d1 = _parse(client, "내일 오후 2시 병원 예약")
+    assert d1["slots"]["title"] == "병원"
+    assert d1["slots"]["category"] == "hospital"
+    assert d1["slots"]["start_time"] == "14:00"
+
+    d2 = _parse(client, "다음 주 화요일 치과 예약")
+    assert d2["slots"]["title"] == "치과"
+    assert d2["slots"]["category"] == "hospital"
+
+    d3 = _parse(client, "예약 진료 잡아줘")
+    assert d3["slots"]["title"] == "진료"            # leading "예약" dropped
+    assert "예약" not in (d3["slots"]["title"] or "")
+    assert d3["slots"]["category"] == "hospital"
+
+
+def test_duration_leftover_tokens_cleaned_from_title(client):
+    assert _parse(client, "내일 오후 2시 30분 동안 회의")["slots"]["title"] == "회의"
+    assert _parse(client, "내일 오전 10시 1시간 30분짜리 회의")["slots"]["title"] == "회의"
+    assert _parse(client, "오늘 5분 더 회의 잡고")["slots"]["title"] == "회의"
+
+
+def test_bare_hour_keeps_ambiguity_policy(client):
+    d = _parse(client, "3시에 약속")
+    assert "time_ambiguity" in d["missing_fields"]
+    assert d["slots"]["start_time"] == "15:00"        # afternoon-default policy
+
+
+def test_duration_phrase_not_mistaken_for_time(client):
+    d = _parse(client, "3시간 회의")
+    assert d["slots"]["start_time"] not in ("03:00", "15:00")
+    assert d["slots"]["start_time"] is None
+    assert "time" in d["missing_fields"]
+
+
+def test_general_reservation_stays_medium_priority(client):
+    d = _parse(client, "이번 주 토요일 1시에 미용실 예약")
+    assert d["slots"]["category"] == "beauty"
+    assert d["schedule_draft"]["priority"] == "medium"   # NOT high
+    assert d["slots"]["title"] == "미용실"
+
+
+def test_month_day_rolls_over_to_next_year(client):
+    # NOW is 2026-06-29; "1월 5일" already passed this year -> next year.
+    d = _parse(client, "1월 5일 회의")
+    assert d["slots"]["date"] == "2027-01-05"
+    assert d["slots"]["category"] == "meeting"
+
+
+# --------------------------------------------------------------------------- #
+# Stage 1-1 — additional regression locks
+# (cases "병원 예약", "미용실 예약", "3시에 약속", "3시간 회의" are already
+#  locked above; these add the not-yet-asserted points.)
+# --------------------------------------------------------------------------- #
+def test_today_report_submit_is_study_high(client):
+    # NOW is a fixed Monday (2026-06-29) via the request's current_datetime,
+    # so this does not depend on the real run date.
+    d = _parse(client, "오늘 안에 보고서 제출")
+    assert d["slots"]["date"] == "2026-06-29"          # 오늘
+    assert d["slots"]["category"] == "study"           # '보고서' -> study
+    assert d["schedule_draft"]["priority"] == "high"   # '제출' high keyword
+
+
+def test_next_week_weekday_date_value(client):
+    # next Tuesday after Monday 2026-06-29 -> 2026-07-07
+    d = _parse(client, "다음 주 화요일 치과 예약")
+    assert d["slots"]["date"] == "2026-07-07"
+    assert d["slots"]["category"] == "hospital"        # 치과 -> hospital (medical)
+    assert d["slots"]["title"] == "치과"
+
+
+def test_duration_case_keeps_real_time_and_clean_title(client):
+    d = _parse(client, "내일 오전 10시 1시간 30분짜리 회의")
+    assert d["slots"]["start_time"] == "10:00"         # real clock time kept
+    assert d["slots"]["title"] == "회의"               # duration phrase removed
+    assert d["missing_fields"] == []

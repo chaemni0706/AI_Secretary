@@ -1,0 +1,4 @@
+* text=auto
+*.py text eol=lf
+*.dart text eol=lf
+.gitattributes text eol=lf

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     DEBUG: bool = True
 
+    # --- Database (local SQLite; no external DB server) ---
+    # Relative sqlite path is anchored to the project root in session.py.
+    DATABASE_URL: str = "sqlite:///runtime/ai_secretary_local.db"
+
     # --- CORS ---
     # Comma-separated list, or "*" to allow all origins (dev default).
     CORS_ORIGINS: str = "*"

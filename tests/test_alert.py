@@ -279,3 +279,46 @@ def test_forgetful_and_late_prone_are_distinct(client):
     assert forgetful != late
     assert "13:00" in forgetful and "13:00" not in late   # forgetful: extra pre-start (60m)
     assert "12:55" in late and "12:55" not in forgetful   # late_prone: earlier departure (20m)
+
+
+# --------------------------------------------------------------------------- #
+# Stage 3 (요구사항 명시 고정) — 기존 테스트를 변경하지 않고 추가로 잠그는 테스트.
+# 핵심 동작은 이미 위에서 검증되지만, 요구사항 항목을 명시적으로 고정한다.
+# --------------------------------------------------------------------------- #
+def test_req1_hospital_rain_full_checklist_no_dup(client):
+    """병원 + 비: 신분증·진료카드·우산이 모두 포함되고 item 중복이 없다."""
+    data = _post(client, category="hospital", weather="rain",
+                 travel=30, buffer=10, start="14:00")["data"]
+    items = _items(data)
+    assert {"신분증", "진료카드", "우산"}.issubset(set(items))
+    assert len(items) == len(set(items))               # item명 기준 중복 없음
+    assert data["leave_time"] == "13:20"               # 14:00 - 30 - 10
+
+
+def test_req_checklist_reason_preserved_after_dedup(client):
+    """카테고리·날씨 규칙 병합/중복 제거 후에도 각 item의 reason이 유지된다."""
+    data = _post(client, category="exercise", weather="hot")["data"]
+    assert data["checklist"]
+    for c in data["checklist"]:
+        assert c["item"]
+        assert c["reason"].strip()                     # reason 정보가 비지 않음
+
+
+def test_req8_message_reflects_leave_time_and_items(client):
+    """알림 메시지에 추천 출발 시각과 준비물이 자연스럽게 반영된다."""
+    data = _post(client, category="hospital", weather="rain",
+                 style="normal", travel=30, buffer=10, start="14:00")["data"]
+    leave = data["leave_time"]                          # "13:20"
+    msgs = [n["message"] for n in data["notifications"]]
+    assert msgs and all(m.strip() for m in msgs)        # 빈 메시지 없음
+    assert any(leave in m for m in msgs)                # 추천 출발 시각 반영
+    first_item = data["checklist"][0]["item"]
+    assert any(first_item in m for m in msgs)           # 준비물 반영
+
+
+def test_req8_huge_travel_messages_not_empty(client):
+    """이동시간 과대 시에도 leave_time/notifications/message가 비정상적으로 비지 않는다."""
+    data = _post(client, start="14:00", travel=10000, buffer=0)["data"]
+    assert data["leave_time"] == "00:00"               # 최소 시각으로 클램프
+    assert data["notifications"]
+    assert all(n["message"].strip() for n in data["notifications"])

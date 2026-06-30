@@ -9,12 +9,15 @@ translation lives in ``planner_mapping`` / the service layer.
 
 from __future__ import annotations
 
+import uuid
 from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.database.models import Calendar, EventDetail, PlannerItem, TodoDetail, User
+from backend.database.models import (
+    Calendar, EventDetail, PlannerItem, TodoDetail, User, UserMemory,
+)
 from backend.services.planner_mapping import now_iso
 
 
@@ -194,3 +197,46 @@ def ensure_default_owner(db: Session) -> tuple[str, str]:
                         name="기본 캘린더", is_primary=1, created_at=ts, updated_at=ts))
         db.commit()
     return DEFAULT_USER_ID, DEFAULT_CALENDAR_ID
+
+
+# --- users / user_memories (personal memory KV store) -----------------------
+def ensure_user(db: Session, user_id: str) -> str:
+    """Create a minimal users row if missing (FK parent for memories)."""
+    if db.get(User, user_id) is None:
+        ts = now_iso()
+        db.add(User(user_id=user_id, display_name=user_id, created_at=ts, updated_at=ts))
+        db.commit()
+    return user_id
+
+
+def get_active_memories(db: Session, user_id: str) -> List[UserMemory]:
+    stmt = select(UserMemory).where(
+        UserMemory.user_id == user_id, UserMemory.is_active == 1
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
+def upsert_memory(
+    db: Session, *, user_id: str, memory_type: str, memory_key: str, value: str
+) -> UserMemory:
+    """Insert or update the active memory row for (user_id, memory_key)."""
+    stmt = select(UserMemory).where(
+        UserMemory.user_id == user_id,
+        UserMemory.memory_key == memory_key,
+        UserMemory.is_active == 1,
+    )
+    row = db.execute(stmt).scalars().first()
+    ts = now_iso()
+    if row is None:
+        row = UserMemory(
+            memory_id=uuid.uuid4().hex, user_id=user_id, memory_type=memory_type,
+            memory_key=memory_key, memory_value_masked=value, is_active=1,
+            created_at=ts, updated_at=ts,
+        )
+        db.add(row)
+    else:
+        row.memory_type = memory_type
+        row.memory_value_masked = value
+        row.updated_at = ts
+    db.flush()
+    return row

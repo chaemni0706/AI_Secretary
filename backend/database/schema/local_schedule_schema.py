@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScheduleCreate(BaseModel):
@@ -24,6 +24,22 @@ class ScheduleCreate(BaseModel):
     source: str = "user"
     travel_time_minutes: Optional[int] = None
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "치과 예약",
+                "date": "2026-07-03",
+                "start_time": "14:00",
+                "end_time": "15:00",
+                "category": "hospital",
+                "priority": "high",
+                "location": "강남역 치과",
+                "memo": "스케일링",
+                "source": "user",
+            }
+        }
+    )
+
 
 class ScheduleUpdate(BaseModel):
     title: Optional[str] = None
@@ -37,6 +53,17 @@ class ScheduleUpdate(BaseModel):
     status: Optional[str] = None
     source: Optional[str] = None
     travel_time_minutes: Optional[int] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "치과 재예약",
+                "start_time": "15:00",
+                "end_time": "16:00",
+                "priority": "high",
+            }
+        }
+    )
 
 
 class ScheduleRead(BaseModel):
@@ -72,3 +99,21 @@ class ScheduleDraftInput(BaseModel):
 class ScheduleFromDraftRequest(BaseModel):
     schedule_draft: ScheduleDraftInput
     intent: Optional[str] = Field(None, description="parse 응답의 intent (선택, 미사용 가능)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "schedule_draft": {
+                    "title": "치과 예약",
+                    "category": "hospital",
+                    "date": "2026-07-03",
+                    "start_time": "14:00",
+                    "end_time": "15:00",
+                    "location": "강남역 치과",
+                    "priority": "high",
+                    "source": "ai",
+                },
+                "intent": "create_schedule",
+            }
+        }
+    )

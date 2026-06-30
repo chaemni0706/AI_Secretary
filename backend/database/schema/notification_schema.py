@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.database.schema.alert_schema import ChecklistItem, NotificationItem
 
@@ -25,6 +25,18 @@ class NotificationPlanRequest(BaseModel):
     )
     include_checklist: bool = True
     persist: bool = Field(False, description="True면 계산된 알림을 reminders 테이블에 저장")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "schedule_id": "저장된 일정 id (POST /local/schedules 응답의 data.id)",
+                "user_id": "local-user",
+                "notification_preference": "forgetful",
+                "include_checklist": True,
+                "persist": True,
+            }
+        }
+    )
 
 
 class NotificationPlanData(BaseModel):

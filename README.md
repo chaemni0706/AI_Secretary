@@ -39,6 +39,9 @@
 ```bash
 pip install -r backend/requirements.txt
 
+# 최초 1회: 로컬 SQLite 스키마 초기화 (runtime/ai_secretary_local.db 생성)
+python scripts/init_local_db.py
+
 # 로컬 실행
 python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
@@ -70,7 +73,7 @@ python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ## 테스트
 
 ```bash
-python -m pytest -v                       # 전체 100개 통과
+python -m pytest -v                       # 전체 256개 통과
 python -m pytest --import-mode=importlib   # import 모드 무관 통과
 ```
 

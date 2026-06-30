@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import repository as repo
 from backend.database.schema.dashboard_schema import (
+    DashboardStats,
     DashboardSummaryData,
     DashboardTodayData,
     HighPriorityItem,
@@ -108,6 +109,10 @@ def get_today(
         date=date, schedules=schedules, todos=todos, next_schedule=nxt,
         total_schedule_count=n_sched, total_todo_count=n_todo,
         completed_todo_count=n_done, todo_completion_rate=rate,
+        stats=DashboardStats(
+            schedule_count=n_sched, todo_count=n_todo,
+            completed_todo_count=n_done, todo_completion_rate=rate,
+        ),
         high_priority_items=high, summary_message=msg,
     )
 
@@ -124,5 +129,9 @@ def get_summary(
     return DashboardSummaryData(
         date=date, total_schedule_count=n_sched, total_todo_count=n_todo,
         completed_todo_count=n_done, todo_completion_rate=rate,
+        stats=DashboardStats(
+            schedule_count=n_sched, todo_count=n_todo,
+            completed_todo_count=n_done, todo_completion_rate=rate,
+        ),
         high_priority_items=high, next_schedule=nxt, summary_message=msg,
     )

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.database.schema.local_schedule_schema import ScheduleDraftInput
 
@@ -22,6 +22,19 @@ class TodoCreate(BaseModel):
     memo: Optional[str] = None
     source: str = "user"
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "자료 정리하기",
+                "due_date": "2026-07-03",
+                "priority": "medium",
+                "completed": False,
+                "category": "study",
+                "source": "user",
+            }
+        }
+    )
+
 
 class TodoUpdate(BaseModel):
     title: Optional[str] = None
@@ -31,6 +44,10 @@ class TodoUpdate(BaseModel):
     category: Optional[str] = None
     memo: Optional[str] = None
     source: Optional[str] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"completed": True}}
+    )
 
 
 class TodoRead(BaseModel):
@@ -50,3 +67,18 @@ class TodoRead(BaseModel):
 class TodoFromDraftRequest(BaseModel):
     schedule_draft: ScheduleDraftInput
     intent: Optional[str] = Field(None, description="parse 응답의 intent (예: create_todo)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "schedule_draft": {
+                    "title": "장보기",
+                    "category": "etc",
+                    "date": "2026-07-03",
+                    "priority": "medium",
+                    "source": "ai",
+                },
+                "intent": "create_todo",
+            }
+        }
+    )

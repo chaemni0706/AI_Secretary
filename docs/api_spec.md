@@ -234,3 +234,96 @@ Response `data`:
 - emotion: fatigue | anxiety | sadness | anger | stress | positive | neutral. 키워드 없으면 neutral.
 - 의학적 진단 아님. "~한 상태로 보입니다 / ~을 추천합니다"만 사용. 진단성 표현은 사용하지 않음.
 - risk_level은 일반 감정에서 low/medium까지만. 자해/극단 신호 시에만 high + 전문가 상담 권유(고정 안전 메시지).
+
+---
+
+# 로컬 저장소 API (SQLite) — 일정 / 할 일 / 대시보드 / 알림
+
+내부 SQLite 기반 CRUD. 외부 캘린더/구글 연동 없음. 모든 응답은 공통 envelope.
+일정·할 일은 `PlannerItem` 공통 테이블 + `EventDetail`/`TodoDetail` 분리 구조에 매핑됩니다.
+
+**계약 고정 사항(Flutter는 이 필드명을 그대로 사용):**
+- `id`는 문자열(string), `priority`는 소문자 `low|medium|high`.
+- 할 일은 `due_date`(마감일) + `completed`(bool) 사용.
+- 알림 항목은 `{ "time": "HH:mm", "message": "..." }`.
+- 예약 후보는 `reason`(string) + `conflict`(bool).
+
+## POST /api/v1/local/schedules — 일정 생성
+
+Request (예시):
+```json
+{ "title": "치과 예약", "date": "2026-07-03", "start_time": "14:00",
+  "end_time": "15:00", "category": "hospital", "priority": "high", "location": "강남역 치과" }
+```
+Response `data`:
+```json
+{ "id": "d166...64", "title": "치과 예약", "date": "2026-07-03", "start_time": "14:00",
+  "end_time": "15:00", "category": "hospital", "priority": "high", "location": "강남역 치과",
+  "memo": null, "status": "scheduled", "source": "user", "travel_time_minutes": null,
+  "created_at": "2026-06-30T12:52:57", "updated_at": "2026-06-30T12:52:57" }
+```
+- `end_time`/`location` 생략 가능. `end_time < start_time`이면 422(공통 envelope, `success=false`).
+- 그 외: GET `/api/v1/local/schedules?date=&category=&priority=&status=` (목록, 시작시간 오름차순),
+  GET·PATCH·DELETE `/api/v1/local/schedules/{id}` (없는 id는 404).
+
+## POST /api/v1/local/schedules/from-draft — 파싱 결과로 일정 저장
+
+Request:
+```json
+{ "schedule_draft": { "title": "치과 예약", "category": "hospital", "date": "2026-07-03",
+  "start_time": "14:00", "end_time": "15:00", "location": "강남역 치과", "priority": "high", "source": "ai" },
+  "intent": "create_schedule" }
+```
+- `/ai/schedule/parse` 응답의 `data.schedule_draft`를 그대로 넣으면 됩니다. Response는 일정 생성과 동일.
+
+## POST /api/v1/local/todos — 할 일 생성
+
+Request:
+```json
+{ "title": "자료 정리하기", "due_date": "2026-07-03", "priority": "medium", "category": "study" }
+```
+Response `data`:
+```json
+{ "id": "ab12...", "title": "자료 정리하기", "due_date": "2026-07-03", "priority": "medium",
+  "completed": false, "category": "study", "memo": null, "status": "todo", "source": "user",
+  "created_at": "...", "updated_at": "..." }
+```
+- 완료 토글: PATCH `/api/v1/local/todos/{id}` `{ "completed": true }`.
+- 목록 GET `/api/v1/local/todos?due_date=&completed=&priority=&category=` (미완료→우선순위→마감 순).
+- POST `/api/v1/local/todos/from-draft` `{ "schedule_draft": {...}, "intent": "create_todo" }` (draft의 `date`→`due_date` 매핑).
+
+## GET /api/v1/dashboard/today — 오늘(특정 날짜) 일정/할 일 + 집계
+
+Query: `date`(미지정 시 오늘), `current_datetime`(ISO8601, next_schedule 계산), `user_id`(선택).
+Response `data`:
+```json
+{ "date": "2026-07-03",
+  "schedules": [ /* ScheduleRead[], 시작시간 오름차순 */ ],
+  "todos": [ /* TodoRead[], 미완료→우선순위→마감 순 */ ],
+  "next_schedule": { /* ScheduleRead | null */ },
+  "total_schedule_count": 1, "total_todo_count": 2,
+  "completed_todo_count": 1, "todo_completion_rate": 0.5,
+  "stats": { "schedule_count": 1, "todo_count": 2, "completed_todo_count": 1, "todo_completion_rate": 0.5 },
+  "high_priority_items": [ { "type": "schedule", "id": "...", "title": "...", "priority": "high", "when": "2026-07-03" } ],
+  "summary_message": "..." }
+```
+- `stats`는 홈 화면 편의용 묶음(추가 필드). 평탄 `total_*` 필드는 하위호환으로 유지.
+- GET `/api/v1/dashboard/summary` 는 `schedules/todos` 배열 없이 `stats` 중심 요약.
+
+## POST /api/v1/notifications/plan — 저장된 일정 기반 알림 계획
+
+Request:
+```json
+{ "schedule_id": "<일정 id>", "notification_preference": "forgetful", "include_checklist": true, "persist": true }
+```
+Response `data`:
+```json
+{ "schedule_id": "<일정 id>", "user_id": null, "leave_time": "14:00",
+  "checklist": [ { "item": "신분증", "reason": "병원 일정에 필요한 기본 준비물입니다." } ],
+  "notifications": [ { "time": "13:30", "message": "치과 예약 시간이 다가옵니다..." } ],
+  "source": "stored_schedule", "applied_preference": "forgetful",
+  "applied_travel_minutes": 0, "applied_buffer_minutes": 0, "persisted_reminders": 4 }
+```
+- 알림 규칙(기본): `normal`=30·10분 전, `forgetful`=60·30·10분 전, `strong`은 더 촘촘, `late_prone`은 출발 전 추가.
+- `persist=true`로 다시 호출해도 UNIQUE 충돌 없이 교체/유지(중복 안전).
+- 조회: GET `/api/v1/notifications/plan/{schedule_id}` (없는 일정은 404).

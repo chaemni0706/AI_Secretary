@@ -5,14 +5,33 @@
 
 ## 기능
 
+### AI 추론형 API (룰/템플릿 + 선택적 LLM)
+
 | API | 설명 |
 |-----|------|
 | `POST /api/v1/ai/schedule/parse` | 자연어 → 일정(날짜/시간/카테고리/우선순위) 추출 |
 | `POST /api/v1/reservations/candidates` | 빈 시간 탐색·점수화로 예약 후보 추천 |
+| `POST /api/v1/reservations/candidates/from-store` | 저장된 일정 기반 예약 후보 추천 |
 | `POST /api/v1/messages/reservation` | 카테고리별 예약 문의 메시지 + 대안 생성 |
 | `POST /api/v1/alerts/departure-plan` | 출발 시각 계산 + 준비물 체크리스트 + 알림 |
 | `POST /api/v1/briefings/daily` | 하루 요약·핵심 포인트·우선순위 정렬 |
 | `POST /api/v1/emotion/analyze` | 감정 분류 + 생활 코칭(비진단) |
+
+### 로컬 데이터 API (SQLite CRUD)
+
+| API | 설명 |
+|-----|------|
+| `POST·GET·PATCH·DELETE /api/v1/local/schedules` | 로컬 일정 CRUD (목록/단건 조회 포함) |
+| `POST /api/v1/local/schedules/from-draft` | parse 결과(schedule_draft)로 일정 저장 |
+| `POST·GET·PATCH·DELETE /api/v1/local/todos` | 로컬 To-do CRUD (목록/단건 조회 포함) |
+| `POST /api/v1/local/todos/from-draft` | parse 결과(draft)로 To-do 저장 |
+| `GET /api/v1/dashboard/today` | 특정 날짜의 일정·할일 + 집계 |
+| `GET /api/v1/dashboard/summary` | 요약 집계 |
+| `GET·PUT /api/v1/memory/{user_id}` | 사용자 메모리/선호 조회·upsert |
+| `GET /api/v1/memory/{user_id}/context` | alert/reservation용 사용자 context |
+| `PATCH /api/v1/memory/{user_id}/preferences` | 알림 성향·이동/여유시간 등 수정 |
+| `POST /api/v1/memory/{user_id}/places` | 자주 가는 장소 추가 |
+| `POST·GET /api/v1/notifications/plan` | 저장된 일정 기반 알림 계획 생성/조회 |
 | `GET /health` | 헬스 체크 |
 
 ## 빠른 시작
@@ -70,6 +89,12 @@ OpenAI 키 없이 결정론적으로 동작하므로 추가 설정 없이 재현
 - `docs/backend_guide.md` — 실행/구조/테스트
 - `docs/integration_guide.md` — 프론트(Flutter) 연동
 - `mock/*.json` — 실제 응답과 동일한 샘플 (프론트 참고용)
+
+## 데이터 계층
+
+- SQLite + SQLAlchemy. 기본 DB: `sqlite:///runtime/ai_secretary_local.db`.
+- 모델: `User`, `UserSetting`, `Calendar`, `PlannerItem`, `EventDetail`, `TodoDetail`, `Reminder`, `UserMemory`.
+- 일정/To-do는 `PlannerItem`을 공통으로 쓰고 상세는 `EventDetail`/`TodoDetail`로 분리.
 
 ## 비고
 

@@ -190,3 +190,123 @@ def test_overlapping_busy_partial_fill_has_no_false_sandwich(client):
     # no candidate fills 10:30-12:00 exactly -> no sandwich bonus -> score < 90
     assert all(c["score"] < 90 for c in cands)
     assert all(c["conflict"] is False for c in cands)
+
+
+# --------------------------------------------------------------------------- #
+# Stage 2 — scoring / boundary / sort-stability regression
+# --------------------------------------------------------------------------- #
+def _starts(data):
+    return [c["start_time"] for c in data["recommended_candidates"]]
+
+
+def test_no_existing_yields_three_or_more(client):
+    data = _post(client, [])["data"]                       # 18:00~21:00, 60min
+    assert len(data["recommended_candidates"]) >= 3
+
+
+def test_candidates_never_overlap_existing(client):
+    body = _post(client, [_sched("a", "10:00", "11:00", "수업")],
+                 preferred_start_time="09:00", preferred_end_time="13:00")
+    for c in body["data"]["recommended_candidates"]:
+        s = int(c["start_time"][:2]) * 60 + int(c["start_time"][3:])
+        e = int(c["end_time"][:2]) * 60 + int(c["end_time"][3:])
+        assert not (s < 11 * 60 and 10 * 60 < e)           # no overlap with 10:00~11:00
+
+
+def test_full_day_window_returns_empty(client):
+    body = _post(client, [_sched("x", "09:00", "18:00", "워크숍")],
+                 preferred_start_time="09:00", preferred_end_time="18:00")
+    assert body["data"]["recommended_candidates"] == []
+    assert body["message"] == "예약 가능한 시간이 없습니다."
+
+
+def test_all_candidates_match_duration_60(client):
+    data = _post(client, [])["data"]                       # duration default 60
+    for c in data["recommended_candidates"]:
+        s = int(c["start_time"][:2]) * 60 + int(c["start_time"][3:])
+        e = int(c["end_time"][:2]) * 60 + int(c["end_time"][3:])
+        assert e - s == 60
+
+
+def test_duration_too_large_is_empty(client):
+    body = _post(client, [], duration_minutes=600)         # 10h won't fit 18~21
+    assert body["data"]["recommended_candidates"] == []
+
+
+def test_duration_zero_or_negative_is_safe(client):
+    for dur in (0, -30):
+        body = _post(client, [], duration_minutes=dur)
+        assert body["success"] is True
+        assert body["data"]["recommended_candidates"] == []
+
+
+def test_preferred_start_proximity_scores_higher(client):
+    data = _post(client, [])["data"]                       # 18:00~21:00
+    by_start = {c["start_time"]: c["score"] for c in data["recommended_candidates"]}
+    assert by_start["18:00"] > by_start["20:00"]           # closer to preferred_start = higher
+
+
+def test_tie_scores_sorted_by_start_time(client):
+    cands = _post(client, [])["data"]["recommended_candidates"]
+    # within each equal-score group, start_time must be ascending
+    from itertools import groupby
+    for _, group in groupby(cands, key=lambda c: c["score"]):
+        starts = [c["start_time"] for c in group]
+        assert starts == sorted(starts)
+    # overall: score desc, then start asc
+    keys = [(-c["score"], c["start_time"]) for c in cands]
+    assert keys == sorted(keys)
+
+
+def test_lunch_slot_is_normal_candidate(client):
+    # Current policy has no special lunch rule: a 12:00~13:00 slot is a normal,
+    # non-conflicting candidate (only 21:00+ is penalized).
+    data = _post(client, [], preferred_start_time="11:00",
+                 preferred_end_time="14:00", duration_minutes=60)["data"]
+    starts = _starts(data)
+    assert "12:00" in starts
+    lunch = next(c for c in data["recommended_candidates"] if c["start_time"] == "12:00")
+    assert lunch["conflict"] is False
+    assert lunch["score"] >= 80                            # no special lunch penalty
+
+
+# --------------------------------------------------------------------------- #
+# Stage 2-1 — additional stability locks
+# (response-structure / full-day-empty / duration-60 / proximity / sort are
+#  already locked above; these add the not-yet-covered cases.)
+# --------------------------------------------------------------------------- #
+def _overlaps(c, bs_h, be_h):
+    s = int(c["start_time"][:2]) * 60 + int(c["start_time"][3:])
+    e = int(c["end_time"][:2]) * 60 + int(c["end_time"][3:])
+    return s < be_h * 60 and bs_h * 60 < e
+
+
+def test_dur30_candidates_exclude_busy_block(client):
+    data = _post(client, [_sched("a", "10:00", "11:00", "수업")],
+                 preferred_start_time="09:00", preferred_end_time="12:00",
+                 duration_minutes=30)["data"]
+    assert data["recommended_candidates"]                       # some candidates exist
+    assert all(not _overlaps(c, 10, 11) for c in data["recommended_candidates"])
+
+
+def test_adjacent_busy_blocks_are_merged(client):
+    # 10:00~10:30 + 10:30~11:00 must behave like a single 10:00~11:00 busy block.
+    data = _post(client, [_sched("a", "10:00", "10:30"), _sched("b", "10:30", "11:00")],
+                 preferred_start_time="09:00", preferred_end_time="12:00",
+                 duration_minutes=30)["data"]
+    assert all(not _overlaps(c, 10, 11) for c in data["recommended_candidates"])
+    starts = [c["start_time"] for c in data["recommended_candidates"]]
+    assert "11:00" in starts                                    # gap reopens at 11:00
+
+
+def test_malformed_existing_schedule_is_skipped_safely(client):
+    # bad existing entries must be skipped, not crash; valid ones still apply.
+    body = _post(client, [
+        _sched("bad1", "25:00", "11:00"),   # invalid hour
+        _sched("bad2", "bad", "x"),         # non-numeric
+        _sched("ok", "10:00", "11:00", "수업"),
+    ], preferred_start_time="09:00", preferred_end_time="12:00", duration_minutes=30)
+    assert body["success"] is True
+    data = body["data"]
+    assert all(not _overlaps(c, 10, 11) for c in data["recommended_candidates"])
+    assert len(data["rejected_slots"]) == 1                     # only the valid one

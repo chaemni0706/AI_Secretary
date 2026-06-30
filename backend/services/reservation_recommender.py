@@ -106,6 +106,31 @@ def _empty(target_date: str) -> ReservationCandidateData:
     )
 
 
+def _score_candidate(
+    start: int, end: int,
+    left_busy_end: Optional[int], right_busy_start: Optional[int],
+    win_end: int, span: int,
+) -> Tuple[int, bool]:
+    """Score a candidate slot. Returns (score 0..100, sandwiched).
+
+    BASE_SCORE
+      + SANDWICH_BONUS  if it fills a gap bounded by busy on BOTH merged edges
+      + PROXIMITY_BONUS scaled by closeness to preferred_start (win_start)
+      - LATE_PENALTY    if it starts at/after 21:00
+    """
+    sandwiched = (
+        left_busy_end is not None and right_busy_start is not None
+        and start == left_busy_end and end == right_busy_start
+    )
+    score = BASE_SCORE
+    if sandwiched:
+        score += SANDWICH_BONUS
+    score += round(PROXIMITY_BONUS * (win_end - start) / span)
+    if start >= TOO_LATE_MINUTES:
+        score -= LATE_PENALTY
+    return max(0, min(100, score)), sandwiched
+
+
 def recommend_candidates(req: ReservationCandidateRequest) -> ReservationCandidateData:
     c = req.constraints
     win_start, win_end = _to_min(c.preferred_start_time), _to_min(c.preferred_end_time)
@@ -151,22 +176,9 @@ def recommend_candidates(req: ReservationCandidateRequest) -> ReservationCandida
         while start + duration <= fe:
             end = start + duration
 
-            score = BASE_SCORE
-            # Sandwiched = the candidate fills a free slot bounded on BOTH sides
-            # by merged busy intervals (start hits the front busy's end and end
-            # hits the back busy's start). Uses merged edges, not raw schedules.
-            sandwiched = (
-                left_be is not None and right_bs is not None
-                and start == left_be and end == right_bs
+            score, sandwiched = _score_candidate(
+                start, end, left_be, right_bs, win_end, span
             )
-            if sandwiched:
-                score += SANDWICH_BONUS
-            # closeness to preferred_start_time: full bonus at win_start, fading
-            # linearly toward win_end.
-            score += round(PROXIMITY_BONUS * (win_end - start) / span)
-            if start >= TOO_LATE_MINUTES:
-                score -= LATE_PENALTY
-            score = max(0, min(100, score))
 
             if sandwiched:
                 reason = f"기존 일정 사이에 딱 맞는 빈 시간으로 예약 소요 시간 {duration}분을 만족합니다."
@@ -184,7 +196,7 @@ def recommend_candidates(req: ReservationCandidateRequest) -> ReservationCandida
             start += STEP_MINUTES
 
     # Highest score first; ties broken by earlier start time.
-    candidates.sort(key=lambda x: (-x.score, _to_min(x.start_time) or 0))
+    candidates.sort(key=lambda x: (-x.score, _to_min(x.start_time) or 0, _to_min(x.end_time) or 0))
     for i, cand in enumerate(candidates, 1):
         cand.candidate_id = f"cand_{i:03d}"
 

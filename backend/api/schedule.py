@@ -32,6 +32,7 @@ from backend.services.schedule_parse_service import (
     resolve_item_type,
 )
 from backend.services.schedule_parser import parse_schedule
+from backend.services import notification_plan_builder
 
 router = APIRouter(tags=["schedule"])
 
@@ -71,9 +72,10 @@ def confirm_schedule_endpoint(req: ScheduleConfirmRequest, db: Session = Depends
         item_type = resolve_item_type(req)
         if item_type == "TODO":
             todo = confirm_todo(db, req)
+            plan = notification_plan_builder.build_todo_plan(db, todo, user_id=req.user_id)
             return success_response(
                 message="할 일을 저장했습니다.",
-                data={"todo": todo.model_dump()},
+                data={"todo": todo.model_dump(), "reminder_plan": plan.model_dump()},
             )
         schedule = confirm_schedule(db, req)
     except ValueError as exc:
@@ -81,7 +83,10 @@ def confirm_schedule_endpoint(req: ScheduleConfirmRequest, db: Session = Depends
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=422, detail="유효하지 않은 일정 데이터입니다.")
+    plan = notification_plan_builder.build_event_plan(
+        db, schedule, user_id=req.user_id, is_all_day=req.parsed.is_all_day
+    )
     return success_response(
         message="일정을 저장했습니다.",
-        data={"schedule": schedule.model_dump()},
+        data={"schedule": schedule.model_dump(), "reminder_plan": plan.model_dump()},
     )

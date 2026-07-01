@@ -16,6 +16,8 @@ from backend.database.schema.personalization_schema import (
     ReminderRecommendResponse,
 )
 from backend.services import reminder_recommender
+from backend.services import notification_plan_builder
+from backend.database.schema.notification_plan_schema import NotificationPlanResponse
 from backend.database.session import get_db
 from backend.services import notification_plan_service as service
 
@@ -68,3 +70,15 @@ def get_plan(
 def recommend_reminders(req: ReminderRecommendRequest, db: Session = Depends(get_db)):
     data = reminder_recommender.recommend_reminders(db, req)
     return success_response(message="알림 추천을 생성했습니다.", data=data.model_dump())
+
+
+@router.get(
+    "/notifications/plans/{item_id}",
+    response_model=NotificationPlanResponse,
+    summary="저장된 일정/할 일의 알림 계획 조회 (plan-only)",
+)
+def get_notification_plan(item_id: str, db: Session = Depends(get_db)):
+    view = notification_plan_builder.build_plan_for_item(db, item_id)
+    if view is None:
+        raise HTTPException(status_code=404, detail="항목을 찾을 수 없습니다.")
+    return success_response(message="알림 계획을 조회했습니다.", data=view.model_dump())

@@ -109,6 +109,22 @@ def _extract_date(text: str, base: datetime) -> Tuple[Optional[str], Optional[st
             resolved = resolved.replace(year=year + 1)
         return resolved.isoformat(), m.group(0)
 
+    # M/D (슬래시 표기, 예: '7/3', '7 / 3'). 시간 '3/4' 같은 오탐을 줄이려고
+    # 월 1-12, 일 1-31 범위를 만족할 때만 날짜로 인정한다.
+    m = re.search(r"(?<!\d)(\d{1,2})\s*/\s*(\d{1,2})(?!\d)", text)
+    if m:
+        month, day = int(m.group(1)), int(m.group(2))
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            year = base_date.year
+            try:
+                resolved = base_date.replace(year=year, month=month, day=day)
+            except ValueError:
+                resolved = None
+            if resolved is not None:
+                if resolved < base_date:
+                    resolved = resolved.replace(year=year + 1)
+                return resolved.isoformat(), m.group(0)
+
     # relative day words
     for word, offset in (("글피", 3), ("모레", 2), ("내일", 1), ("오늘", 0)):
         if word in text:

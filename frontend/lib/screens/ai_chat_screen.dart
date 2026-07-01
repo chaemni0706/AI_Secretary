@@ -86,24 +86,29 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _save() async {
     final parse = _lastParse;
     if (parse == null || _saving) return;
-    setState(() => _saving = true);
 
-    // 백엔드 일정 저장은 date(일정)/title 이 필수다. parse 가 날짜를 인식하지 못하면
-    // date 가 null 로 와서 422("date가 없어...")가 난다. 누락 시 오늘로 보정.
     final draft = Map<String, dynamic>.from(parse.scheduleDraft);
-    bool dateFilled = false;
+
+    // 일정 저장은 date 가 필수다. 파서가 날짜를 인식하지 못했으면(예: 날짜 표현이
+    // 없는 문장) 임의로 오늘로 저장하지 않고, 사용자에게 날짜를 알려달라고 안내한다.
+    // (일정만 해당. To-do 는 마감일이 없어도 저장 가능.)
     final rawDate = draft['date'];
-    if (rawDate == null || rawDate.toString().trim().isEmpty) {
-      final n = DateTime.now();
-      String two(int x) => x.toString().padLeft(2, '0');
-      draft['date'] = '${n.year}-${two(n.month)}-${two(n.day)}';
-      dateFilled = true;
+    final dateMissing =
+        rawDate == null || rawDate.toString().trim().isEmpty;
+    if (!parse.isTodo && dateMissing) {
+      _addMessage(
+        '날짜를 인식하지 못했어요. "7월 3일", "7/3", "내일"처럼 날짜를 포함해 다시 말씀해 주세요.',
+        isUser: false,
+      );
+      return;
     }
+
     final rawTitle = draft['title'];
     if (rawTitle == null || rawTitle.toString().trim().isEmpty) {
       draft['title'] = '새 일정';
     }
 
+    setState(() => _saving = true);
     try {
       final String savedTitle;
       if (parse.isTodo) {
@@ -122,9 +127,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _saving = false;
         _lastParse = null;
       });
-      final note = dateFilled ? ' (날짜를 인식하지 못해 오늘로 저장했어요)' : '';
-      _addMessage('"$savedTitle" 저장 완료! 홈 화면에 반영됩니다.$note',
-          isUser: false);
+      _addMessage('"$savedTitle" 저장 완료! 홈 화면에 반영됩니다.', isUser: false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('저장되었습니다.')),

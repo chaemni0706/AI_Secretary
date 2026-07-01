@@ -42,6 +42,8 @@ from backend.services import local_schedule_service as sched_service
 from backend.services import planner_mapping as pm
 from backend.services import virtual_business_service as biz_service
 from backend.services.reservation_recommender import recommend_candidates
+from backend.services import preference_service
+from backend.database.schema.personalization_schema import Personalization
 
 # time_preference -> (window_start, window_end) in 'HH:mm'. "any" resolves to
 # the business' full operating hours at call time.
@@ -213,6 +215,54 @@ def _collect(
 
 
 # --------------------------------------------------------------------------- #
+# personalization — re-rank same-condition candidates by stored preference
+# --------------------------------------------------------------------------- #
+_BLOCK_LABEL = {
+    "early_morning": "이른 아침", "morning": "오전", "afternoon": "오후",
+    "evening": "저녁", "late_night": "늦은 밤",
+}
+
+
+def _personalize(candidates: List[BusinessCandidate], pref, meta: Personalization) -> None:
+    """Attach personalization_score, stably re-rank (preferred first), and enrich
+    reasons. Preference weighting only; the underlying conflict-free set is
+    unchanged so recommendations still work without any stored preference."""
+    preferred = set(pref.preferred_reservation_times or [])
+    avoid = set(pref.avoid_times or [])
+
+    for c in candidates:
+        block = preference_service.time_block_of(c.start_time)
+        score = 0.5
+        if block in preferred:
+            score += 0.3
+        if block in avoid:
+            score -= 0.4
+        if pref.late_prone and block in ("early_morning", "morning"):
+            score -= 0.1   # late-prone users are penalized for rushed early slots
+        c.personalization_score = round(max(0.0, min(1.0, score)), 2)
+
+    # stable sort keeps the original earliest-first order among equal scores
+    candidates.sort(key=lambda c: -(c.personalization_score or 0.0))
+
+    for c in candidates:
+        block = preference_service.time_block_of(c.start_time)
+        if block in preferred:
+            label = _BLOCK_LABEL.get(block, "선호")
+            c.reason = (
+                f"사용자가 {label} 시간대를 선호하고 기존 일정과 겹치지 않아 우선 추천했습니다."
+            )
+
+    used = ["preferred_reservation_times"]
+    if avoid:
+        used.append("avoid_times")
+    if pref.late_prone:
+        used.append("late_prone")
+    meta.used_preferences = used
+    if meta.personalization_applied:
+        meta.reason = "선호 시간대와 지각 경향을 반영해 후보 순서를 조정했습니다."
+
+
+# --------------------------------------------------------------------------- #
 # public API
 # --------------------------------------------------------------------------- #
 def recommend_business_candidates(
@@ -220,9 +270,13 @@ def recommend_business_candidates(
 ) -> BusinessCandidateData:
     """Recommend reservation candidates for a category on a date, honoring the
     user's saved schedules, each business' hours / closed days / reserved slots,
-    and the requested time-of-day preference. Never raises."""
+    the requested time-of-day preference, AND the user's stored personal
+    preferences (re-ranking). Never raises."""
     user_busy = _stored_busy(db, req.user_id, req.date)
     candidates = _collect(db, req, date=req.date, pref=req.time_preference, user_busy=user_busy)
+
+    eff = preference_service.get_effective_user_preference(db, req.user_id)
+    pref, meta = eff["preference"], eff["meta"]
 
     if candidates:
         req_label = _PREF_LABEL.get(req.time_preference, "")
@@ -230,11 +284,15 @@ def recommend_business_candidates(
             f"{candidates[0].business_name}에서 사용자 일정과 업체 예약 현황이 겹치지 않는 "
             f"가장 빠른 {req_label} 시간입니다."
         )
-        return BusinessCandidateData(requested=req, candidates=candidates, alternatives=[])
+        _personalize(candidates, pref, meta)
+        return BusinessCandidateData(
+            requested=req, candidates=candidates, alternatives=[], personalization=meta
+        )
 
     return BusinessCandidateData(
         requested=req, candidates=[],
         alternatives=_alternatives(db, req, user_busy),
+        personalization=meta,
     )
 
 

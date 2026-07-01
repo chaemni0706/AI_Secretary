@@ -14,6 +14,8 @@ from backend.database.schema.memory_schema import (
     PlaceCreate,
     PreferencesPatch,
 )
+from backend.database.schema.personalization_schema import PreferenceUpdate
+from backend.services import preference_service
 from backend.database.session import get_db
 from backend.services import memory_service as service
 
@@ -53,3 +55,34 @@ def patch_preferences(user_id: str, payload: PreferencesPatch, db: Session = Dep
 def add_place(user_id: str, payload: PlaceCreate, db: Session = Depends(get_db)):
     data = service.add_place(db, user_id, payload)
     return success_response(message="장소를 추가했습니다.", data=data.model_dump())
+
+
+# --------------------------------------------------------------------------- #
+# Effective personalization preference (reservation / notification / coaching)
+# --------------------------------------------------------------------------- #
+def _pref_payload(eff: dict) -> dict:
+    return {
+        "preference": eff["preference"].model_dump(),
+        "personalization_applied": eff["personalization_applied"],
+        "memory_source": eff["memory_source"],
+    }
+
+
+@router.get(
+    "/memory/{user_id}/preferences/effective",
+    summary="개인화 유효 선호 조회 (없으면 기본값 fallback)",
+)
+def get_effective_preferences(user_id: str, db: Session = Depends(get_db)):
+    eff = preference_service.get_effective_user_preference(db, user_id)
+    return success_response(message="유효 선호 설정입니다.", data=_pref_payload(eff))
+
+
+@router.put(
+    "/memory/{user_id}/preferences/effective",
+    summary="개인화 선호 저장 (예약/알림/코칭 반영, invalid 값은 무시)",
+)
+def put_effective_preferences(
+    user_id: str, payload: PreferenceUpdate, db: Session = Depends(get_db)
+):
+    eff = preference_service.save_preference(db, user_id, payload)
+    return success_response(message="사용자 선호도를 저장했습니다.", data=_pref_payload(eff))

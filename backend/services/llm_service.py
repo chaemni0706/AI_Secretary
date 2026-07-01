@@ -27,8 +27,14 @@ def generate(
     system: Optional[str] = None,
     model: Optional[str] = None,
     temperature: Optional[float] = None,
+    response_format: Optional[dict] = None,
 ) -> Optional[str]:
-    """Return generated text, or None if LLM is unavailable / fails."""
+    """Return generated text, or None if LLM is unavailable / fails.
+
+    `response_format` is passed straight through to the OpenAI client when set
+    (e.g. {"type": "json_object"} for JSON mode). Unknown/unsupported values
+    simply raise inside the client and are swallowed as None, so callers keep
+    their fallback path."""
     if not is_enabled():
         return None
     try:
@@ -42,10 +48,12 @@ def generate(
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
+        extra = {"response_format": response_format} if response_format else {}
         resp = client.chat.completions.create(
             model=model or settings.OPENAI_MODEL,
             messages=messages,
             temperature=settings.LLM_TEMPERATURE if temperature is None else temperature,
+            **extra,
         )
         text = (resp.choices[0].message.content or "").strip()
         # Models sometimes wrap the reply in code fences or quotes; strip them so

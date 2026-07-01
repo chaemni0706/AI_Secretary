@@ -81,12 +81,13 @@ def test_response_envelope_and_shape(client):
     body = _cands(client, time_preference="evening", duration_minutes=60)
     assert {"success", "message", "data"}.issubset(body.keys())
     data = body["data"]
-    assert set(data.keys()) == {"requested", "candidates", "alternatives"}
+    # personalization added as an optional, additive field
+    assert set(data.keys()) == {"requested", "candidates", "alternatives", "personalization"}
     assert data["requested"]["category"] == "hair"
     cand = data["candidates"][0]
     assert set(cand.keys()) == {
         "business_id", "business_name", "category", "date",
-        "start_time", "end_time", "reason",
+        "start_time", "end_time", "reason", "personalization_score",
     }
 
 

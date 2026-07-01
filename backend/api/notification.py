@@ -11,6 +11,11 @@ from sqlalchemy.orm import Session
 
 from backend.core.response import success_response
 from backend.database.schema.notification_schema import NotificationPlanRequest
+from backend.database.schema.personalization_schema import (
+    ReminderRecommendRequest,
+    ReminderRecommendResponse,
+)
+from backend.services import reminder_recommender
 from backend.database.session import get_db
 from backend.services import notification_plan_service as service
 
@@ -53,3 +58,13 @@ def get_plan(
     if data is None:
         raise HTTPException(status_code=404, detail="일정을 찾을 수 없습니다.")
     return success_response(message="알림 계획을 생성했습니다.", data=data.model_dump())
+
+
+@router.post(
+    "/notifications/recommend",
+    response_model=ReminderRecommendResponse,
+    summary="개인 선호 반영 알림 추천 (기본 알림/출발 알림)",
+)
+def recommend_reminders(req: ReminderRecommendRequest, db: Session = Depends(get_db)):
+    data = reminder_recommender.recommend_reminders(db, req)
+    return success_response(message="알림 추천을 생성했습니다.", data=data.model_dump())

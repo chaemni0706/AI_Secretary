@@ -14,6 +14,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend.database.schema.personalization_schema import Personalization
+
 # Preferred time-of-day windows. "any" == the business' full operating hours.
 TimePreference = Literal["morning", "afternoon", "evening", "any"]
 
@@ -80,6 +82,9 @@ class BusinessCandidate(BaseModel):
     start_time: str
     end_time: str
     reason: str
+    personalization_score: Optional[float] = Field(
+        None, description="개인 선호 반영 점수 0.0~1.0 (optional)"
+    )
 
 
 class BusinessAlternative(BaseModel):
@@ -96,6 +101,7 @@ class BusinessCandidateData(BaseModel):
     requested: BusinessCandidateRequest
     candidates: List[BusinessCandidate] = Field(default_factory=list)
     alternatives: List[BusinessAlternative] = Field(default_factory=list)
+    personalization: Optional[Personalization] = None
 
 
 class BusinessCandidateResponse(BaseModel):

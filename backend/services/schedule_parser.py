@@ -26,10 +26,15 @@ _RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 _WEEKDAY = {"월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6}
 
 # Command/verb endings to strip from the end of a title (longest first).
+# "~줘" 없는 명령형(잡아/추가해/등록해/저장해/넣어 등)도 함께 제거한다.
 _VERB_TAILS = sorted(
     [
         "잡아줘", "잡아 줘", "추가해줘", "추가 해줘", "넣어줘", "넣어 줘",
         "알림해줘", "알림 해줘", "알려줘", "등록해줘", "만들어줘", "예약해줘",
+        "저장해줘", "저장 해줘",
+        # bare command forms (without 줘)
+        "추가해", "추가 해", "등록해", "등록 해", "저장해", "저장 해",
+        "예약해", "만들어", "알림해", "넣어", "잡아",
         "해줘", "해 줘", "있어", "줘", "좀", "해주세요", "주세요", "잡고",
     ],
     key=len,
@@ -45,7 +50,9 @@ _TITLE_TAILS = sorted(_VERB_TAILS + _NOISE_NOUNS, key=len, reverse=True)
 
 # Filler tokens dropped when they LEAD a title:
 #   "예약 진료" -> "진료", "동안 회의" -> "회의", "더 회의" -> "회의".
-_LEADING_NOISE = ("예약", "일정", "스케줄", "더", "동안")
+_LEADING_NOISE = (
+    "할 일로", "할일로", "일정으로", "예약", "일정", "스케줄", "더", "동안",
+)
 
 # Duration expressions ("3시간", "1시간 30분", "30분") with an optional trailing
 # 짜리/동안/만. These are NOT clock times (start_time parsing already ignores

@@ -1,8 +1,8 @@
 """Title 추출 개선 회귀 테스트.
 
-정책(팀 합의): 'N 예약' 형태에서 '예약'은 기존대로 title에서 제거한다
-(병원 예약 -> 병원). 이번 개선은 '~줘' 없는 명령형(잡아/추가해/등록해/저장해/넣어)
-과 '할 일로'/'일정으로' 같은 앞부분 필러 제거에 한정한다.
+정책: '예약'은 일정의 핵심 목적이므로 title 에 보존한다 (병원 예약 -> 병원 예약).
+명령형(잡아/추가해/등록해/저장해/넣어)과 '할 일로'/'일정으로' 앞부분 필러,
+마감 표현(~까지)만 제거한다.
 
 parse_schedule 을 직접 호출한다(외부 의존/DB 없음).
 """
@@ -21,12 +21,12 @@ def _title(text: str) -> str:
 
 
 def test_bare_command_verb_잡아_removed():
-    # '잡아'(줘 없음)가 title 끝에 남지 않아야 한다. ('예약'은 정책상 제거)
-    assert _title("7월 4일 3시에 치과 예약 잡아") == "치과"
+    # '잡아'(줘 없음)만 제거하고 '예약'은 title 에 보존한다.
+    assert _title("7월 4일 3시에 치과 예약 잡아") == "치과 예약"
 
 
 def test_command_verb_잡아줘_removed():
-    assert _title("내일 오후 2시에 병원 예약 잡아줘") == "병원"
+    assert _title("내일 오후 2시에 병원 예약 잡아줘") == "병원 예약"
 
 
 def test_noise_noun_일정_and_추가해줘_removed():
@@ -34,7 +34,7 @@ def test_noise_noun_일정_and_추가해줘_removed():
 
 
 def test_bare_command_verb_등록해_removed():
-    assert _title("오늘 저녁 6시에 미용실 예약 등록해") == "미용실"
+    assert _title("오늘 저녁 6시에 미용실 예약 등록해") == "미용실 예약"
 
 
 def test_bare_command_verb_저장해_removed():

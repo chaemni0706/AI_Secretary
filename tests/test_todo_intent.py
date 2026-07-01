@@ -48,8 +48,8 @@ def test_todo_자료_정리():
 def test_schedule_치과_예약():
     d = _parse("7월 4일 3시에 치과 예약 잡아")
     assert d.intent == "create_schedule"
-    # 정책상 '예약'은 제거되어 title 은 '치과'.
-    assert d.schedule_draft.title == "치과"
+    # '예약'은 title 에 보존된다.
+    assert d.schedule_draft.title == "치과 예약"
 
 
 def test_schedule_회의():

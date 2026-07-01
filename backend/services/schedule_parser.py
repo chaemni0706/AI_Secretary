@@ -6,9 +6,9 @@ reported via `missing_fields`.
 
 Policy notes:
 - Title strips date/time expressions, command verbs (잡아/추가해/등록해/저장해/
-  넣어/해야 해 ...), deadline markers (~까지) and filler nouns (일정/스케줄/예약) /
-  leading fillers (할 일로/일정으로 ...). ('예약' 제거는 팀 회귀 테스트
-  test_reservation_word_not_left_in_title 로 고정된 정책이다.)
+  넣어/해야 해 ...), deadline markers (~까지) and filler nouns (일정/스케줄) /
+  leading fillers (할 일로/일정으로 ...). '예약'은 일정의 핵심 목적이므로 title 에
+  보존한다 ("치과 예약" -> "치과 예약").
 - To-do intent: strong to-do signals (작성/제출/정리/장보기/마감/까지 ...) classify
   as create_todo, unless a schedule-override keyword (예약/회의/약속/병원/알림 ...)
   is present.
@@ -51,17 +51,16 @@ _VERB_TAILS = sorted(
     reverse=True,
 )
 
-# Filler nouns that are noise when trailing a title ("운동 일정" -> "운동",
-# "병원 예약" -> "병원"). '예약' 제거는 test_reservation_word_not_left_in_title
-# 로 고정된 기존 정책이다.
-_NOISE_NOUNS = ["일정", "스케줄", "예약"]
+# Filler nouns that are noise when trailing a title ("운동 일정" -> "운동").
+# '예약'은 제거하지 않는다 — 일정의 핵심 목적이라 title 에 남긴다 ("치과 예약").
+_NOISE_NOUNS = ["일정", "스케줄"]
 
 # Combined trailing tokens stripped from a title, longest first.
 _TITLE_TAILS = sorted(_VERB_TAILS + _NOISE_NOUNS, key=len, reverse=True)
 
 # Filler tokens dropped when they LEAD a title:
-#   "예약 진료" -> "진료", "할 일로 장보기" -> "장보기".
-_LEADING_NOISE = ("할 일로", "할일로", "일정으로", "예약", "일정", "스케줄", "더", "동안")
+#   "일정 회의" -> "회의", "할 일로 장보기" -> "장보기".
+_LEADING_NOISE = ("할 일로", "할일로", "일정으로", "일정", "스케줄", "더", "동안")
 
 # --- intent classification signals ----------------------------------------- #
 # 강한 To-do 신호.

@@ -259,19 +259,20 @@ def test_duration_suffix_does_not_eat_words(client):
 # --------------------------------------------------------------------------- #
 # Stage 1 — title cleanup & policy regression
 # --------------------------------------------------------------------------- #
-def test_reservation_word_not_left_in_title(client):
+def test_reservation_word_kept_in_title(client):
+    # 정책: '예약'은 일정의 핵심 목적이므로 title 에 보존한다.
     d1 = _parse(client, "내일 오후 2시 병원 예약")
-    assert d1["slots"]["title"] == "병원"
+    assert d1["slots"]["title"] == "병원 예약"
     assert d1["slots"]["category"] == "hospital"
     assert d1["slots"]["start_time"] == "14:00"
 
     d2 = _parse(client, "다음 주 화요일 치과 예약")
-    assert d2["slots"]["title"] == "치과"
+    assert d2["slots"]["title"] == "치과 예약"
     assert d2["slots"]["category"] == "hospital"
 
     d3 = _parse(client, "예약 진료 잡아줘")
-    assert d3["slots"]["title"] == "진료"            # leading "예약" dropped
-    assert "예약" not in (d3["slots"]["title"] or "")
+    assert d3["slots"]["title"] == "예약 진료"        # "예약" kept, only verb removed
+    assert "예약" in (d3["slots"]["title"] or "")
     assert d3["slots"]["category"] == "hospital"
 
 
@@ -298,7 +299,7 @@ def test_general_reservation_stays_medium_priority(client):
     d = _parse(client, "이번 주 토요일 1시에 미용실 예약")
     assert d["slots"]["category"] == "beauty"
     assert d["schedule_draft"]["priority"] == "medium"   # NOT high
-    assert d["slots"]["title"] == "미용실"
+    assert d["slots"]["title"] == "미용실 예약"
 
 
 def test_month_day_rolls_over_to_next_year(client):
@@ -327,7 +328,7 @@ def test_next_week_weekday_date_value(client):
     d = _parse(client, "다음 주 화요일 치과 예약")
     assert d["slots"]["date"] == "2026-07-07"
     assert d["slots"]["category"] == "hospital"        # 치과 -> hospital (medical)
-    assert d["slots"]["title"] == "치과"
+    assert d["slots"]["title"] == "치과 예약"
 
 
 def test_duration_case_keeps_real_time_and_clean_title(client):

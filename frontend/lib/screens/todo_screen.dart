@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../models/todo_model.dart';
+import '../services/todo_api.dart';
+import '../services/dashboard_api.dart';
+import '../services/api_client.dart';
 
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
@@ -13,95 +17,138 @@ class _TodoScreenState extends State<TodoScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const _todayTodos = [
-    _TodoItem(
-      time: '09:30',
-      title: '발표 자료 최종 확인',
-      priority: '높음',
-      priorityColor: AppTheme.red,
-      deadline: '13:00 마감 · 30분 전',
-      isDone: false,
-      supplies: ['노트북', '충전기', '발표 자료', '레이저 포인터'],
-      doneSupplies: ['노트북', '충전기'],
-    ),
-    _TodoItem(
-      time: '11:00',
-      title: '병원 예약 확인 전화',
-      priority: '보통',
-      priorityColor: AppTheme.orange,
-      deadline: null,
-      isDone: false,
-      supplies: [],
-      doneSupplies: [],
-    ),
-    _TodoItem(
-      time: '14:00',
-      title: 'AI 스터디 노트 정리',
-      priority: '보통',
-      priorityColor: AppTheme.orange,
-      deadline: null,
-      isDone: false,
-      supplies: [],
-      doneSupplies: [],
-    ),
-    _TodoItem(
-      time: '19:00',
-      title: '저녁 약속 준비',
-      priority: '낮음',
-      priorityColor: AppTheme.textSecondary,
-      deadline: null,
-      isDone: false,
-      supplies: [],
-      doneSupplies: [],
-    ),
-  ];
-
-  static const _doneTodos = [
-    _TodoItem(
-      time: '08:00',
-      title: '아침 운동',
-      priority: '보통',
-      priorityColor: AppTheme.orange,
-      deadline: null,
-      isDone: true,
-      supplies: [],
-      doneSupplies: [],
-    ),
-    _TodoItem(
-      time: '09:00',
-      title: '이메일 확인 및 답장',
-      priority: '높음',
-      priorityColor: AppTheme.red,
-      deadline: null,
-      isDone: true,
-      supplies: [],
-      doneSupplies: [],
-    ),
-    _TodoItem(
-      time: '09:15',
-      title: '프로젝트 회의 준비',
-      priority: '높음',
-      priorityColor: AppTheme.red,
-      deadline: null,
-      isDone: true,
-      supplies: [],
-      doneSupplies: [],
-    ),
-  ];
-
-  int _expandedIndex = 0;
+  bool _loading = true;
+  String? _error;
+  List<TodoModel> _all = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadTodos();
+    // 저장/변경 후 다른 화면에서 triggerDashboardRefresh() 호출 시 함께 갱신.
+    dashboardRefresh.addListener(_loadTodos);
   }
 
   @override
   void dispose() {
+    dashboardRefresh.removeListener(_loadTodos);
     _tabController.dispose();
     super.dispose();
   }
+
+  Future<void> _loadTodos() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final todos = await todoApi.list();
+      if (!mounted) return;
+      setState(() {
+        _all = todos;
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '할 일을 불러오지 못했습니다. ($e)';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _toggle(TodoModel todo) async {
+    try {
+      await todoApi.setCompleted(todo.id, !todo.completed);
+      // 완료율/집계도 갱신되도록 대시보드 트리거.
+      triggerDashboardRefresh();
+      await _loadTodos();
+    } on ApiException catch (e) {
+      _snack('변경 실패: ${e.message}');
+    } catch (e) {
+      _snack('변경 중 오류: $e');
+    }
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ---- 분류/유틸 ------------------------------------------------------------
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
+  String get _today {
+    final n = DateTime.now();
+    return '${n.year}-${_two(n.month)}-${_two(n.day)}';
+  }
+
+  static const _prioRank = {'high': 0, 'medium': 1, 'low': 2};
+
+  int _cmp(TodoModel a, TodoModel b) {
+    final pa = _prioRank[a.priority] ?? 1;
+    final pb = _prioRank[b.priority] ?? 1;
+    if (pa != pb) return pa.compareTo(pb);
+    return (a.dueDate ?? '9999-99-99').compareTo(b.dueDate ?? '9999-99-99');
+  }
+
+  List<TodoModel> get _todayTodos {
+    final t = _today;
+    final list =
+        _all.where((x) => !x.completed && x.dueDate == t).toList();
+    list.sort(_cmp);
+    return list;
+  }
+
+  List<TodoModel> get _upcomingTodos {
+    final t = _today;
+    final list = _all
+        .where((x) => !x.completed && (x.dueDate == null || x.dueDate! != t))
+        .where((x) => x.dueDate == null || x.dueDate!.compareTo(t) > 0)
+        .toList();
+    list.sort(_cmp);
+    return list;
+  }
+
+  List<TodoModel> get _doneTodos {
+    final list = _all.where((x) => x.completed).toList();
+    list.sort(_cmp);
+    return list;
+  }
+
+  String _prioKo(String p) {
+    switch (p) {
+      case 'high':
+        return '높음';
+      case 'low':
+        return '낮음';
+      default:
+        return '보통';
+    }
+  }
+
+  Color _prioColor(String p) {
+    switch (p) {
+      case 'high':
+        return AppTheme.red;
+      case 'low':
+        return AppTheme.textSecondary;
+      default:
+        return AppTheme.orange;
+    }
+  }
+
+  // ---- build ---------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -114,14 +161,22 @@ class _TodoScreenState extends State<TodoScreen>
             _buildTabBar(),
             _buildProgressCard(),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildTodoList(_todayTodos, showExpand: true),
-                  _buildUpcomingList(),
-                  _buildTodoList(_doneTodos, isDoneTab: true),
-                ],
-              ),
+              child: _loading && _all.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? _buildError()
+                      : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildTodoList(_todayTodos,
+                                emptyText: '오늘 마감인 할 일이 없습니다.'),
+                            _buildTodoList(_upcomingTodos,
+                                emptyText: '예정된 할 일이 없습니다.'),
+                            _buildTodoList(_doneTodos,
+                                isDoneTab: true,
+                                emptyText: '완료한 할 일이 없습니다.'),
+                          ],
+                        ),
             ),
           ],
         ),
@@ -129,7 +184,48 @@ class _TodoScreenState extends State<TodoScreen>
     );
   }
 
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: GlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off,
+                  color: AppTheme.textSecondary, size: 34),
+              const SizedBox(height: 10),
+              Text(
+                _error ?? '할 일을 불러오지 못했습니다.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 14, color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '백엔드 서버가 실행 중인지 확인하세요.',
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _loadTodos,
+                style:
+                    FilledButton.styleFrom(backgroundColor: AppTheme.blue),
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
+    final n = DateTime.now();
+    const week = ['', '월', '화', '수', '목', '금', '토', '일'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
       child: Row(
@@ -148,14 +244,14 @@ class _TodoScreenState extends State<TodoScreen>
                 ),
               ),
               Text(
-                '6월 29일 일요일',
+                '${n.month}월 ${n.day}일 ${week[n.weekday]}요일',
                 style: const TextStyle(
                     fontSize: 13, color: AppTheme.textSecondary),
               ),
             ],
           ),
           GestureDetector(
-            onTap: () {},
+            onTap: _loading ? null : _loadTodos,
             child: Container(
               width: 40,
               height: 40,
@@ -164,8 +260,8 @@ class _TodoScreenState extends State<TodoScreen>
                 shape: BoxShape.circle,
                 border: Border.all(color: AppTheme.separator),
               ),
-              child:
-                  const Icon(Icons.tune, color: AppTheme.textPrimary, size: 20),
+              child: const Icon(Icons.refresh,
+                  color: AppTheme.textPrimary, size: 20),
             ),
           ),
         ],
@@ -199,13 +295,13 @@ class _TodoScreenState extends State<TodoScreen>
           dividerColor: Colors.transparent,
           labelColor: AppTheme.textPrimary,
           unselectedLabelColor: AppTheme.textSecondary,
-          labelStyle: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600),
+          labelStyle:
+              const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: const [
-            Tab(text: '오늘 4'),
-            Tab(text: '예정 7'),
-            Tab(text: '완료 12'),
+          tabs: [
+            Tab(text: '오늘 ${_todayTodos.length}'),
+            Tab(text: '예정 ${_upcomingTodos.length}'),
+            Tab(text: '완료 ${_doneTodos.length}'),
           ],
         ),
       ),
@@ -213,6 +309,13 @@ class _TodoScreenState extends State<TodoScreen>
   }
 
   Widget _buildProgressCard() {
+    final today = _today;
+    final todayAll =
+        _all.where((x) => x.dueDate == today).toList();
+    final done = todayAll.where((x) => x.completed).length;
+    final total = todayAll.length;
+    final rate = total == 0 ? 0.0 : done / total;
+    final percent = (rate * 100).round();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: GlassCard(
@@ -231,9 +334,9 @@ class _TodoScreenState extends State<TodoScreen>
                     color: AppTheme.textPrimary,
                   ),
                 ),
-                const Text(
-                  '68%',
-                  style: TextStyle(
+                Text(
+                  '$percent%',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.blue,
@@ -245,16 +348,17 @@ class _TodoScreenState extends State<TodoScreen>
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: 0.68,
+                value: rate,
                 backgroundColor: AppTheme.separator,
                 valueColor: const AlwaysStoppedAnimation(AppTheme.blue),
                 minHeight: 6,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              '완료 3개 · 남은 할 일 4개',
-              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            Text(
+              '완료 $done개 · 남은 할 일 ${total - done}개',
+              style: const TextStyle(
+                  fontSize: 12, color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -262,258 +366,117 @@ class _TodoScreenState extends State<TodoScreen>
     );
   }
 
-  Widget _buildTodoList(List<_TodoItem> todos,
-      {bool isDoneTab = false, bool showExpand = false}) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 80),
-      physics: const BouncingScrollPhysics(),
-      itemCount: todos.length,
-      itemBuilder: (context, i) {
-        final todo = todos[i];
-        final isExpanded = showExpand && i == _expandedIndex;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: GestureDetector(
-            onTap: () {
-              if (showExpand) setState(() => _expandedIndex = i);
-            },
-            child: GlassCard(
-              padding: const EdgeInsets.all(14),
+  Widget _buildTodoList(
+    List<TodoModel> todos, {
+    bool isDoneTab = false,
+    required String emptyText,
+  }) {
+    return RefreshIndicator(
+      onRefresh: _loadTodos,
+      child: todos.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 18),
+                    child: Text(
+                      emptyText,
+                      style: const TextStyle(
+                          fontSize: 13, color: AppTheme.textSecondary),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 80),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              itemCount: todos.length,
+              itemBuilder: (context, i) => _todoCard(todos[i], isDoneTab),
+            ),
+    );
+  }
+
+  Widget _todoCard(TodoModel todo, bool isDoneTab) {
+    final done = todo.completed;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 체크 아이콘 = 완료 토글 (실제 PATCH 호출)
+            GestureDetector(
+              onTap: () => _toggle(todo),
+              behavior: HitTestBehavior.opaque,
+              child: Icon(
+                done ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: done ? AppTheme.green : AppTheme.textSecondary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    todo.title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: done
+                          ? AppTheme.textSecondary
+                          : AppTheme.textPrimary,
+                      decoration:
+                          done ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        isDoneTab
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: isDoneTab
-                            ? AppTheme.green
-                            : AppTheme.textSecondary,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              todo.title,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: isDoneTab
-                                    ? AppTheme.textSecondary
-                                    : AppTheme.textPrimary,
-                                decoration: isDoneTab
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  todo.time,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                                if (todo.deadline != null) ...[
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      '· ${todo.deadline}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.red,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
+                      Icon(Icons.event_outlined,
+                          size: 12, color: AppTheme.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        todo.dueDate ?? '마감일 미정',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      PillBadge(
-                        label: todo.priority,
-                        color: todo.priorityColor,
-                      ),
-                    ],
-                  ),
-                  if (isExpanded && todo.supplies.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    const Divider(color: AppTheme.separator, height: 1),
-                    const SizedBox(height: 10),
-                    const Row(
-                      children: [
-                        Icon(Icons.backpack_outlined,
-                            size: 14, color: AppTheme.textSecondary),
-                        SizedBox(width: 4),
+                      if (todo.category != null) ...[
+                        const Text(' · ',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary)),
                         Text(
-                          '준비물',
-                          style: TextStyle(
+                          todo.category!,
+                          style: const TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
                             color: AppTheme.textSecondary,
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    ...todo.supplies.map((s) => Padding(
-                          padding: const EdgeInsets.only(bottom: 5),
-                          child: Row(
-                            children: [
-                              Icon(
-                                todo.doneSupplies.contains(s)
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
-                                size: 16,
-                                color: todo.doneSupplies.contains(s)
-                                    ? AppTheme.green
-                                    : AppTheme.textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                s,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: todo.doneSupplies.contains(s)
-                                      ? AppTheme.textSecondary
-                                      : AppTheme.textPrimary,
-                                  decoration:
-                                      todo.doneSupplies.contains(s)
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.flag_outlined, size: 14),
-                          label: const Text('우선순위',
-                              style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.textSecondary,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8)),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.notifications_outlined,
-                              size: 14),
-                          label: const Text('알림',
-                              style: TextStyle(fontSize: 12)),
-                          style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.textSecondary,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8)),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildUpcomingList() {
-    final items = [
-      ('7월 1일', '치과 정기 검진', '10:00', AppTheme.teal),
-      ('7월 2일', '프로젝트 발표 준비', '14:00', AppTheme.blue),
-      ('7월 3일', '미용실 예약', '19:00', AppTheme.purple),
-      ('7월 4일', '가족 모임', '12:00', AppTheme.orange),
-      ('7월 5일', '독서 클럽', '15:00', AppTheme.green),
-      ('7월 7일', '월간 회고', '20:00', AppTheme.red),
-      ('7월 10일', '생일 파티', '18:00', AppTheme.orange),
-    ];
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 80),
-      physics: const BouncingScrollPhysics(),
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final (date, title, time, color) = items[i];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: GlassCard(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.event_outlined, color: color, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          )),
-                      const SizedBox(height: 3),
-                      Text('$date · $time',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          )),
-                    ],
-                  ),
-                ),
-                Icon(Icons.radio_button_unchecked,
-                    color: AppTheme.textSecondary, size: 20),
-              ],
+            const SizedBox(width: 8),
+            PillBadge(
+              label: _prioKo(todo.priority),
+              color: _prioColor(todo.priority),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
-}
-
-class _TodoItem {
-  final String time;
-  final String title;
-  final String priority;
-  final Color priorityColor;
-  final String? deadline;
-  final bool isDone;
-  final List<String> supplies;
-  final List<String> doneSupplies;
-
-  const _TodoItem({
-    required this.time,
-    required this.title,
-    required this.priority,
-    required this.priorityColor,
-    required this.deadline,
-    required this.isDone,
-    required this.supplies,
-    required this.doneSupplies,
-  });
 }

@@ -327,3 +327,9 @@ Response `data`:
 - 알림 규칙(기본): `normal`=30·10분 전, `forgetful`=60·30·10분 전, `strong`은 더 촘촘, `late_prone`은 출발 전 추가.
 - `persist=true`로 다시 호출해도 UNIQUE 충돌 없이 교체/유지(중복 안전).
 - 조회: GET `/api/v1/notifications/plan/{schedule_id}` (없는 일정은 404).
+- 주의: 알림 조회는 query parameter가 아니라 path parameter 방식입니다. Flutter에서는 `schedule_id`를 URL 경로에 포함해야 합니다.
+
+예:
+```http
+GET /api/v1/notifications/plan/123
+```

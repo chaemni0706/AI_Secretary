@@ -31,7 +31,8 @@
 | `GET /api/v1/memory/{user_id}/context` | alert/reservation용 사용자 context |
 | `PATCH /api/v1/memory/{user_id}/preferences` | 알림 성향·이동/여유시간 등 수정 |
 | `POST /api/v1/memory/{user_id}/places` | 자주 가는 장소 추가 |
-| `POST·GET /api/v1/notifications/plan` | 저장된 일정 기반 알림 계획 생성/조회 |
+| `POST /api/v1/notifications/plan` | 저장된 일정 기반 알림 계획 생성 |
+| `GET /api/v1/notifications/plan/{schedule_id}` | 저장된 일정 기반 알림 계획 조회(path parameter) |
 | `GET /health` | 헬스 체크 |
 
 ## 빠른 시작
@@ -69,6 +70,25 @@ python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 프론트 핵심 필드: 일정 `data.schedule_draft`, 예약 후보 `data.recommended_candidates`,
 예약 메시지 `data.generated_message`, 출발 알림 `data.leave_time`·`data.checklist`,
 브리핑 `data.summary`·`data.key_points`, 감정 `data.emotion`·`data.coaching`.
+
+## 알림 계획 API
+
+알림 계획 생성:
+
+`POST /api/v1/notifications/plan`
+
+알림 계획 조회:
+
+`GET /api/v1/notifications/plan/{schedule_id}`
+
+주의: 알림 조회는 query parameter가 아니라 path parameter 방식입니다.
+Flutter에서는 `schedule_id`를 URL 경로에 포함해야 합니다.
+
+예:
+
+```http
+GET /api/v1/notifications/plan/123
+```
 
 ## 테스트
 

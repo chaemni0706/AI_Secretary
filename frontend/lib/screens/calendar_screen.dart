@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../models/schedule_model.dart';
+import '../services/schedule_api.dart';
+import '../services/dashboard_api.dart';
+import '../services/api_client.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -11,29 +15,119 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  DateTime _focusedDay = DateTime(2026, 6, 29);
-  DateTime _selectedDay = DateTime(2026, 6, 29);
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
   int _viewIndex = 0; // 0=월간, 1=주간, 2=타임라인
 
-  static final _eventDays = {
-    DateTime(2026, 6, 23),
-    DateTime(2026, 6, 24),
-    DateTime(2026, 6, 25),
-    DateTime(2026, 6, 26),
-    DateTime(2026, 6, 29),
-    DateTime(2026, 6, 30),
-    DateTime(2026, 7, 1),
-    DateTime(2026, 7, 3),
-  };
+  bool _loading = true;
+  String? _error;
+  List<ScheduleModel> _all = [];
 
-  static const _scheduleForDay = [
-    _CalEvent('09:30 – 10:30', '발표 자료 최종 확인', '업무', AppTheme.blue,
-        Icons.work_outline),
-    _CalEvent('11:00 – 11:30', '병원 예약 확인 전화', '병원', AppTheme.teal,
-        Icons.local_hospital_outlined),
-    _CalEvent('19:00 – 21:00', '저녁 약속', '약속', AppTheme.orange,
-        Icons.restaurant_outlined),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadSchedules();
+    // 예약/AI챗 등에서 저장 후 triggerDashboardRefresh() 가 호출되면 캘린더도 갱신.
+    dashboardRefresh.addListener(_loadSchedules);
+  }
+
+  @override
+  void dispose() {
+    dashboardRefresh.removeListener(_loadSchedules);
+    super.dispose();
+  }
+
+  Future<void> _loadSchedules() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      // 전체 일정 조회 (프론트에서 날짜별 필터링).
+      final schedules = await scheduleApi.list();
+      if (!mounted) return;
+      setState(() {
+        _all = schedules;
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '일정을 불러오지 못했습니다. ($e)';
+        _loading = false;
+      });
+    }
+  }
+
+  // ---- 날짜 유틸 ------------------------------------------------------------
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
+
+  String _ymd(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
+
+  /// 선택 날짜와 schedule.date("YYYY-MM-DD") 문자열 비교로 필터링.
+  List<ScheduleModel> _schedulesFor(DateTime day) {
+    final key = _ymd(day);
+    final list = _all.where((s) => s.date == key).toList();
+    list.sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
+    return list;
+  }
+
+  bool _hasEvent(DateTime day) => _schedulesFor(day).isNotEmpty;
+
+  int _hourOf(String? hhmm) {
+    if (hhmm == null || !hhmm.contains(':')) return -1;
+    return int.tryParse(hhmm.split(':')[0]) ?? -1;
+  }
+
+  Color _colorFor(String? category) {
+    switch (category) {
+      case 'hospital':
+        return AppTheme.teal;
+      case 'meeting':
+      case 'work':
+        return AppTheme.blue;
+      case 'study':
+        return AppTheme.purple;
+      case 'meal':
+      case 'beauty':
+        return AppTheme.orange;
+      case 'exercise':
+        return AppTheme.green;
+      default:
+        return AppTheme.blue;
+    }
+  }
+
+  IconData _iconFor(String? category) {
+    switch (category) {
+      case 'hospital':
+        return Icons.local_hospital_outlined;
+      case 'study':
+        return Icons.book_outlined;
+      case 'meeting':
+      case 'work':
+        return Icons.work_outline;
+      case 'meal':
+        return Icons.restaurant_outlined;
+      case 'beauty':
+        return Icons.content_cut_outlined;
+      case 'exercise':
+        return Icons.fitness_center_outlined;
+      default:
+        return Icons.event_outlined;
+    }
+  }
+
+  // ---- build ---------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -45,16 +139,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
             _buildHeader(),
             _buildViewSwitcher(),
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    if (_viewIndex == 0) _buildMonthCalendar(),
-                    if (_viewIndex == 1) _buildWeekView(),
-                    if (_viewIndex == 2) _buildTimelineView(),
-                    _buildDaySchedule(),
-                    const SizedBox(height: 80),
-                  ],
+              child: RefreshIndicator(
+                onRefresh: _loadSchedules,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  child: Column(
+                    children: [
+                      if (_viewIndex == 0) _buildMonthCalendar(),
+                      if (_viewIndex == 1) _buildWeekView(),
+                      if (_viewIndex == 2) _buildTimelineView(),
+                      _buildDaySchedule(),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -72,8 +171,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           GestureDetector(
             onTap: () {
               setState(() {
-                _focusedDay = DateTime(
-                    _focusedDay.year, _focusedDay.month - 1);
+                _focusedDay =
+                    DateTime(_focusedDay.year, _focusedDay.month - 1);
               });
             },
             child: const Icon(Icons.chevron_left,
@@ -104,8 +203,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           GestureDetector(
             onTap: () {
               setState(() {
-                _focusedDay = DateTime(
-                    _focusedDay.year, _focusedDay.month + 1);
+                _focusedDay =
+                    DateTime(_focusedDay.year, _focusedDay.month + 1);
               });
             },
             child: const Icon(Icons.chevron_right,
@@ -113,7 +212,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () {},
+            onTap: _loading ? null : _loadSchedules,
             child: Container(
               width: 36,
               height: 36,
@@ -121,7 +220,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 color: AppTheme.blue.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.add, color: AppTheme.blue, size: 20),
+              child: const Icon(Icons.refresh, color: AppTheme.blue, size: 20),
             ),
           ),
         ],
@@ -166,9 +265,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isActive
-                          ? FontWeight.w600
-                          : FontWeight.w400,
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.w400,
                       color: isActive
                           ? AppTheme.textPrimary
                           : AppTheme.textSecondary,
@@ -201,8 +299,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _focusedDay = focused;
             });
           },
-          eventLoader: (day) =>
-              _eventDays.any((d) => isSameDay(d, day)) ? [true] : [],
+          // 실제 API 일정이 있는 날짜에 marker 표시.
+          eventLoader: (day) => _hasEvent(day) ? [true] : [],
           headerVisible: false,
           daysOfWeekHeight: 28,
           rowHeight: 44,
@@ -275,8 +373,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             final day = weekStart.add(Duration(days: i));
             final isSelected = isSameDay(day, _selectedDay);
             final isToday = isSameDay(day, DateTime.now());
-            final hasEvent =
-                _eventDays.any((d) => isSameDay(d, day));
+            final hasEvent = _hasEvent(day);
             final dayNames = ['일', '월', '화', '수', '목', '금', '토'];
             return GestureDetector(
               onTap: () => setState(() => _selectedDay = day),
@@ -321,9 +418,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     width: 5,
                     height: 5,
                     decoration: BoxDecoration(
-                      color: hasEvent
-                          ? AppTheme.blue
-                          : Colors.transparent,
+                      color: hasEvent ? AppTheme.blue : Colors.transparent,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -337,6 +432,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildTimelineView() {
+    final daySchedules = _schedulesFor(_selectedDay);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: GlassCard(
@@ -352,8 +448,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 12),
             ...List.generate(12, (i) {
               final hour = 8 + i;
-              final hasEvent = _scheduleForDay
-                  .any((e) => int.parse(e.time.split(':')[0]) == hour);
+              ScheduleModel? ev;
+              for (final s in daySchedules) {
+                if (_hourOf(s.startTime) == hour) {
+                  ev = s;
+                  break;
+                }
+              }
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -371,28 +472,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          height: 1,
-                          color: AppTheme.separator,
-                        ),
-                        if (hasEvent)
+                        Container(height: 1, color: AppTheme.separator),
+                        if (ev != null)
                           Container(
                             margin: const EdgeInsets.only(top: 2, bottom: 2),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppTheme.blue.withOpacity(0.15),
+                              color: _colorFor(ev.category).withOpacity(0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              _scheduleForDay
-                                  .firstWhere((e) =>
-                                      int.parse(e.time.split(':')[0]) ==
-                                      hour)
-                                  .title,
-                              style: const TextStyle(
+                              ev.title,
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.blue,
+                                color: _colorFor(ev.category),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -414,6 +508,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildDaySchedule() {
     final dateStr =
         '${_selectedDay.month}월 ${_selectedDay.day}일 ${_weekdayStr(_selectedDay.weekday)}';
+    final daySchedules = _schedulesFor(_selectedDay);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -423,71 +519,148 @@ class _CalendarScreenState extends State<CalendarScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$dateStr 일정 ${_scheduleForDay.length}',
+                '$dateStr 일정 ${daySchedules.length}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
                 ),
               ),
-              const Icon(Icons.umbrella_outlined,
-                  color: AppTheme.blue, size: 20),
+              if (_loading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
             ],
           ),
         ),
-        ...List.generate(_scheduleForDay.length, (i) {
-          final ev = _scheduleForDay[i];
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        if (_loading && _all.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null)
+          _buildError()
+        else if (daySchedules.isEmpty)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: GlassCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              child: Text(
+                '이 날짜에 등록된 일정이 없습니다.',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
+            ),
+          )
+        else
+          ...daySchedules.map(_scheduleCard),
+      ],
+    );
+  }
+
+  Widget _buildError() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: GlassCard(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Icon(Icons.cloud_off,
+                color: AppTheme.textSecondary, size: 32),
+            const SizedBox(height: 10),
+            Text(
+              _error ?? '일정을 불러오지 못했습니다.',
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '백엔드 서버가 실행 중인지 확인하세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _loadSchedules,
+              style: FilledButton.styleFrom(backgroundColor: AppTheme.blue),
+              child: const Text('다시 시도'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _scheduleCard(ScheduleModel s) {
+    final color = _colorFor(s.category);
+    final timeText = s.startTime == null
+        ? '시간 미정'
+        : (s.endTime != null ? '${s.startTime} – ${s.endTime}' : s.startTime!);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 4,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: ev.color,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                  Text(s.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      )),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Text(timeText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          )),
+                      if (s.category != null) ...[
+                        const Text(' · ',
+                            style: TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 12)),
+                        PillBadge(label: s.category!, color: color),
+                      ],
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (s.location != null && s.location!.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(
                       children: [
-                        Text(ev.title,
+                        const Icon(Icons.place_outlined,
+                            size: 12, color: AppTheme.textSecondary),
+                        const SizedBox(width: 3),
+                        Text(s.location!,
                             style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
                             )),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Text(ev.time,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                )),
-                            const Text(' · ',
-                                style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 12)),
-                            PillBadge(
-                                label: ev.category, color: ev.color),
-                          ],
-                        ),
                       ],
                     ),
-                  ),
-                  Icon(ev.icon, color: ev.color.withOpacity(0.6), size: 20),
+                  ],
                 ],
               ),
             ),
-          );
-        }),
-      ],
+            Icon(_iconFor(s.category), color: color.withOpacity(0.6), size: 20),
+          ],
+        ),
+      ),
     );
   }
 
@@ -495,15 +668,4 @@ class _CalendarScreenState extends State<CalendarScreen> {
     const days = ['', '월', '화', '수', '목', '금', '토', '일'];
     return '${days[weekday]}요일';
   }
-}
-
-class _CalEvent {
-  final String time;
-  final String title;
-  final String category;
-  final Color color;
-  final IconData icon;
-
-  const _CalEvent(
-      this.time, this.title, this.category, this.color, this.icon);
 }

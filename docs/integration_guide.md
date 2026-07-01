@@ -118,6 +118,22 @@
    (persist=true 로 다시 호출해도 UNIQUE 충돌 없이 교체/유지됩니다)
 ```
 
+### Flutter 연동 주의사항
+
+알림 조회 API는 다음 경로를 사용합니다.
+
+```text
+GET /api/v1/notifications/plan/{schedule_id}
+```
+
+예를 들어 schedule_id가 `abc-123`이면 Flutter에서는 다음 URL로 호출합니다.
+
+```text
+/api/v1/notifications/plan/abc-123
+```
+
+`GET /api/v1/notifications/plan?schedule_id=abc-123` 방식이 아닙니다.
+
 ## 7. 주의할 필드명 (계약 고정)
 
 Flutter는 아래 **실제 필드명**을 그대로 사용하세요.

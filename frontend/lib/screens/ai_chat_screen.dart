@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../services/api_client.dart';
+import '../services/schedule_api.dart';
+import '../services/todo_api.dart';
+import '../services/dashboard_api.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -13,14 +17,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isListening = false;
+  bool _parsing = false;
+  bool _saving = false;
+
+  /// 마지막 parse 결과 (저장 대상).
+  ParseResult? _lastParse;
 
   final List<_ChatMessage> _messages = [
     const _ChatMessage(
-      text: '내일 오후 2시에 병원 예약 잡아줘',
-      isUser: true,
-    ),
-    const _ChatMessage(
-      text: '내일 오후 2시 병원 예약으로 인식했어요. 캘린더에 추가할까요?',
+      text: '무엇을 도와드릴까요? 예: "내일 오후 2시에 치과 예약 잡아줘"',
       isUser: false,
     ),
   ];
@@ -32,6 +37,108 @@ class _AiChatScreenState extends State<AiChatScreen> {
     super.dispose();
   }
 
+  void _addMessage(String text, {required bool isUser}) {
+    setState(() => _messages.add(_ChatMessage(text: text, isUser: isUser)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  /// 1) 자연어 → parse
+  Future<void> _send() async {
+    final text = _inputController.text.trim();
+    if (text.isEmpty || _parsing) return;
+    _inputController.clear();
+    _addMessage(text, isUser: true);
+    setState(() => _parsing = true);
+
+    try {
+      final result = await scheduleApi.parse(
+        text,
+        currentDatetime: DateTime.now().toIso8601String(),
+      );
+      setState(() {
+        _lastParse = result;
+        _parsing = false;
+      });
+      final draft = result.scheduleDraft;
+      final kind = result.isTodo ? '할 일' : '일정';
+      _addMessage(
+        '"${draft['title'] ?? text}"($kind)로 인식했어요. 아래에서 확인 후 저장하세요.',
+        isUser: false,
+      );
+    } on ApiException catch (e) {
+      setState(() => _parsing = false);
+      _addMessage('인식에 실패했어요: ${e.message}', isUser: false);
+    } catch (e) {
+      setState(() => _parsing = false);
+      _addMessage('오류가 발생했어요: $e', isUser: false);
+    }
+  }
+
+  /// 2) parse 결과 저장 → 3) 대시보드 새로고침 트리거
+  Future<void> _save() async {
+    final parse = _lastParse;
+    if (parse == null || _saving) return;
+    setState(() => _saving = true);
+
+    // 백엔드 일정 저장은 date(일정)/title 이 필수다. parse 가 날짜를 인식하지 못하면
+    // date 가 null 로 와서 422("date가 없어...")가 난다. 누락 시 오늘로 보정.
+    final draft = Map<String, dynamic>.from(parse.scheduleDraft);
+    bool dateFilled = false;
+    final rawDate = draft['date'];
+    if (rawDate == null || rawDate.toString().trim().isEmpty) {
+      final n = DateTime.now();
+      String two(int x) => x.toString().padLeft(2, '0');
+      draft['date'] = '${n.year}-${two(n.month)}-${two(n.day)}';
+      dateFilled = true;
+    }
+    final rawTitle = draft['title'];
+    if (rawTitle == null || rawTitle.toString().trim().isEmpty) {
+      draft['title'] = '새 일정';
+    }
+
+    try {
+      final String savedTitle;
+      if (parse.isTodo) {
+        final todo = await todoApi.createFromDraft(draft);
+        savedTitle = todo.title;
+      } else {
+        final sch = await scheduleApi.createFromDraft(
+          draft,
+          intent: parse.intent,
+        );
+        savedTitle = sch.title;
+      }
+      // 홈 대시보드 새로고침 트리거.
+      triggerDashboardRefresh();
+      setState(() {
+        _saving = false;
+        _lastParse = null;
+      });
+      final note = dateFilled ? ' (날짜를 인식하지 못해 오늘로 저장했어요)' : '';
+      _addMessage('"$savedTitle" 저장 완료! 홈 화면에 반영됩니다.$note',
+          isUser: false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('저장되었습니다.')),
+        );
+      }
+    } on ApiException catch (e) {
+      setState(() => _saving = false);
+      _addMessage('저장 실패: ${e.message}', isUser: false);
+    } catch (e) {
+      setState(() => _saving = false);
+      _addMessage('저장 중 오류: $e', isUser: false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -40,11 +147,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
         child: Column(
           children: [
             _buildHeader(),
-            Expanded(
-              child: _buildChatArea(),
-            ),
-            _buildResultCard(),
-            _buildSuggestionChips(),
+            Expanded(child: _buildChatArea()),
+            if (_parsing)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            if (_lastParse != null) _buildResultCard(_lastParse!),
             _buildInputArea(),
           ],
         ),
@@ -114,7 +227,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
-  Widget _buildResultCard() {
+  Widget _buildResultCard(ParseResult parse) {
+    final draft = parse.scheduleDraft;
+    final title = (draft['title'] ?? '(제목 없음)').toString();
+    final category = (draft['category'] ?? '기타').toString();
+    final date = (draft['date'] ?? '-').toString();
+    final start = (draft['start_time'] ?? '').toString();
+    final end = (draft['end_time'] ?? '').toString();
+    final timeText = start.isEmpty
+        ? '-'
+        : (end.isEmpty ? start : '$start – $end');
+    final isTodo = parse.isTodo;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: GlassCard(
@@ -131,42 +255,51 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     color: AppTheme.teal.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.local_hospital_outlined,
-                      color: AppTheme.teal, size: 18),
+                  child: Icon(
+                    isTodo ? Icons.check_circle_outline : Icons.event_outlined,
+                    color: AppTheme.teal,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 10),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('병원 예약',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        )),
-                    Text('카테고리 · 병원',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        )),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          )),
+                      Text('${isTodo ? "할 일" : "일정"} · $category',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          )),
+                    ],
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             const Divider(color: AppTheme.separator, height: 1),
             const SizedBox(height: 10),
-            _resultRow('날짜', '6월 30일 (월)'),
-            const SizedBox(height: 6),
-            _resultRow('시간', '오후 2:00 – 3:00'),
-            const SizedBox(height: 6),
-            _resultRow('알림', '30분 전'),
+            _resultRow(isTodo ? '마감일' : '날짜', date),
+            if (!isTodo) ...[
+              const SizedBox(height: 6),
+              _resultRow('시간', timeText),
+            ],
+            if (parse.missingFields.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _resultRow('누락', parse.missingFields.join(', ')),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
                   child: FilledButton(
-                    onPressed: () {},
+                    onPressed: _saving ? null : _save,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.blue,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -174,15 +307,26 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('저장하기',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: _saving
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('저장하기',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: _saving
+                        ? null
+                        : () => setState(() => _lastParse = null),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.textPrimary,
                       side: const BorderSide(color: AppTheme.separator),
@@ -191,7 +335,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('수정하기',
+                    child: const Text('취소',
                         style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
@@ -206,6 +350,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Widget _resultRow(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           width: 48,
@@ -213,47 +358,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
               style: const TextStyle(
                   fontSize: 13, color: AppTheme.textSecondary)),
         ),
-        Text(value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-            )),
-      ],
-    );
-  }
-
-  Widget _buildSuggestionChips() {
-    final chips = ['준비물 알려줘', '출발 시간은?', '취소하기'];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: chips.map((c) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: GestureDetector(
-                onTap: () {},
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.separator),
-                  ),
-                  child: Text(c,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.textPrimary,
-                      )),
-                ),
-              ),
-            );
-          }).toList(),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              )),
         ),
-      ),
+      ],
     );
   }
 
@@ -280,6 +393,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _inputController,
+                      onSubmitted: (_) => _send(),
+                      textInputAction: TextInputAction.send,
                       style: const TextStyle(
                           fontSize: 14, color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
@@ -308,9 +423,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       ),
                       child: Icon(
                         Icons.graphic_eq,
-                        color: _isListening
-                            ? Colors.white
-                            : AppTheme.blue,
+                        color: _isListening ? Colors.white : AppTheme.blue,
                         size: 18,
                       ),
                     ),
@@ -321,7 +434,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: () {},
+            onTap: _send,
             child: Container(
               width: 42,
               height: 42,
@@ -362,9 +475,8 @@ class _ChatBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: message.isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
+        mainAxisAlignment:
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isUser) ...[
@@ -387,8 +499,8 @@ class _ChatBubble extends StatelessWidget {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
               ),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: message.isUser
                     ? AppTheme.blue

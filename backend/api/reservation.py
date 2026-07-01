@@ -13,7 +13,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.core.response import success_response
+from backend.core.response import error_response, success_response
+from backend.database.schema.reservation_message_schema import (
+    FromCandidateRequest,
+    FromCandidateResponse,
+)
+from backend.services.reservation_message_service import (
+    MissingFieldsError,
+    build_message_card,
+)
 from backend.database.schema.reservation_business_schema import (
     BusinessCandidateRequest,
     BusinessCandidateResponse,
@@ -119,3 +127,22 @@ def book_reservation(req: ReservationBookingRequest, db: Session = Depends(get_d
         message="예약 후보를 로컬 일정으로 저장했습니다.",
         data={"schedule": schedule.model_dump()},
     )
+
+
+@router.post(
+    "/reservations/message/from-candidate",
+    response_model=FromCandidateResponse,
+    summary="선택한 예약 후보로 예약 문의 메시지 생성 (draft-only)",
+)
+def reservation_message_from_candidate(req: FromCandidateRequest):
+    try:
+        data = build_message_card(req)
+    except MissingFieldsError as exc:
+        return error_response(
+            message="예약 메시지 생성에 필요한 정보가 부족합니다.",
+            status_code=422,
+            data={"missing_fields": exc.missing},
+        )
+    label = {"inquiry": "예약 문의", "confirm": "예약 확정 요청", "change": "예약 변경 문의",
+             "cancel": "예약 취소 요청", "check": "예약 확인 요청"}.get(req.action_type, "예약 문의")
+    return success_response(message=f"{label} 메시지를 생성했습니다.", data=data.model_dump())

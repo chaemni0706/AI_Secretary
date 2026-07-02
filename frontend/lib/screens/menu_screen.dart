@@ -4,6 +4,9 @@ import '../widgets/glass_card.dart';
 import 'briefing_screen.dart';
 import 'booking_recommend_screen.dart';
 import 'booking_message_screen.dart';
+import 'daily_briefing_screen.dart';
+import 'voice_chat_screen.dart';
+import 'mock_call_alert_screen.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -19,6 +22,7 @@ class MenuScreen extends StatelessWidget {
             SliverToBoxAdapter(child: _buildHeader()),
             SliverToBoxAdapter(child: _buildSearchBar()),
             SliverToBoxAdapter(child: _buildMvpSection(context)),
+            SliverToBoxAdapter(child: _buildVoiceSection(context)),
             SliverToBoxAdapter(child: _buildExtendedSection()),
             SliverToBoxAdapter(child: _buildSettingsSection()),
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
@@ -133,6 +137,60 @@ class MenuScreen extends StatelessWidget {
             children: items
                 .map((item) => _MenuCard(item: item))
                 .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVoiceSection(BuildContext context) {
+    final items = [
+      _MenuItem(
+        icon: Icons.wb_sunny_outlined,
+        color: AppTheme.blue,
+        title: '오늘의 브리핑',
+        subtitle: '하루 요약·듣기',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DailyBriefingScreen()),
+        ),
+      ),
+      _MenuItem(
+        icon: Icons.mic_none_outlined,
+        color: AppTheme.purple,
+        title: 'AI 음성 챗봇',
+        subtitle: '감정 기반 코칭',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VoiceChatScreen()),
+        ),
+      ),
+      _MenuItem(
+        icon: Icons.phone_in_talk_outlined,
+        color: AppTheme.teal,
+        title: '챔니 전화 알림',
+        subtitle: '일정 전 음성 알림',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MockCallAlertScreen()),
+        ),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'AI 음성 비서'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.5,
+            children: items.map((item) => _MenuCard(item: item)).toList(),
           ),
         ),
       ],

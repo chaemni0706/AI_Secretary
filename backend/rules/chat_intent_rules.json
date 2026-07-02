@@ -1,0 +1,166 @@
+{
+  "_comment": "Rule-based intent classifier for the AI-secretary chat. Each intent has weighted keyword lists. Scoring: sum of weights of matched keywords, then normalized. Order in 'priority_order' breaks ties (earlier = higher).",
+  "priority_order": [
+    "reservation_message",
+    "reservation_recommend",
+    "schedule_adjustment",
+    "schedule_create",
+    "schedule_query",
+    "daily_briefing",
+    "emotion_coaching",
+    "smalltalk",
+    "fallback"
+  ],
+  "intents": {
+    "reservation_message": {
+      "strong": [
+        "예약 문자",
+        "예약문자",
+        "예약 메시지",
+        "문자 써",
+        "문자 작성",
+        "메시지 써",
+        "문자 보내",
+        "예약 메세지"
+      ],
+      "weak": [
+        "문자",
+        "메시지",
+        "메세지"
+      ]
+    },
+    "reservation_recommend": {
+      "strong": [
+        "예약 언제",
+        "예약 시간",
+        "예약하면 좋",
+        "예약 잡",
+        "언제 예약",
+        "예약 가능한 시간",
+        "몇 시에 예약"
+      ],
+      "weak": [
+        "예약",
+        "병원",
+        "미용실",
+        "진료"
+      ]
+    },
+    "schedule_adjustment": {
+      "strong": [
+        "미루고 싶",
+        "옮기고 싶",
+        "일정 조정",
+        "일정 바꾸",
+        "시간 옮기",
+        "일정 옮기",
+        "미룰까",
+        "뒤로 미",
+        "다른 시간으로",
+        "재조정"
+      ],
+      "weak": [
+        "미루",
+        "옮기",
+        "조정",
+        "바꾸"
+      ]
+    },
+    "schedule_create": {
+      "strong": [
+        "일정 추가",
+        "일정 등록",
+        "일정 잡",
+        "약속 잡",
+        "캘린더에 추가",
+        "일정 만들"
+      ],
+      "weak": [
+        "추가해",
+        "등록해",
+        "잡아줘"
+      ]
+    },
+    "schedule_query": {
+      "strong": [
+        "일정 알려",
+        "오늘 일정",
+        "내일 일정",
+        "일정 뭐",
+        "일정 확인",
+        "스케줄 알려",
+        "일정 보여"
+      ],
+      "weak": [
+        "일정",
+        "스케줄",
+        "무슨 일"
+      ]
+    },
+    "daily_briefing": {
+      "strong": [
+        "오늘 하루",
+        "오늘 브리핑",
+        "하루 요약",
+        "오늘 요약",
+        "브리핑 해",
+        "오늘 어때"
+      ],
+      "weak": [
+        "브리핑",
+        "요약"
+      ]
+    },
+    "emotion_coaching": {
+      "strong": [
+        "너무 힘들",
+        "너무 지쳐",
+        "우울",
+        "불안해",
+        "스트레스",
+        "번아웃",
+        "지친다",
+        "막막",
+        "힘들어",
+        "슬퍼",
+        "짜증",
+        "화가",
+        "어떻게 해야 할지",
+        "뭐부터",
+        "모르겠어",
+        "벅차",
+        "감당",
+        "정신 없"
+      ],
+      "weak": [
+        "힘들",
+        "피곤",
+        "졸려",
+        "졸리",
+        "지쳐",
+        "기분",
+        "마음"
+      ]
+    },
+    "smalltalk": {
+      "strong": [
+        "그냥 얘기",
+        "그냥 이야기",
+        "말동무",
+        "심심",
+        "대화하고 싶",
+        "얘기하고 싶",
+        "이야기하고 싶"
+      ],
+      "weak": [
+        "안녕",
+        "뭐해",
+        "심심해"
+      ]
+    }
+  },
+  "weights": {
+    "strong": 3,
+    "weak": 1
+  }
+}

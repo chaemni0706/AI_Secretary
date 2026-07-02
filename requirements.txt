@@ -1,0 +1,80 @@
+# FastAPI
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20
+
+# Database
+sqlalchemy==2.0.43
+alembic==1.16.4
+pymysql==1.1.1
+
+# Data Validation
+pydantic==2.11.7
+pydantic-settings==2.10.1
+
+# Environment
+python-dotenv==1.1.1
+
+# OpenAI / LLM
+openai==1.99.9
+tiktoken==0.11.0
+
+# LangChain / RAG
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-openai==0.3.30
+
+chromadb==1.0.15
+faiss-cpu==1.11.0
+
+sentence-transformers==5.0.0
+
+# NLP
+transformers==4.55.0
+torch==2.8.0
+spacy==3.8.7
+dateparser==1.2.2
+kiwipiepy==0.21.0
+
+# Data Analysis
+numpy==2.2.5
+pandas==2.3.1
+scikit-learn==1.7.1
+
+# Graph Relationship
+networkx==3.5
+
+# Google Calendar
+google-api-python-client==2.178.0
+google-auth==2.40.3
+google-auth-oauthlib==1.2.2
+google-auth-httplib2==0.2.0
+
+# Maps
+googlemaps==4.10.0
+
+# Weather / External API
+requests==2.32.4
+
+# Notification
+firebase-admin==7.0.0
+
+# Voice
+gtts==2.5.4
+
+# Image Analysis
+opencv-python==4.12.0.88
+Pillow==11.3.0
+
+# Scheduling
+apscheduler==3.11.0
+
+# Logging
+loguru==0.7.3
+
+# Testing
+pytest==8.4.1
+httpx==0.28.1
+
+# Utility
+tqdm==4.67.1

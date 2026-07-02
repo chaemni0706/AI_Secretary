@@ -172,3 +172,83 @@ WHEN (SELECT item_type FROM planner_items WHERE item_id = NEW.item_id) <> 'TODO'
 BEGIN
   SELECT RAISE(ABORT, 'todo_details requires TODO planner item');
 END;
+
+-- =====================================================================
+-- AI 가계부 (ledger) — 알림/영수증 기반 거래 기록.
+-- planner_items 계열(일정/할일)과 완전히 독립된 신규 테이블. 기존 테이블·
+-- 트리거·CHECK 는 일절 수정하지 않고 아래 정의만 추가한다(append only).
+-- enum류는 기존 컨벤션대로 UPPERCASE 로 저장하고, API 응답은 소문자로 매핑한다
+-- (planner_items 의 SCHEDULED↔scheduled 방식과 동일).
+-- duplicated_transaction_id 는 자기참조 FK 를 걸지 않고 TEXT 로 두며, 원본
+-- 참조 무결성은 LedgerService 계층에서 관리한다.
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS ledger_transactions (
+  transaction_id            TEXT PRIMARY KEY,
+  user_id                   TEXT NOT NULL,
+
+  -- 입력 출처
+  source_type               TEXT NOT NULL
+                              CHECK (source_type IN
+                                ('NOTIFICATION','RECEIPT_SCAN','MANUAL','SEED')),
+  app_name                  TEXT,          -- 알림 앱명(KB국민카드 등), 그 외 NULL
+  title                     TEXT,          -- 알림 title
+  raw_text                  TEXT,          -- 알림 body 또는 receipt_text 원문
+
+  -- 거래 핵심
+  merchant                  TEXT,
+  normalized_merchant       TEXT,          -- dedup/카테고리용 정규화 상호명
+  amount                    INTEGER NOT NULL DEFAULT 0
+                              CHECK (amount >= 0),        -- KRW 정수(원)
+  transaction_type          TEXT NOT NULL
+                              CHECK (transaction_type IN
+                                ('EXPENSE','INCOME','CANCEL','IGNORE')),
+
+  -- 분류
+  category                  TEXT,
+  category_source           TEXT,          -- rule_based / mock_place_search /
+                                           -- receipt_rule / notification_rule /
+                                           -- category_mapping / llm / fallback /
+                                           -- user_override
+  confidence                REAL
+                              CHECK (confidence IS NULL OR
+                                     (confidence >= 0 AND confidence <= 1)),
+  needs_user_confirmation   INTEGER NOT NULL DEFAULT 0
+                              CHECK (needs_user_confirmation IN (0,1)),
+  alternatives_json         TEXT,          -- JSON 배열 문자열, 없으면 NULL
+
+  -- 시각 (기존 컨벤션: occurred_at=ISO datetime, date/time 분리 저장)
+  occurred_at               TEXT,          -- 'YYYY-MM-DDTHH:MM:SS'
+  date                      TEXT,          -- 'YYYY-MM-DD' (달력/집계 키)
+  time                      TEXT,          -- 'HH:MM'
+
+  -- 상태 / 중복
+  status                    TEXT NOT NULL DEFAULT 'PENDING'
+                              CHECK (status IN
+                                ('PENDING','CONFIRMED','DUPLICATE',
+                                 'DELETED','NEEDS_REVIEW')),
+  duplicated_transaction_id TEXT,          -- 중복 시 원본 tx 참조(앱 계층 관리)
+  dedup_key                 TEXT,          -- 정확 일치 지문(해시)
+  source_hash               TEXT,          -- 원본 입력 해시(동일 알림 재전송 감지)
+
+  -- 영수증 상세 / 반복결제
+  items_json                TEXT,          -- JSON 배열 [{"name":..,"amount":..}]
+  is_recurring              INTEGER NOT NULL DEFAULT 0
+                              CHECK (is_recurring IN (0,1)),
+
+  created_at                TEXT NOT NULL,
+  updated_at                TEXT NOT NULL,
+
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 대시보드/리포트: user + 날짜(월 범위) 조회
+CREATE INDEX IF NOT EXISTS idx_ledger_tx_user_date
+  ON ledger_transactions (user_id, date);
+
+-- 정확 일치 dedup (동일 알림 재전송)
+CREATE INDEX IF NOT EXISTS idx_ledger_tx_dedup
+  ON ledger_transactions (user_id, dedup_key);
+
+-- 퍼지 dedup 후보 (알림↔영수증 교차, merchant+amount 근사)
+CREATE INDEX IF NOT EXISTS idx_ledger_tx_fuzzy
+  ON ledger_transactions (user_id, normalized_merchant, amount);

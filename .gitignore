@@ -21,10 +21,39 @@ __pycache__/
 .vscode/
 .idea/
 
+<<<<<<< HEAD
 # OS files
+=======
+# Flutter
+frontend/.dart_tool/
+frontend/build/
+# Runtime upload/temp files
+backend/temp_uploads/
+temp_uploads/
+resized_images/
+
+# Runtime result/data files
+backend/data/medicine_routines.json
+
+# OCR/model cache
+.paddleocr/
+.paddlex/
+*.pdparams
+*.pdmodel
+*.pdiparams
+
+# Old test result folders
+raw_ocr_results/
+structured_results/
+debug_results/
+
+
+# macOS
+>>>>>>> origin/Feature_SJ
 .DS_Store
 Thumbs.db
 
+<<<<<<< HEAD
 # Logs
 *.log
 
@@ -51,3 +80,7 @@ rag/vector_db/
 *.tflite*
 runtime/
 *.sqlite
+=======
+# Windows
+Thumbs.db
+>>>>>>> origin/Feature_SJ

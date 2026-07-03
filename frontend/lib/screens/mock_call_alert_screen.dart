@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/mock_call_alert.dart';
 import '../services/mock_voice_service.dart';
+import '../services/voice_tts_service.dart';
 
 /// 가짜 전화 알림 화면 (Mock).
 ///
@@ -22,6 +24,7 @@ class MockCallAlertScreen extends StatefulWidget {
 
 class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
   final _service = mockVoiceService;
+  final VoiceTtsService _ttsService = VoiceTtsService();
 
   bool _loading = true;
   MockCallAlert? _data;
@@ -29,7 +32,14 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
   @override
   void initState() {
     super.initState();
+    _ttsService.init();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _ttsService.stop();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -41,25 +51,25 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
     });
   }
 
-  /// "알림 듣기" — 실제 TTS 대신 SnackBar 안내. 추후 flutter_tts 연동 지점.
+  /// "알림 듣기" — flutter_tts 로 voice_alert_text 를 실제로 재생한다.
   Future<void> _playAlertVoice() async {
-    final text = _data?.alertPlan.voiceAlertText ?? '';
-    await _service.requestTts(text, source: 'call_alert');
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('TTS 재생 예정: $text'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.white.withOpacity(0.15),
-      ),
-    );
+    final text = _data?.alertPlan.voiceAlertText ??
+        '챔니가 알려드려요. 곧 일정이 시작돼요.';
+    debugPrint('Mock call alert TTS text: $text');
+    await _ttsService.speak(text);
   }
 
-  void _confirm() {
+  /// "확인했어요" — TTS 정지 후 화면을 닫는다.
+  Future<void> _confirm() async {
+    await _ttsService.stop();
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
-  void _snooze() {
+  /// "나중에 다시 알림" — TTS 정지 후 기존 SnackBar 유지.
+  Future<void> _snooze() async {
+    await _ttsService.stop();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('10분 뒤 다시 알림으로 설정했어요.'),

@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/voice_chat_message.dart';
 import '../data/mock_voice_data.dart';
 import '../services/mock_voice_service.dart';
+import '../services/voice_tts_service.dart';
 
 /// AI 음성 챗봇 화면 (Mock).
 ///
@@ -23,6 +25,7 @@ class VoiceChatScreen extends StatefulWidget {
 
 class _VoiceChatScreenState extends State<VoiceChatScreen> {
   final _service = mockVoiceService;
+  final VoiceTtsService _ttsService = VoiceTtsService();
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
 
@@ -30,7 +33,14 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
   bool _sending = false;
 
   @override
+  void initState() {
+    super.initState();
+    _ttsService.init();
+  }
+
+  @override
   void dispose() {
+    _ttsService.stop();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -73,18 +83,11 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     _scrollToBottom();
   }
 
-  /// "음성으로 듣기" — 실제 TTS 대신 SnackBar 안내. 추후 flutter_tts 연동 지점.
+  /// "음성으로 듣기" — flutter_tts 로 실제 음성을 재생한다.
+  /// AI 메시지의 tts_text 우선, 없으면 coaching_reply(=말풍선 text) 사용.
   Future<void> _playTts(String text) async {
-    await _service.requestTts(text, source: 'chatbot_reply');
-    if (!mounted) return;
-    final preview = text.length > 30 ? '${text.substring(0, 30)}...' : text;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('TTS 재생 예정: $preview'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.dark,
-      ),
-    );
+    debugPrint('Voice chat TTS text: $text');
+    await _ttsService.speak(text);
   }
 
   void _scrollToBottom() {

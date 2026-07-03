@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/daily_briefing_mock.dart';
+import '../data/mock_voice_data.dart';
 import '../services/mock_voice_service.dart';
+import '../services/voice_tts_service.dart';
 
 /// 하루 브리핑 화면 (Mock).
 ///
@@ -18,6 +21,7 @@ class DailyBriefingScreen extends StatefulWidget {
 
 class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
   final _service = mockVoiceService;
+  final VoiceTtsService _ttsService = VoiceTtsService();
 
   bool _loading = true;
   DailyBriefingMock? _data;
@@ -25,7 +29,14 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
   @override
   void initState() {
     super.initState();
+    _ttsService.init();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _ttsService.stop();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -39,21 +50,28 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
     });
   }
 
-  /// "브리핑 듣기" 버튼 로직. 추후 `/api/v1/voice/tts` 연결 시 이 메서드만 수정.
+  /// "브리핑 듣기" 버튼 로직. flutter_tts 로 실제 음성을 재생한다.
+  /// tts_text 우선, 없으면 briefing_text, 그것도 없으면 기본 문구를 읽는다.
   Future<void> _playBriefingTts() async {
-    final text = _data?.ttsText ?? '';
-    // 실제 TTS 대신 Mock 서비스 호출 후 안내 SnackBar 표시.
-    await _service.requestTts(text, source: 'briefing');
-    if (!mounted) return;
-    final preview = text.length > 30 ? '${text.substring(0, 30)}...' : text;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('TTS 재생 예정: $preview'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.dark,
-      ),
-    );
+    // Mock 데이터에서 직접 tts_text → briefing_text 순으로 fallback.
+    final data = mockDailyBriefing['data'] as Map<String, dynamic>;
+    final ttsText = (data['tts_text'] ??
+            data['briefing_text'] ??
+            '안녕하세요. 챔니 브리핑 테스트입니다.')
+        .toString();
+
+    debugPrint('Daily briefing TTS text: $ttsText');
+    await _ttsService.speak(ttsText);
   }
+
+  // ===== 디버깅용 임시 메서드 (원인 분리 후 삭제 가능) =====
+  // 이 버튼에서도 소리가 안 나면 태블릿 TTS 엔진/볼륨 문제,
+  // 이 버튼은 되는데 "브리핑 듣기"만 안 되면 데이터 연결 문제.
+  Future<void> _playTtsTest() async {
+    debugPrint('Daily briefing TTS TEST button pressed');
+    await _ttsService.speak('안녕하세요. 챔니 음성 테스트입니다.');
+  }
+  // ===== 디버깅용 임시 메서드 끝 =====
 
   String _dateLabel(String iso) {
     final dt = DateTime.tryParse(iso);
@@ -227,6 +245,25 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
               ),
             ),
           ),
+          // ===== 디버깅용 임시 버튼 (원인 분리 후 삭제 가능) =====
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _playTtsTest,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.purple,
+                side: const BorderSide(color: AppTheme.purple),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: const Icon(Icons.bug_report_outlined, size: 18),
+              label: const Text('태블릿 TTS 테스트'),
+            ),
+          ),
+          // ===== 디버깅용 임시 버튼 끝 =====
         ],
       ),
     );

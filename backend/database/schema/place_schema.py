@@ -2,6 +2,9 @@
 
 MVP: search + score + return. Most request fields are optional so a bare
 `input` (or bare `preferences.category`) is enough to get recommendations.
+
+Travel-time integration is additive: set options.include_travel_time and
+provide location coords to get per-place travel info + travel-aware scoring.
 """
 
 from __future__ import annotations
@@ -9,6 +12,8 @@ from __future__ import annotations
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from backend.database.schema.travel_schema import TravelInfo
 
 
 # --------------------------------------------------------------------------- #
@@ -36,6 +41,15 @@ class PlaceScheduleContext(BaseModel):
     duration_minutes: Optional[int] = None
 
 
+class PlaceOptions(BaseModel):
+    """Optional, additive behavior toggles."""
+
+    include_travel_time: bool = Field(
+        False, description="True면 상위 N개 장소에 이동 시간 정보를 계산해 포함"
+    )
+    transport_mode: str = Field("car", description="car | public_transit | walking | unknown")
+
+
 class PlaceRecommendRequest(BaseModel):
     """Everything optional except that we need *something* to search with:
     either `input` text or `preferences.category`. Validated in the service,
@@ -48,6 +62,7 @@ class PlaceRecommendRequest(BaseModel):
     location: Optional[PlaceLocation] = None
     preferences: Optional[PlacePreferences] = None
     schedule_context: Optional[PlaceScheduleContext] = None
+    options: Optional[PlaceOptions] = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -73,6 +88,7 @@ class PlaceRecommendRequest(BaseModel):
                     "available_end_time": "21:00",
                     "duration_minutes": 90,
                 },
+                "options": {"include_travel_time": True},
             }
         }
     )
@@ -92,6 +108,9 @@ class RecommendedPlace(BaseModel):
     score: int = Field(..., description="0 ~ 100, higher is better")
     reason: str
     recommendation_tags: List[str] = Field(default_factory=list)
+    travel: Optional[TravelInfo] = Field(
+        None, description="options.include_travel_time=true일 때 상위 N개에만 채워짐"
+    )
     source: str = "naver"
 
 

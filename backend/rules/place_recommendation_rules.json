@@ -31,6 +31,15 @@
     "min_score": 0,
     "max_score": 100
   },
+  "travel_scoring": {
+    "short_max_minutes": 15,
+    "short_bonus": 10,
+    "medium_max_minutes": 30,
+    "medium_bonus": 5,
+    "long_min_minutes": 45,
+    "long_penalty": -10,
+    "top_n_with_travel": 3
+  },
   "mood_aliases": {
     "casual": ["가성비", "편한", "캐주얼", "혼밥", "간단", "분위기"],
     "date": ["데이트", "분위기", "감성", "예쁜", "뷰"],

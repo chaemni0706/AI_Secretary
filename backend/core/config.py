@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     LLM_TIMEOUT_SECONDS: float = 8.0
 
-    # --- Naver local search (optional; endpoint errors clearly when absent) ---
+    # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error
     # instead of crashing at import/startup time.
@@ -39,6 +39,22 @@ class Settings(BaseSettings):
     NAVER_CLIENT_SECRET: str | None = None
     NAVER_LOCAL_SEARCH_URL: str = "https://openapi.naver.com/v1/search/local.json"
     NAVER_TIMEOUT_SECONDS: float = 5.0
+
+    # --- Naver Cloud Maps (지도/거리/경로 계산용; 인증 정보 분리) ---
+    # Separate credentials from the local-search API. Missing keys never block
+    # startup; the Maps-backed endpoints return a clear config error instead.
+    NAVER_MAPS_CLIENT_ID: str | None = None
+    NAVER_MAPS_CLIENT_SECRET: str | None = None
+    NAVER_MAPS_GEOCODE_URL: str = (
+        "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode"
+    )
+    NAVER_MAPS_REVERSE_GEOCODE_URL: str = (
+        "https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc"
+    )
+    NAVER_MAPS_DIRECTIONS_URL: str = (
+        "https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving"
+    )
+    NAVER_MAPS_TIMEOUT_SECONDS: float = 5.0
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -54,9 +70,16 @@ class Settings(BaseSettings):
 
     @property
     def naver_configured(self) -> bool:
-        """True only when both Naver credentials are present and non-empty."""
+        """True only when both local-search credentials are present."""
         return bool((self.NAVER_CLIENT_ID or "").strip()) and bool(
             (self.NAVER_CLIENT_SECRET or "").strip()
+        )
+
+    @property
+    def naver_maps_configured(self) -> bool:
+        """True only when both Naver Cloud Maps credentials are present."""
+        return bool((self.NAVER_MAPS_CLIENT_ID or "").strip()) and bool(
+            (self.NAVER_MAPS_CLIENT_SECRET or "").strip()
         )
 
 

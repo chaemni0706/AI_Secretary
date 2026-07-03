@@ -16,6 +16,7 @@ from backend.api import (
     reservation,
     schedule,
     todo,
+    travel,
     chat,
     ledger,
 )
@@ -53,5 +54,6 @@ for r in (
     chat,
     ledger,
     place,
+    travel,
 ):
     app.include_router(r.router, prefix=settings.API_V1_PREFIX)

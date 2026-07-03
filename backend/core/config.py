@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     LLM_TIMEOUT_SECONDS: float = 8.0
 
+    # --- Naver local search (optional; endpoint errors clearly when absent) ---
+    # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
+    # the server still boots; the place-recommend endpoint returns a clear error
+    # instead of crashing at import/startup time.
+    NAVER_CLIENT_ID: str | None = None
+    NAVER_CLIENT_SECRET: str | None = None
+    NAVER_LOCAL_SEARCH_URL: str = "https://openapi.naver.com/v1/search/local.json"
+    NAVER_TIMEOUT_SECONDS: float = 5.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -42,6 +51,13 @@ class Settings(BaseSettings):
         if self.CORS_ORIGINS.strip() == "*":
             return ["*"]
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def naver_configured(self) -> bool:
+        """True only when both Naver credentials are present and non-empty."""
+        return bool((self.NAVER_CLIENT_ID or "").strip()) and bool(
+            (self.NAVER_CLIENT_SECRET or "").strip()
+        )
 
 
 settings = Settings()

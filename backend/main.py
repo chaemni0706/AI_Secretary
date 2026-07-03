@@ -12,6 +12,7 @@ from backend.api import (
     memory,
     message,
     notification,
+    place,
     reservation,
     schedule,
     todo,
@@ -51,5 +52,6 @@ for r in (
     coaching,
     chat,
     ledger,
+    place,
 ):
     app.include_router(r.router, prefix=settings.API_V1_PREFIX)

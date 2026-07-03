@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -22,6 +24,25 @@ class VoiceTtsService {
       await _flutterTts.setSpeechRate(0.5);
       await _flutterTts.setPitch(1.0);
       await _flutterTts.setVolume(1.0);
+
+      // speak() 가 발화 완료까지 await 되도록 하여, 엔진이 발화를 조용히 드롭하거나
+      // 바로 이어지는 호출에 잘리는 문제를 방지한다. (무음 원인 중 하나)
+      await _flutterTts.awaitSpeakCompletion(true);
+
+      // iOS: 무음(무음 스위치) 상태에서도 재생되도록 오디오 세션을 명시적으로 설정한다.
+      // 이 설정이 없으면 아이폰에서 소리가 전혀 안 나는 경우가 많다. (web 은 제외)
+      if (!kIsWeb && Platform.isIOS) {
+        await _flutterTts.setSharedInstance(true);
+        await _flutterTts.setIosAudioCategory(
+          IosTextToSpeechAudioCategory.playback,
+          [
+            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+          ],
+        );
+      }
 
       _flutterTts.setStartHandler(() {
         debugPrint('TTS started');
@@ -66,6 +87,14 @@ class VoiceTtsService {
 
       final languages = await _flutterTts.getLanguages;
       debugPrint('TTS available languages: $languages');
+
+      // 사용 가능한 TTS 엔진 목록 (Android). 한국어 엔진 미설치 진단용.
+      try {
+        final engines = await _flutterTts.getEngines;
+        debugPrint('TTS available engines: $engines');
+      } catch (e) {
+        debugPrint('TTS getEngines error: $e');
+      }
     } catch (e) {
       // getVoices/getLanguages 는 일부 기기/엔진에서 미지원일 수 있다.
       debugPrint('TTS getVoices error: $e');

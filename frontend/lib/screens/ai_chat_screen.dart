@@ -5,6 +5,8 @@ import '../services/api_client.dart';
 import '../services/schedule_api.dart';
 import '../services/todo_api.dart';
 import '../services/dashboard_api.dart';
+import '../services/voice_stt_service.dart';
+import '../services/voice_tts_service.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -16,12 +18,35 @@ class AiChatScreen extends StatefulWidget {
 class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  // 음성 입출력 서비스 (기존 서비스 재사용).
+  final VoiceSttService _stt = VoiceSttService();
+  final VoiceTtsService _tts = VoiceTtsService();
+
+  /// 음성 인식 후 바로 전송할지 여부. false 로 두면 입력창에 넣기만 한다.
+  static const bool autoSendAfterVoiceInput = true;
+
   bool _isListening = false;
   bool _parsing = false;
   bool _saving = false;
 
+  /// 마이크 상태 안내 문구 (null 이면 표시 안 함).
+  String? _voiceStatus;
+
+  /// 이번 전송이 음성 입력에서 시작됐는지(응답 TTS 재생 여부 판단).
+  bool _fromVoice = false;
+
+  /// 음성 인식 누적 텍스트.
+  String _recognized = '';
+
   /// 마지막 parse 결과 (저장 대상).
   ParseResult? _lastParse;
+
+  @override
+  void initState() {
+    super.initState();
+    _tts.init();
+  }
 
   final List<_ChatMessage> _messages = [
     const _ChatMessage(
@@ -32,9 +57,91 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   void dispose() {
+    _stt.cancel();
+    _tts.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------- //
+  // 음성 입력 (STT)  —  마이크 → 인식 → 입력창 → 자동 전송
+  // ---------------------------------------------------------------------- //
+  Future<void> _handleMicPressed() async {
+    // 이미 듣는 중이면 정지(수동 종료).
+    if (_isListening) {
+      await _stt.stop();
+      await _finishListening();
+      return;
+    }
+    if (_parsing || _saving) return;
+
+    final granted = await _stt.ensureMicPermission();
+    if (!mounted) return;
+    if (!granted) {
+      setState(() => _voiceStatus = '마이크 권한이 필요해요.');
+      return;
+    }
+
+    final ready = await _stt.init(
+      onStatus: (s) {
+        // 인식이 끝나면(done/notListening) 자동으로 마무리.
+        if ((s == 'done' || s == 'notListening') && _isListening) {
+          _finishListening();
+        }
+      },
+      onError: (_) {
+        if (mounted && _isListening) {
+          setState(() {
+            _isListening = false;
+            _voiceStatus = '음성 인식 중 오류가 발생했어요.';
+          });
+        }
+      },
+    );
+    if (!mounted) return;
+    if (!ready) {
+      setState(() => _voiceStatus = '기기에서 음성 인식을 사용할 수 없어요.');
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+      _recognized = '';
+      _voiceStatus = '듣는 중...';
+    });
+
+    await _stt.listen(
+      onResult: (r) {
+        _recognized = r.text;
+        if (mounted) {
+          setState(() => _inputController.text = r.text);
+        }
+      },
+      localeId: 'ko_KR',
+    );
+  }
+
+  /// 인식 종료 처리: 결과가 있으면 입력창 반영 + (옵션) 자동 전송.
+  Future<void> _finishListening() async {
+    if (!_isListening) return;
+    if (!mounted) return;
+    setState(() => _isListening = false);
+
+    final text = _recognized.trim();
+    if (text.isEmpty) {
+      setState(() => _voiceStatus = '음성을 인식하지 못했어요. 다시 말해주세요.');
+      return;
+    }
+
+    setState(() {
+      _inputController.text = text;
+      _voiceStatus = '인식 완료';
+    });
+
+    if (autoSendAfterVoiceInput) {
+      await _send(fromVoice: true);
+    }
   }
 
   void _addMessage(String text, {required bool isUser}) {
@@ -51,34 +158,71 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   /// 1) 자연어 → parse
-  Future<void> _send() async {
+  /// [fromVoice] 가 true 면 input_type="voice" 로 보내고, AI 응답을 TTS 로 읽어준다.
+  Future<void> _send({bool fromVoice = false}) async {
     final text = _inputController.text.trim();
     if (text.isEmpty || _parsing) return;
+    _fromVoice = fromVoice;
     _inputController.clear();
     _addMessage(text, isUser: true);
-    setState(() => _parsing = true);
+    setState(() {
+      _parsing = true;
+      _voiceStatus = fromVoice ? '답변 생성 중...' : null;
+    });
 
     try {
       final result = await scheduleApi.parse(
         text,
         currentDatetime: DateTime.now().toIso8601String(),
+        inputType: fromVoice ? 'voice' : 'text',
       );
+      if (!mounted) return;
       setState(() {
         _lastParse = result;
         _parsing = false;
+        _voiceStatus = null;
       });
       final draft = result.scheduleDraft;
       final kind = result.isTodo ? '할 일' : '일정';
-      _addMessage(
-        '"${draft['title'] ?? text}"($kind)로 인식했어요. 아래에서 확인 후 저장하세요.',
-        isUser: false,
-      );
+      final reply =
+          '"${draft['title'] ?? text}"($kind)로 인식했어요. 아래에서 확인 후 저장하세요.';
+      _addMessage(reply, isUser: false);
+
+      // 음성 입력이었으면 AI 응답을 읽어준다. tts_text 우선, 없으면 화면 문구.
+      if (_fromVoice) {
+        final speakText = (result.ttsText != null &&
+                result.ttsText!.trim().isNotEmpty)
+            ? result.ttsText!
+            : reply;
+        await _speak(speakText);
+      }
     } on ApiException catch (e) {
-      setState(() => _parsing = false);
-      _addMessage('인식에 실패했어요: ${e.message}', isUser: false);
+      if (!mounted) return;
+      setState(() {
+        _parsing = false;
+        _voiceStatus = null;
+      });
+      final msg = (e.statusCode == null)
+          ? '서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해주세요.'
+          : '인식에 실패했어요: ${e.message}';
+      _addMessage(msg, isUser: false);
+      if (_fromVoice) await _speak('요청을 처리하지 못했어요. 다시 시도해주세요.');
     } catch (e) {
-      setState(() => _parsing = false);
+      if (!mounted) return;
+      setState(() {
+        _parsing = false;
+        _voiceStatus = null;
+      });
       _addMessage('오류가 발생했어요: $e', isUser: false);
+    }
+  }
+
+  /// AI 응답을 Flutter TTS 로 읽는다. (빈 문자열/오류는 서비스에서 안전 처리)
+  Future<void> _speak(String text) async {
+    try {
+      await _tts.speak(text);
+    } catch (e) {
+      debugPrint('AiChat TTS error: $e');
     }
   }
 
@@ -161,6 +305,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ),
               ),
             if (_lastParse != null) _buildResultCard(_lastParse!),
+            if (_voiceStatus != null) _buildVoiceStatus(_voiceStatus!),
             _buildInputArea(),
           ],
         ),
@@ -373,6 +518,32 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  Widget _buildVoiceStatus(String status) {
+    final listening = _isListening;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            listening ? Icons.mic : Icons.info_outline,
+            size: 14,
+            color: listening ? AppTheme.red : AppTheme.textSecondary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: listening ? AppTheme.red : AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -413,19 +584,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => setState(() => _isListening = !_isListening),
+                    onTap: (_parsing || _saving) ? null : _handleMicPressed,
                     child: Container(
                       width: 34,
                       height: 34,
                       margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: _isListening
-                            ? AppTheme.blue
+                            ? AppTheme.red
                             : AppTheme.blue.withOpacity(0.12),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.graphic_eq,
+                        _isListening ? Icons.stop : Icons.mic,
                         color: _isListening ? Colors.white : AppTheme.blue,
                         size: 18,
                       ),

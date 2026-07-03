@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 음성 인식(speech_to_text)용 마이크 권한 -->
+    <!-- 음성 인식(speech_to_text)용 마이크 권한 + 백엔드 /voice/tts 호출용 인터넷 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application
@@ -47,6 +47,10 @@
         <!-- speech_to_text: 기기 음성 인식 서비스 조회 (Android 11+) -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <!-- flutter_tts: 기기 TTS 엔진 조회 (Android 11+) -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
     </queries>
 </manifest>

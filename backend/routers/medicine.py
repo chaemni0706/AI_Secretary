@@ -4,6 +4,7 @@ import os
 import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 
 from backend.services import medicine_ocr_service
 
@@ -28,6 +29,19 @@ async def analyze_medicine_image(file: UploadFile = File(...)):
             f.write(contents)
 
         medicines = medicine_ocr_service.analyze_medicine_image(temp_path)
+    except RuntimeError as exc:
+        # paddleocr 미설치 등 optional dependency 부재 → 앱은 죽지 않고 명확히 안내
+        return JSONResponse(
+            status_code=503,
+            content={
+                "success": False,
+                "message": "Medicine OCR 기능을 사용할 수 없습니다.",
+                "error": {
+                    "code": "OPTIONAL_DEPENDENCY_MISSING",
+                    "detail": str(exc),
+                },
+            },
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"이미지 분석 중 오류가 발생했습니다: {e}")
     finally:

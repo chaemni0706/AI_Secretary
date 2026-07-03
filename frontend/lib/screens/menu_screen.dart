@@ -6,6 +6,7 @@ import 'booking_recommend_screen.dart';
 import 'booking_message_screen.dart';
 import 'daily_briefing_screen.dart';
 import 'voice_chat_screen.dart';
+import 'voice_schedule_screen.dart';
 import 'mock_call_alert_screen.dart';
 
 class MenuScreen extends StatelessWidget {
@@ -145,6 +146,16 @@ class MenuScreen extends StatelessWidget {
 
   Widget _buildVoiceSection(BuildContext context) {
     final items = [
+      _MenuItem(
+        icon: Icons.mic_external_on_outlined,
+        color: AppTheme.blue,
+        title: '음성으로 일정 만들기',
+        subtitle: '말하면 일정 등록',
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VoiceScheduleScreen()),
+        ),
+      ),
       _MenuItem(
         icon: Icons.wb_sunny_outlined,
         color: AppTheme.blue,

@@ -371,6 +371,10 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         location=None,
     )
 
+    # 음성 입력(input_type="voice")이면 초안 source 를 "voice" 로 표시한다.
+    # InputType 은 str Enum 이라 "voice" 문자열 비교로 충분하다.
+    source = "voice" if req.input_type == "voice" else "ai"
+
     draft = ScheduleDraft(
         title=final_title,
         category=category,
@@ -380,7 +384,15 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         location=None,
         memo=None,
         priority=priority,
-        source="ai",
+        source=source,
+    )
+
+    tts_text = _build_tts_text(
+        intent=intent,
+        missing=missing,
+        title=final_title,
+        date_value=date_value,
+        start_time=start_time,
     )
 
     return ScheduleParseData(
@@ -389,4 +401,26 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         slots=slots,
         schedule_draft=draft,
         missing_fields=missing,
+        tts_text=tts_text,
     )
+
+
+def _build_tts_text(
+    *,
+    intent: str,
+    missing: List[str],
+    title: str,
+    date_value: Optional[str],
+    start_time: Optional[str],
+) -> str:
+    """음성 안내(TTS)용 문장을 상태에 따라 생성한다.
+
+    - 실패(intent=unknown): 다시 말하기 유도
+    - 부분 인식(날짜/시간 누락): 보완 요청
+    - 성공: 요약 + 등록 확인
+    """
+    if intent == "unknown":
+        return "일정 정보를 정확히 듣지 못했어요. 날짜와 시간을 포함해서 다시 말해주세요."
+    if "date" in missing or "time" in missing:
+        return "일정 정보를 일부만 이해했어요. 날짜나 시간을 다시 확인해주세요."
+    return f"{title} 일정을 {date_value} {start_time}으로 정리했어요. 등록할까요?"

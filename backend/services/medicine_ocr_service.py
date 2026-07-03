@@ -1,21 +1,37 @@
-"""약봉투 이미지 OCR 분석 및 약 정보 파싱 서비스."""
+"""약봉투 이미지 OCR 분석 및 약 정보 파싱 서비스.
+
+paddleocr 는 선택적(optional) 의존성이다. 모듈 최상단에서 import 하지 않고
+실제 OCR 실행 시점에 lazy import 하므로, paddleocr 가 설치되어 있지 않아도
+이 모듈(및 이 모듈을 import 하는 라우터)과 FastAPI 앱 전체는 정상 기동된다.
+미설치 상태에서 OCR 을 호출하면 명확한 RuntimeError 를 던진다.
+"""
 
 import os
 
-# PaddleOCR import 전에 반드시 설정해야 하는 환경변수
-os.environ["FLAGS_use_mkldnn"] = "0"
-os.environ["PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT"] = "0"
+# PaddleOCR import 전에 반드시 설정해야 하는 환경변수 (import 시점에 맞춰 미리 설정)
+os.environ.setdefault("FLAGS_use_mkldnn", "0")
+os.environ.setdefault("PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT", "0")
 
 import re
-from paddleocr import PaddleOCR
 
 _ocr_engine = None
 
 
 def _get_ocr_engine():
-    """PaddleOCR 엔진을 최초 호출 시 한 번만 로드한다."""
+    """PaddleOCR 엔진을 최초 호출 시 한 번만 로드한다.
+
+    paddleocr 를 여기서 lazy import 한다. 미설치 시 RuntimeError 를 던져
+    라우터가 500 대신 명확한 optional-dependency 오류를 반환할 수 있게 한다.
+    """
     global _ocr_engine
     if _ocr_engine is None:
+        try:
+            from paddleocr import PaddleOCR
+        except ImportError as exc:
+            raise RuntimeError(
+                "paddleocr가 설치되어 있지 않습니다. Medicine OCR 기능을 사용하려면 "
+                "paddleocr를 설치하세요 (pip install paddleocr)."
+            ) from exc
         _ocr_engine = PaddleOCR(lang="korean")
     return _ocr_engine
 

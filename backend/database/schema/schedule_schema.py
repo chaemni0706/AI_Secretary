@@ -58,6 +58,10 @@ class ScheduleParseData(BaseModel):
     slots: ScheduleSlots
     schedule_draft: ScheduleDraft
     missing_fields: List[str] = Field(default_factory=list)
+    tts_text: Optional[str] = Field(
+        None,
+        description="음성 안내용 문장. 성공/부분인식/실패에 따라 달라지며 Flutter TTS로 재생한다.",
+    )
 
 
 class ScheduleParseResponse(BaseModel):

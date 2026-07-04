@@ -1,0 +1,45 @@
+type: study
+allowed_labels:
+  - book
+  - textbook
+  - notebook
+  - workbook
+  - printed_document
+  - laptop
+  - tablet
+  - monitor
+  - pen
+  - highlighter
+  - keyboard
+  - desk
+  - study_timer
+mandatory:
+  quality_usable: true
+  study_patterns: true
+thresholds:
+  verified: 50
+  retake_required: 30
+scoring:
+  base_score: 0
+  object_scores:
+    desk: 10
+    laptop: 10
+    monitor: 10
+    keyboard: 10
+    pen: 10
+  study_evidence_scores:
+    open_textbook: 25
+    open_workbook: 25
+    handwritten_notes: 20
+    highlighted_text: 15
+    problem_solving_material: 20
+    study_content_on_screen: 30
+    lecture_video: 30
+    educational_document: 25
+    code_editor: 25
+    study_timer: 10
+  similar_object_groups:
+    - labels: [desk, laptop, monitor, keyboard, pen]
+      max_score: 10
+gps:
+  enabled: false

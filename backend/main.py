@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api import (
-    alert, briefing, dashboard, emotion, health, local_schedule, memory,
+    alert, briefing, dashboard, emotion, health, image_verification, local_schedule, memory,
     message, notification, reservation, schedule, todo,
 )
 from backend.core.config import settings
@@ -22,6 +22,6 @@ app.add_middleware(
 )
 register_exception_handlers(app)
 app.include_router(health.router)
-for r in (schedule, reservation, message, alert, briefing, emotion,
+for r in (schedule, reservation, message, alert, briefing, emotion, image_verification,
           local_schedule, todo, dashboard, memory, notification):
     app.include_router(r.router, prefix=settings.API_V1_PREFIX)

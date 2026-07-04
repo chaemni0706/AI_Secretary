@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     # --- LLM (optional; falls back to template when key absent) ---
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_VISION_MODEL: str = "gpt-4.1-mini-2025-04-14"
     LLM_TEMPERATURE: float = 0.7
     LLM_TIMEOUT_SECONDS: float = 8.0
 

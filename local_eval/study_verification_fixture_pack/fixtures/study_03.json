@@ -1,0 +1,39 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study_desk",
+  "objects": [
+    {
+      "label": "workbook",
+      "confidence": 0.99,
+      "evidence": "문제집이 펼쳐져 있음"
+    },
+    {
+      "label": "laptop",
+      "confidence": 0.99,
+      "evidence": "노트북 화면이 보임"
+    },
+    {
+      "label": "pen",
+      "confidence": 0.97,
+      "evidence": "사용자가 필기구를 들고 있음"
+    },
+    {
+      "label": "desk",
+      "confidence": 0.99,
+      "evidence": "학습 자료가 놓인 책상"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "open_workbook",
+    "study_content_on_screen",
+    "problem_solving_material"
+  ],
+  "water_visual_evidence": []
+}

@@ -11,7 +11,7 @@ import '../services/voice_tts_service.dart';
 ///
 /// `MockVoiceService.getDailyBriefing()` 로 Mock 응답을 받아
 /// 요약 / 메인 브리핑 / 섹션 / 다음 일정 / 추천 행동 카드를 표시한다.
-/// "브리핑 듣기" 는 실제 TTS 대신 `_playBriefingTts()` 에서 SnackBar 로 안내한다.
+/// "브리핑 듣기" 는 `_playBriefingTts()` 에서 flutter_tts 로 실제 음성을 재생한다.
 class DailyBriefingScreen extends StatefulWidget {
   const DailyBriefingScreen({super.key});
 
@@ -51,17 +51,34 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
   }
 
   /// "브리핑 듣기" 버튼 로직. flutter_tts 로 실제 음성을 재생한다.
-  /// tts_text 우선, 없으면 briefing_text, 그것도 없으면 기본 문구를 읽는다.
+  ///
+  /// 백엔드 응답 필드가 엔드포인트마다 다르므로(tts_text / text / summary /
+  /// briefing_text) 아래 우선순위로 비어 있지 않은 첫 텍스트를 사용한다.
+  /// 어느 것도 없으면 무음 대신 안내 문구를 읽는다.
+  ///   tts_text → text → summary → briefing_text → 안내 문구
   Future<void> _playBriefingTts() async {
-    // Mock 데이터에서 직접 tts_text → briefing_text 순으로 fallback.
-    final data = mockDailyBriefing['data'] as Map<String, dynamic>;
-    final ttsText = (data['tts_text'] ??
-            data['briefing_text'] ??
-            '안녕하세요. 챔니 브리핑 테스트입니다.')
-        .toString();
+    final raw = mockDailyBriefing['data'] as Map<String, dynamic>;
 
-    debugPrint('Daily briefing TTS text: $ttsText');
+    final ttsText = _pickTtsText([
+      raw['tts_text'], // 파싱 전 원본 tts_text
+      raw['text'], // /api/v1/voice/tts 계열 응답 필드
+      raw['summary'], // /api/v1/briefings/daily 의 요약 문장(문자열일 때만)
+      raw['briefing_text'], // 화면 본문 텍스트
+      _data?.ttsText, // 파싱된 값(실제 API 연결 시에도 동작)
+      _data?.briefingText,
+    ]);
+
+    debugPrint('Daily briefing TTS text: "$ttsText"');
     await _ttsService.speak(ttsText);
+  }
+
+  /// 후보들 중 비어 있지 않은 첫 문자열을 고른다. 없으면 안내 문구를 반환한다.
+  /// summary 등 일부 필드는 Map(카운트) 형태일 수 있어 String 일 때만 사용한다.
+  String _pickTtsText(List<dynamic> candidates) {
+    for (final c in candidates) {
+      if (c is String && c.trim().isNotEmpty) return c.trim();
+    }
+    return '오늘 브리핑을 불러오지 못했습니다.';
   }
 
   // ===== 디버깅용 임시 메서드 (원인 분리 후 삭제 가능) =====

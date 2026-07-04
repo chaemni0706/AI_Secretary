@@ -158,7 +158,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   /// 1) 자연어 → parse
-  /// [fromVoice] 가 true 면 input_type="voice" 로 보내고, AI 응답을 TTS 로 읽어준다.
+  ///
+  /// TTS 정책(의도된 동작):
+  /// - 마이크로 말한 경우([fromVoice]==true): input_type="voice" 로 보내고
+  ///   AI 응답을 TTS 로 자동 재생한다.
+  /// - 키보드로 입력한 경우([fromVoice]==false): 화면에만 표시하고 소리는 내지 않는다.
+  ///   (조용한 상황에서 타이핑했는데 갑자기 말이 나오는 것을 막기 위함)
   Future<void> _send({bool fromVoice = false}) async {
     final text = _inputController.text.trim();
     if (text.isEmpty || _parsing) return;

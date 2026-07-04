@@ -12,6 +12,21 @@ class VoiceTtsService {
   final FlutterTts _flutterTts = FlutterTts();
   bool _initialized = false;
 
+  /// 실제로 엔진에 적용된 언어. 한국어가 없으면 fallback 언어가 담긴다.
+  String _selectedLanguage = 'ko-KR';
+
+  /// 한국어 음성 데이터 사용 가능 여부(진단/안내용).
+  bool _koreanAvailable = false;
+
+  /// 선택하려는 언어 우선순위. 앞에서부터 사용 가능한 첫 언어를 적용한다.
+  static const List<String> _preferredLanguages = ['ko-KR', 'ko_KR', 'en-US'];
+
+  /// 현재 적용된 언어(외부 확인용).
+  String get selectedLanguage => _selectedLanguage;
+
+  /// 한국어 TTS 사용 가능 여부(외부 확인용).
+  bool get koreanAvailable => _koreanAvailable;
+
   /// 엔진 초기화(언어/속도/피치/볼륨 + 핸들러 등록).
   Future<void> init() async {
     if (_initialized) return;
@@ -19,8 +34,8 @@ class VoiceTtsService {
     try {
       debugPrint('TTS init started');
 
-      await _flutterTts.setLanguage('ko-KR');
-      debugPrint('TTS language set: ko-KR');
+      // 사용 가능한 언어를 확인하고, 한국어가 없으면 안전하게 fallback 한다.
+      await _selectLanguage();
       await _flutterTts.setSpeechRate(0.5);
       await _flutterTts.setPitch(1.0);
       await _flutterTts.setVolume(1.0);
@@ -67,6 +82,54 @@ class VoiceTtsService {
     }
   }
 
+  /// 우선순위(ko-KR → ko_KR → en-US)대로 사용 가능한 언어를 골라 적용한다.
+  ///
+  /// 한국어가 없으면 조용히 실패하지 않도록 en-US 로 fallback 하고,
+  /// 한국어 TTS 데이터 설치가 필요하다는 안내 로그를 남긴다.
+  Future<void> _selectLanguage() async {
+    // 선택된 엔진을 함께 로그로 남겨 진단을 돕는다.
+    try {
+      final engine = await _flutterTts.getDefaultEngine;
+      debugPrint('TTS engine selected: $engine');
+    } catch (e) {
+      debugPrint('TTS getDefaultEngine error: $e');
+    }
+
+    String? chosen;
+    for (final lang in _preferredLanguages) {
+      try {
+        final available = await _flutterTts.isLanguageAvailable(lang);
+        debugPrint('TTS isLanguageAvailable($lang) = $available');
+        if (available == true) {
+          chosen = lang;
+          break;
+        }
+      } catch (e) {
+        debugPrint('TTS isLanguageAvailable($lang) error: $e');
+      }
+    }
+
+    _koreanAvailable = chosen == 'ko-KR' || chosen == 'ko_KR';
+
+    // 아무 것도 확인되지 않으면(일부 기기/엔진은 isLanguageAvailable 미지원)
+    // 최소한 ko-KR 을 시도한다.
+    _selectedLanguage = chosen ?? 'ko-KR';
+
+    try {
+      await _flutterTts.setLanguage(_selectedLanguage);
+      debugPrint('TTS language selected: $_selectedLanguage '
+          '(korean available: $_koreanAvailable)');
+    } catch (e) {
+      debugPrint('TTS setLanguage($_selectedLanguage) error: $e');
+    }
+
+    if (!_koreanAvailable) {
+      debugPrint('TTS WARNING: 한국어(ko-KR) 음성 데이터가 없습니다. '
+          '기기 설정 > 언어 및 입력 > 텍스트 음성 변환(TTS)에서 '
+          '한국어 음성 데이터를 설치하세요. 현재는 "$_selectedLanguage" 로 재생됩니다.');
+    }
+  }
+
   /// 사용 가능한 음성 목록과 ko-KR 존재 여부를 로그로 남긴다.
   Future<void> _logAvailableVoices() async {
     try {
@@ -102,24 +165,36 @@ class VoiceTtsService {
   }
 
   /// 텍스트를 읽는다. 재생 전 기존 음성을 정지한다.
+  ///
+  /// 텍스트가 비어 있으면 조용히 종료하지 않고 안내 문구를 읽어
+  /// "버튼을 눌렀는데 아무 반응이 없다"는 상황을 방지한다.
   Future<void> speak(String text) async {
-    final trimmed = text.trim();
-    debugPrint('TTS speak called: $trimmed');
+    var trimmed = text.trim();
+    debugPrint('TTS speak called: "$trimmed"');
 
     if (trimmed.isEmpty) {
-      debugPrint('TTS text is empty');
-      return;
+      debugPrint('TTS text is empty -> 안내 문구로 대체');
+      trimmed = '읽어드릴 내용이 없습니다.';
     }
 
     try {
       if (!_initialized) {
         await init();
       }
+      debugPrint('TTS language selected: $_selectedLanguage');
       await _flutterTts.stop();
-      final result = await _flutterTts.speak(trimmed);
-      debugPrint('TTS speak result: $result');
+
+      // Android: focus:true 로 오디오 포커스를 요청해 미디어 볼륨으로 재생되도록 한다.
+      // (다른 앱의 소리를 잠시 낮추고 TTS 를 미디어 스트림으로 내보낸다.)
+      final dynamic result;
+      if (!kIsWeb && Platform.isAndroid) {
+        result = await _flutterTts.speak(trimmed, focus: true);
+      } else {
+        result = await _flutterTts.speak(trimmed);
+      }
+      debugPrint('TTS speak result: $result (result==1 이면 재생 시작)');
     } catch (e) {
-      debugPrint('TTS speak error: $e');
+      debugPrint('TTS error: $e');
     }
   }
 

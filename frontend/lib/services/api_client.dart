@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// ---------------------------------------------------------------------------
 /// 실행 환경별 Base URL
@@ -9,7 +10,7 @@ import 'package:dio/dio.dart';
 ///
 /// 환경에 맞게 아래 값 하나만 바꾸면 됩니다.
 // const String baseUrl = 'http://127.0.0.1:8000';
-const String baseUrl = "http://192.168.0.73:8000";
+const String baseUrl = "http://141.223.140.84:8000";
 
 // Android Emulator용:
 // const String baseUrl = 'http://10.0.2.2:8000';
@@ -47,6 +48,35 @@ class ApiClient {
         headers: {'Content-Type': 'application/json'},
         // 4xx/5xx 도 예외 없이 받아서 envelope 를 직접 해석한다.
         validateStatus: (_) => true,
+      ),
+    );
+
+    // 네트워크 진단용 로그.
+    // - onRequest: 실제로 어떤 URL 로 요청이 나가는지(baseUrl + path) 확인.
+    // - onResponse: 서버까지 도달했는지 + 상태코드 확인.
+    // - onError: 서버 도달 전 실패(연결 거부/타임아웃/cleartext 차단 등) 진단.
+    // Flutter 로그에 요청 URL 이 찍혔는데 백엔드 터미널에 로그가 없다면,
+    // 요청이 기기를 벗어나지 못한 것(네트워크/HTTP 차단 문제)으로 판단한다.
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint('[API] → ${options.method} ${options.uri}');
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint(
+            '[API] ← ${response.statusCode} ${response.requestOptions.uri}',
+          );
+          handler.next(response);
+        },
+        onError: (e, handler) {
+          debugPrint('[API] ✗ ERROR ${e.requestOptions.uri}');
+          debugPrint('[API]   type       : ${e.type}');
+          debugPrint('[API]   message    : ${e.message}');
+          debugPrint('[API]   statusCode : ${e.response?.statusCode}');
+          debugPrint('[API]   response   : ${e.response?.data}');
+          handler.next(e);
+        },
       ),
     );
   }

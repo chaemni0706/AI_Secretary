@@ -1,0 +1,46 @@
+type: exercise
+allowed_labels:
+  - treadmill
+  - dumbbell
+  - barbell
+  - weight_plate
+  - weight_machine
+  - exercise_bike
+  - gym_bench
+  - locker
+  - gym_mirror
+  - stair_climber
+  - running_track
+  - running_shoes
+  - stadium_track
+  - park_path
+  - swimming_pool
+  - swimming_lane
+  - lane_rope
+  - swim_cap
+  - swim_goggles
+  - pool_sign
+  - yoga_mat
+  - yoga_block
+  - yoga_studio
+  - pilates_reformer
+  - pilates_cadillac
+  - pilates_chair
+  - pilates_studio
+  - exercise_mat
+  - resistance_band
+  - kettlebell
+  - pull_up_bar
+  - home_interior
+mandatory:
+  quality_usable: true
+  exercise_patterns: true
+thresholds:
+  verified: 50
+  retake_required: 30
+scoring:
+  base_score: 0
+  mandatory_match:
+    minimum_score: 50
+gps:
+  enabled: false

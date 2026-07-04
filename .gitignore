@@ -1,26 +1,53 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Virtual Environment
-backend/AI_project/
-backend/venv/
+# Python virtual environments
+AI_project/
+.venv/
 venv/
+env/
+ENV/
 
-# Environment Variables
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Environment variables
 .env
+.env.*
+!.env.example
 
-# VS Code
+# IDE
 .vscode/
+.idea/
 
-# Flutter
-frontend/.dart_tool/
-frontend/build/
-
-# macOS
+# OS files
 .DS_Store
-
-# Windows
 Thumbs.db
+
+# Logs
+*.log
+
+# Test/cache
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
+
+# Database
+*.sqlite3
+*.db
+
+# Large model/cache files
+rag/embeddings/
+rag/vector_db/
+*.pt
+*.pth
+*.onnx
+*.tflite
+runtime/
+*.sqlite

@@ -1,0 +1,43 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "glass",
+      "description": "transparent glass containing clear liquid"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "table",
+      "description": "blue surface with a glass on top"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "glass",
+      "description": "transparent glass containing clear liquid"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non_water_beverage",
+      "description": "no indication of non-water beverage"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque_closed_container",
+      "description": "glass appears to be closed and opaque"
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.8
+}
+```

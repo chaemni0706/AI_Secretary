@@ -1,0 +1,51 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand",
+      "pose": "holding a glass"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "a hand holding a glass near a water dispenser"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "type": "containers",
+      "name": "glass",
+      "description": "transparent glass containing clear liquid"
+    },
+    {
+      "type": "positive_evidence",
+      "name": "visible_water",
+      "description": "clear liquid visible in the glass"
+    },
+    {
+      "type": "positive_evidence",
+      "name": "filled_container",
+      "description": "glass appears to contain a meaningful amount of clear liquid"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "type": "non_water_beverage",
+      "description": "no indication that the liquid is not water"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "type": "opaque_closed_container",
+      "description": "the glass is opaque and closed, making it difficult to see the liquid"
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.85
+}

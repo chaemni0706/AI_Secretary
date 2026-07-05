@@ -1,0 +1,41 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "filled",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "full glass of water"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A glass filled with water."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "type": "container",
+      "name": "full glass of water"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "type": "non_water_beverage",
+      "reason": "The glass appears to contain water, not another type of beverage."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "type": "opaque_closed_container",
+      "reason": "The glass is opaque and closed, making it difficult to determine the contents."
+    }
+  ],
+  "text_observed": [
+    "full glass of water"
+  ],
+  "confidence": 1.0
+}

@@ -1,0 +1,47 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand holding a glass of water"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A hand holding a glass of water."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "type": "container",
+      "name": "glass"
+    },
+    {
+      "type": "liquid",
+      "name": "water"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "type": "non_water_beverage",
+      "reason": "The glass appears to contain water, not another type of beverage."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "type": "opaque_closed_container",
+      "reason": "The glass is opaque and closed, making it difficult to determine the contents."
+    }
+  ],
+  "text_observed": [
+    "hand holding a glass of water"
+  ],
+  "confidence": 0.95
+}
+```

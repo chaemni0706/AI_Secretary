@@ -1,0 +1,38 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "water dispenser",
+      "position": [105, 24, 386, 227]
+    },
+    {
+      "name": "cup",
+      "position": [210, 332, 349, 448]
+    }
+  ],
+  "scenes": [
+    "water dispenser filling a cup"
+  ],
+  "visual_evidence": [
+    {
+      "name": "water stream",
+      "position": [232, 250, 270, 340]
+    },
+    {
+      "name": "cup",
+      "position": [210, 332, 349, 448]
+    }
+  ],
+  "negative_evidence": [],
+  "uncertain_evidence": [],
+  "text_observed": [],
+  "confidence": 0.9
+}
+```

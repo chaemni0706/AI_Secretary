@@ -1,0 +1,40 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "uncertain",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "closed opaque bottle, no context"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "closed opaque bottle, no context"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "description": "closed opaque bottle, no context"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "description": "closed opaque bottle, no context"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "description": "closed opaque bottle, no context"
+    }
+  ],
+  "text_observed": [
+    "sealed"
+  ],
+  "confidence": 0.0
+}
+```

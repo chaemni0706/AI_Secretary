@@ -1,0 +1,70 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "water dispenser/purifier",
+      "position": [
+        128,
+        0,
+        587,
+        392
+      ]
+    },
+    {
+      "name": "cup",
+      "position": [
+        60,
+        184,
+        286,
+        392
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "name": "water dispenser/purifier pouring into a cup"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "water stream",
+      "position": [
+        128,
+        0,
+        587,
+        392
+      ],
+      "confidence": 0.9
+    },
+    {
+      "name": "filled container",
+      "position": [
+        60,
+        184,
+        286,
+        392
+      ],
+      "confidence": 0.8
+    }
+  ],
+  "negative_evidence": [],
+  "uncertain_evidence": [],
+  "text_observed": [
+    {
+      "text": "BRITA",
+      "position": [
+        341,
+        168,
+        409,
+        234
+      ]
+    }
+  ],
+  "confidence": 0.9
+}

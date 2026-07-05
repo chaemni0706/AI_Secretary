@@ -1,0 +1,39 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "glass",
+      "description": "transparent glass containing clear liquid"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "a glass of water with a small amount of liquid visible"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "description": "a transparent glass with a small amount of clear liquid visible inside"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "description": "no other beverages or liquids visible in the glass"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "description": "the amount of liquid is not fully visible, suggesting it might be less than a full glass"
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.8
+}
+```

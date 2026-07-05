@@ -1,0 +1,25 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "half glass of water",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.9,
+      "evidence": null
+    }
+  ],
+  "visible_text": [
+    "half glass of water"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "opaque_closed_container"
+  ],
+  "exercise_visual_evidence": []
+}

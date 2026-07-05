@@ -1,0 +1,60 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand",
+      "description": "A hand reaching towards a water dispenser"
+    },
+    {
+      "name": "water dispenser",
+      "description": "A white water dispenser with a digital display"
+    },
+    {
+      "name": "glass",
+      "description": "A clear glass being filled with water"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A kitchen counter with a water dispenser, a glass being filled, and a bowl of limes in the background"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "hand",
+      "description": "A hand reaching towards a water dispenser"
+    },
+    {
+      "name": "water dispenser",
+      "description": "A white water dispenser with a digital display"
+    },
+    {
+      "name": "glass",
+      "description": "A clear glass being filled with water"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non_water_beverage",
+      "description": "The glass appears to contain water, not another beverage"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque_closed_container",
+      "description": "The glass is opaque and closed, making it difficult to see the contents clearly"
+    }
+  ],
+  "text_observed": [
+    "COWAY"
+  ],
+  "confidence": 0.95
+}
+```

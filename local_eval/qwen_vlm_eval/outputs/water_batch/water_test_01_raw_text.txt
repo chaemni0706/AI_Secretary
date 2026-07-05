@@ -1,0 +1,47 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand holding glass",
+      "position": [1, 78, 146, 139]
+    }
+  ],
+  "scenes": [
+    {
+      "name": "hand holding glass with lemon slice",
+      "position": [1, 52, 188, 220]
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "clear liquid in glass",
+      "position": [74, 52, 188, 220]
+    },
+    {
+      "name": "lemon slice in glass",
+      "position": [134, 78, 163, 110]
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non-water beverage",
+      "position": [134, 78, 163, 110]
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque closed container",
+      "position": [134, 78, 163, 110]
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.8
+}
+```

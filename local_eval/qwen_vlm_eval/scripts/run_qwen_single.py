@@ -34,6 +34,27 @@ For water verification, focus on:
 - negative evidence: empty_container, non_water_beverage
 - uncertain evidence: opaque_closed_container, uncertain_liquid
 
+Water verification principles (MVP, follow strictly):
+- Use these exact snake_case evidence tokens (e.g. visible_water), not free-form sentences.
+- A transparent glass containing clear liquid MUST produce visible_water or visible_clear_liquid.
+- If a cup/glass visibly contains clear liquid, ALSO include filled_container.
+- Do NOT output only "glass" or "cup" as evidence when clear liquid is visible; always add the liquid evidence.
+- If the glass has clear transparent liquid, treat it as water evidence for MVP (visible_clear_liquid + filled_container). Do NOT label it non_water_beverage or opaque_closed_container.
+- An empty glass/cup MUST output empty_container.
+- Coffee or any colored/opaque beverage MUST output non_water_beverage.
+- Only use opaque_closed_container / uncertain_liquid when the liquid genuinely cannot be seen; never together with clearly visible clear liquid.
+- A water dispenser/purifier pouring into a container MUST output water_stream and receiving_water.
+
+Be conservative about the AMOUNT of liquid (avoid false positives):
+- Do NOT output filled_container unless a meaningful amount of clear liquid is visibly present.
+- If the cup/glass looks empty, almost empty, has only a tiny amount, a few drops, or liquid only at the bottom, output empty_container or uncertain_liquid, NOT filled_container.
+- Reflections, transparent glass edges, or background color must NOT be interpreted as water.
+- If the amount of liquid is unclear, prefer uncertain_liquid instead of filled_container.
+- A false positive is worse than a false negative for verification. For borderline transparent cups, be conservative.
+- Also report the observed amount in the "water_amount" field: one of none, tiny, partial, filled, uncertain.
+  Use "none" for empty, "tiny" for a few drops / only at the bottom, "partial" for clearly some but not full,
+  "filled" for a clearly filled container, "uncertain" if the amount cannot be judged.
+
 For study verification, focus on:
 - paper study evidence: open_textbook, open_workbook, handwritten_notes, highlighted_text, problem_solving_material
 - digital study evidence: study_content_on_screen, lecture_video, educational_document, code_editor
@@ -53,6 +74,7 @@ Return JSON with this exact schema:
 {
   "verification_type": "<water|study|exercise>",
   "activity_type": "<gym|running|swimming|yoga|pilates|home_workout|null>",
+  "water_amount": "<none|tiny|partial|filled|uncertain>",
   "image_quality": {
     "usable": true,
     "issues": []

@@ -1,0 +1,30 @@
+{
+  "filename": "generated_water_07_nearly_empty_glass.png",
+  "source": "generated",
+  "expected_label": "FAIL",
+  "predicted_label": "FAIL",
+  "engine_result": "rejected",
+  "score": 15,
+  "mandatory_passed": false,
+  "ok": true,
+  "water_visual_evidence": [],
+  "objects": [
+    "glass"
+  ],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_07_nearly_empty_glass_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_07_nearly_empty_glass_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "water_pattern_missing",
+      "message": "물 인증에 필요한 물/용기 근거가 부족합니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "object:glass",
+      "message": "glass 객체가 확인되었습니다.",
+      "score_delta": 15
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_07_nearly_empty_glass_result.json",
+  "error": ""
+}

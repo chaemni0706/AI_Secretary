@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "A hand holding a glass of water.",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.95,
+      "evidence": "fallback_from_description"
+    }
+  ],
+  "visible_text": [
+    "hand holding a glass of water"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container"
+  ],
+  "exercise_visual_evidence": []
+}

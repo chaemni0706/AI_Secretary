@@ -83,11 +83,49 @@ python -m pytest tests/test_water_verification_fixtures.py -v -s
 5. `normalize_water_output` (Qwen 증거 → VisionAnalysis) 정규화 검증
 6. BORDERLINE 케이스 분리 기록
 
+## 실제 Qwen2.5-VL-3B 배치 실행 (GPU 필요)
+
+`torch` / `transformers` / `qwen_vl_utils`가 설치된 GPU 환경에서 18장 전체를 실제 모델로 평가한다.
+모델은 배치 시작 시 한 번만 로드하고, 이미지마다 `torch.inference_mode()` + `torch.cuda.empty_cache()`로 처리한다.
+
+```bash
+# 빠른 점검(처음 3장)
+python local_eval/qwen_vlm_eval/scripts/run_qwen_water_batch.py --limit 3
+
+# 전체 18장
+python local_eval/qwen_vlm_eval/scripts/run_qwen_water_batch.py
+
+# 모델 지정 (기본값 Qwen/Qwen2.5-VL-3B-Instruct)
+python local_eval/qwen_vlm_eval/scripts/run_qwen_water_batch.py --model Qwen/Qwen2.5-VL-3B-Instruct
+```
+
+산출물 (`local_eval/qwen_vlm_eval/outputs/water_batch/`):
+
+- `{stem}_raw.json` — 파싱된 Qwen raw output (파싱 성공 시)
+- `{stem}_raw_text.txt` — Qwen 원본 텍스트 (항상 저장; 파싱 실패 진단용)
+- `{stem}_normalized.json` — VisionAnalysis 호환 정규화 결과
+- `{stem}_result.json` — 이미지별 최종 판정 (filename, predicted_label, engine_result, score,
+  mandatory_passed, ok, water_visual_evidence, objects, rule_evidence, *_output_path, error)
+- `water_qwen_batch_report.csv` — 컬럼: `filename, source, expected_label, predicted_label,
+  engine_result, score, mandatory_passed, ok, water_visual_evidence, objects,
+  raw_output_path, normalized_output_path, result_output_path, error`
+
+정규화(`normalize_water_output.py`)의 false positive/negative 방어:
+- Qwen이 evidence를 dict(name/description)로 내도 흡수한다.
+- 부정문("no other beverages", "not opaque", "does not appear to be water" 등)은 negative 근거로 매핑하지 않는다.
+- `empty_container`는 명시적 빈/소량 표현("empty glass", "small amount", "few drops" 등)에서만 매핑한다.
+- 강한 긍정(glass/cup + 투명 액체 + filled + hard negative 없음)이면 모순 근거를 제거한다.
+- Qwen raw의 선택적 `water_amount`(none|tiny|partial|filled|uncertain): none/tiny/uncertain은 PASS 금지, partial/filled는 PASS 가능.
+
+배치의 `predicted_label`은 `verified→PASS`, `rejected→FAIL`, `retake_required→BORDERLINE_CASE`이며,
+`ok`는 PASS 게이팅 일치(기대/예측이 둘 다 PASS이거나 둘 다 non-PASS)로 계산한다.
+
 ## 관련 코드
 
+- 배치 실행: `local_eval/qwen_vlm_eval/scripts/run_qwen_water_batch.py`
+- 단건 Qwen 추론: `local_eval/qwen_vlm_eval/scripts/run_qwen_single.py --verification-type water`
 - 판정 파서: `local_eval/qwen_vlm_eval/scripts/water_verdict.py`
 - 정규화: `local_eval/qwen_vlm_eval/scripts/normalize_water_output.py`
-- 실제 Qwen 추론: `local_eval/qwen_vlm_eval/scripts/run_qwen_single.py --verification-type water`
 - Rule Engine: `backend/services/image_verification_rule_engine.py`
 - Water 규칙: `backend/rules/image_verification/water.yaml`
-- 리포트 출력: `local_eval/qwen_vlm_eval/outputs/water_verdict_report.csv`
+- 픽스처 리포트: `local_eval/qwen_vlm_eval/outputs/water_verdict_report.csv`

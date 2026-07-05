@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "A glass filled with water.",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 1.0,
+      "evidence": "fallback_from_description"
+    }
+  ],
+  "visible_text": [
+    "full glass of water"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container"
+  ],
+  "exercise_visual_evidence": []
+}

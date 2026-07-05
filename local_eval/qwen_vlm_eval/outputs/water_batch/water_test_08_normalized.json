@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "water dispenser/purifier pouring into a cup",
+  "objects": [
+    {
+      "label": "cup",
+      "confidence": 0.9,
+      "evidence": null
+    }
+  ],
+  "visible_text": [
+    "{'text': 'BRITA', 'position': [341, 168, 409, 234]}"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "water_stream",
+    "filled_container"
+  ],
+  "exercise_visual_evidence": []
+}

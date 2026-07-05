@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "a hand holding a glass near a water dispenser",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.85,
+      "evidence": "fallback_from_description"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_clear_liquid",
+    "visible_water",
+    "filled_container",
+    "opaque_closed_container"
+  ],
+  "exercise_visual_evidence": []
+}

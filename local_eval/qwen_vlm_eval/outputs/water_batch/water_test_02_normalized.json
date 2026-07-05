@@ -9,13 +9,11 @@
   "objects": [
     {
       "label": "glass",
-      "confidence": 0.8,
+      "confidence": 0.9,
       "evidence": "transparent glass containing clear liquid"
     }
   ],
-  "visible_text": [
-    "{'name': 'notebook', 'description': 'a notebook with writing on it'}"
-  ],
+  "visible_text": [],
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [

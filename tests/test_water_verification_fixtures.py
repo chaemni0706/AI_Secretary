@@ -913,6 +913,58 @@ def test_dispenser_relief_does_not_pass_colored_or_empty():
     assert wv.normalize_verdict(nwo.normalize_water_evidence(raw_empty)).label != wv.PASS
 
 
+# ----- 이번 라운드: empty_container 환각 제거 (lemon water) + regression -----
+
+def test_wt01_empty_container_hallucination_removed_passes():
+    """실제 water_test_01: clear liquid + lemon slice floating + 'empty container' 환각 → PASS."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "hand holding glass"}],
+        "scenes": [{"name": "hand holding glass with lemon slice"}],
+        "visual_evidence": [
+            {"name": "hand holding glass", "description": "A hand holding a glass with a lemon slice inside."},
+            {"name": "glass with lemon slice",
+             "description": "A glass containing a clear liquid with a lemon slice floating in it."},
+        ],
+        "negative_evidence": [{"name": "empty container", "description": "The glass appears to be empty."}],
+        "uncertain_evidence": [{"name": "uncertain liquid", "description": "The liquid inside the glass is not clearly visible."}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "empty_container" not in normalized["water_visual_evidence"]
+    assert {"visible_clear_liquid", "filled_container"}.issubset(normalized["water_visual_evidence"])
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_lemon_slice_is_water_not_non_water_beverage():
+    """레몬 슬라이스가 있는 맑은 물은 non_water_beverage가 아니다 (MVP)."""
+    raw = {
+        "objects": [{"name": "glass"}],
+        "visual_evidence": [{"name": "clear liquid in glass",
+                             "description": "clear liquid with a lemon slice floating in it"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "non_water_beverage" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+@pytest.mark.parametrize("raw", [
+    {"objects": [{"name": "glass"}], "visual_evidence": [{"description": "an empty glass"}]},
+    {"objects": [{"name": "glass"}], "water_amount": "partial",
+     "visual_evidence": [{"description": "a nearly empty glass with clear liquid, filled with water"}]},
+    {"objects": [{"name": "glass"}],
+     "visual_evidence": [{"description": "a glass with a tiny amount of clear liquid, filled with water"}]},
+    {"objects": [{"name": "glass"}], "scenes": [{"description": "two empty glasses on a tray"}],
+     "visual_evidence": [{"description": "clear liquid, glass filled with water"}]},
+    {"objects": [{"name": "glass"}],
+     "visual_evidence": [{"name": "clear liquid in glass", "description": "reflection only on transparent glass surface"}]},
+    {"objects": [{"name": "cup"}], "visual_evidence": [{"name": "clear liquid in cup"}],
+     "negative_evidence": [{"name": "non_water_beverage", "description": "the cup contains coffee, a brown beverage"}]},
+])
+def test_empty_hallucination_removal_does_not_cause_false_positive(raw):
+    """진짜 빈컵/소량/여러컵/반사/커피는 empty 환각 제거 규칙에도 불구하고 PASS 금지."""
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
 def test_dispenser_phrase_mapping_pass():
     raw = {
         "objects": [{"name": "water dispenser"}, {"name": "cup"}],

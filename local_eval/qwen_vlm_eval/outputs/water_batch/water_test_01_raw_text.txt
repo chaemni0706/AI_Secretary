@@ -16,7 +16,7 @@
   "scenes": [
     {
       "name": "hand holding glass with lemon slice",
-      "position": [1, 52, 188, 140]
+      "position": [1, 52, 188, 139]
     }
   ],
   "visual_evidence": [
@@ -31,14 +31,14 @@
   ],
   "negative_evidence": [
     {
-      "name": "non-water beverage",
-      "description": "The presence of a lemon slice suggests that the liquid is not water."
+      "name": "empty container",
+      "description": "The glass appears to be empty."
     }
   ],
   "uncertain_evidence": [
     {
-      "name": "opaque_closed_container",
-      "description": "The glass appears to be opaque and closed, which could make it difficult to see the contents clearly."
+      "name": "uncertain liquid",
+      "description": "The liquid inside the glass is not clearly visible."
     }
   ],
   "text_observed": [],

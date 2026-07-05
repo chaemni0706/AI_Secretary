@@ -16,7 +16,7 @@
   "scenes": [
     {
       "name": "table",
-      "description": "a table with a glass of water, a notebook, and a pen"
+      "description": "a table with a glass of water and a notebook"
     }
   ],
   "visual_evidence": [
@@ -26,27 +26,22 @@
     },
     {
       "name": "table",
-      "description": "a table with a glass of water, a notebook, and a pen"
+      "description": "a table with a glass of water and a notebook"
     }
   ],
   "negative_evidence": [
     {
       "name": "non_water_beverage",
-      "description": "the liquid in the glass is not water"
+      "description": "the liquid appears to be water"
     }
   ],
   "uncertain_evidence": [
     {
       "name": "opaque_closed_container",
-      "description": "the glass appears to be closed and opaque"
+      "description": "the glass is transparent and the liquid is clear"
     }
   ],
-  "text_observed": [
-    {
-      "name": "notebook",
-      "description": "a notebook with writing on it"
-    }
-  ],
-  "confidence": 0.8
+  "text_observed": [],
+  "confidence": 0.9
 }
 ```

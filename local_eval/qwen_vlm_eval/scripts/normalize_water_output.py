@@ -168,6 +168,46 @@ HARD_EMPTY_PHRASES: tuple[str, ...] = (
     "just glasses",
 )
 
+# --- 강한 긍정 단서: 이게 있으면 이름만 있는 empty_container 환각을 제거할 수 있다 ---
+STRONG_POSITIVE_CUES: tuple[str, ...] = (
+    "lemon slice",
+    "floating",
+    "liquid inside",
+    "clear liquid with",
+    "glass containing a clear liquid",
+    "cup containing a clear liquid",
+    "containing a clear liquid",
+    "filled with water",
+    "glass of water",
+    "cup of water",
+)
+
+# --- 진짜 빈/부족 단서: 이게 있으면 empty_container 환각 제거를 하지 않는다 (regression 방지) ---
+HARD_EMPTY_CUES: tuple[str, ...] = (
+    "empty glass",
+    "empty cup",
+    "empty glasses",
+    "empty cups",
+    "glass is empty",
+    "cup is empty",
+    "no water",
+    "no liquid",
+    "nearly empty",
+    "almost empty",
+    "tiny amount",
+    "small amount",
+    "few drops",
+    "only at the bottom",
+    "multiple empty glasses",
+    "two empty glasses",
+    "reflection",
+    "reflection only",
+    "glass shine",
+    "transparent glass only",
+    "clear glass only",
+    "glass surface",
+)
+
 # --- 여러 개의 컵/유리컵 → 단일 섭취 인증 불가 (BORDERLINE로 강등) ---
 MULTI_CONTAINER_PHRASES: tuple[str, ...] = (
     "two glasses",
@@ -599,6 +639,22 @@ def build_water_evidence(raw: dict) -> tuple[list[dict], list[str]]:
 
     objects = _resolve_objects(raw, confidence, has_liquid, has_filled)
     obj_labels = {o["label"] for o in objects}
+
+    # empty_container 환각 제거:
+    # glass/cup + 투명 액체 + filled + 강한 긍정 단서(lemon slice/floating/clear liquid with 등)가 있고
+    # 진짜 빈/부족 단서(empty glass, small amount, reflection only 등)가 없으면 empty_container를 hallucination으로 보고 제거.
+    # (레몬물처럼 명백한 물인데 Qwen이 'empty container'를 함께 뱉는 경우 방어)
+    _has_container = bool(CUP_GLASS_LABELS.intersection(obj_labels))
+    if (
+        "empty_container" in hard
+        and _has_container
+        and has_liquid
+        and has_filled
+        and _has_any(all_text, STRONG_POSITIVE_CUES)
+        and not _has_any(all_text, HARD_EMPTY_CUES)
+    ):
+        hard = [t for t in hard if t != "empty_container"]
+        soft = [t for t in soft if t != "empty_container"]
 
     # 정수기/물 받는 컨텍스트: opaque_closed_container 환각 완화
     # (정수기에서 물을 받는 장면인데 Qwen이 'opaque closed'를 붙여도 PASS 가능해야 함)

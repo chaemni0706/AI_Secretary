@@ -1,0 +1,164 @@
+[
+  {
+    "filename": "water_test_01_hand_glass_water.png",
+    "image_path": "data/test_images/water/uploaded/water_test_01_hand_glass_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "uploaded",
+    "reason": "hand holding a cup containing clear water",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "water_test_02_glass_water.png",
+    "image_path": "data/test_images/water/uploaded/water_test_02_glass_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "uploaded",
+    "reason": "clear glass containing water",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "water_test_03_nearly_empty_glass.png",
+    "image_path": "data/test_images/water/uploaded/water_test_03_nearly_empty_glass.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "uploaded",
+    "reason": "glass appears empty or contains too little water",
+    "difficulty": "hard"
+  },
+  {
+    "filename": "water_test_04_empty_glasses.png",
+    "image_path": "data/test_images/water/uploaded/water_test_04_empty_glasses.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "uploaded",
+    "reason": "empty glasses, no clear evidence of water",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "water_test_05_hand_glass_water.png",
+    "image_path": "data/test_images/water/uploaded/water_test_05_hand_glass_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "uploaded",
+    "reason": "hand holding a glass containing water",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "water_test_06_dispenser_cup_water.png",
+    "image_path": "data/test_images/water/uploaded/water_test_06_dispenser_cup_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "uploaded",
+    "reason": "water dispenser filling a cup",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "water_test_07_dispenser_pitcher_water.png",
+    "image_path": "data/test_images/water/uploaded/water_test_07_dispenser_pitcher_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "uploaded",
+    "reason": "water dispenser pouring water into a container",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "water_test_08_purifier_glass_water.png",
+    "image_path": "data/test_images/water/uploaded/water_test_08_purifier_glass_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "uploaded",
+    "reason": "water purifier dispensing water into a glass",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "generated_water_01_full_glass.png",
+    "image_path": "data/test_images/water/generated/generated_water_01_full_glass.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "generated",
+    "reason": "synthetic full glass of clear water",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "generated_water_02_half_glass.png",
+    "image_path": "data/test_images/water/generated/generated_water_02_half_glass.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "generated",
+    "reason": "synthetic half-full glass of clear water",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "generated_water_03_hand_holding_water.png",
+    "image_path": "data/test_images/water/generated/generated_water_03_hand_holding_water.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "generated",
+    "reason": "synthetic hand holding a water glass",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "generated_water_04_dispenser_filling_cup.png",
+    "image_path": "data/test_images/water/generated/generated_water_04_dispenser_filling_cup.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "generated",
+    "reason": "synthetic dispenser filling a cup with water",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "generated_water_05_water_bottle.png",
+    "image_path": "data/test_images/water/generated/generated_water_05_water_bottle.png",
+    "expected_label": "PASS",
+    "expected_bool": true,
+    "source": "generated",
+    "reason": "synthetic transparent bottle containing water",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "generated_water_06_empty_glass.png",
+    "image_path": "data/test_images/water/generated/generated_water_06_empty_glass.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "generated",
+    "reason": "synthetic empty glass",
+    "difficulty": "easy"
+  },
+  {
+    "filename": "generated_water_07_nearly_empty_glass.png",
+    "image_path": "data/test_images/water/generated/generated_water_07_nearly_empty_glass.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "generated",
+    "reason": "synthetic glass with only a tiny amount of water",
+    "difficulty": "hard"
+  },
+  {
+    "filename": "generated_water_08_coffee_cup.png",
+    "image_path": "data/test_images/water/generated/generated_water_08_coffee_cup.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "generated",
+    "reason": "synthetic colored drink, not clear water",
+    "difficulty": "medium"
+  },
+  {
+    "filename": "generated_water_09_closed_bottle_no_context.png",
+    "image_path": "data/test_images/water/generated/generated_water_09_closed_bottle_no_context.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "generated",
+    "reason": "closed bottle without clear drinking verification context",
+    "difficulty": "hard"
+  },
+  {
+    "filename": "generated_water_10_many_empty_cups.png",
+    "image_path": "data/test_images/water/generated/generated_water_10_many_empty_cups.png",
+    "expected_label": "FAIL",
+    "expected_bool": false,
+    "source": "generated",
+    "reason": "multiple empty cups",
+    "difficulty": "medium"
+  }
+]

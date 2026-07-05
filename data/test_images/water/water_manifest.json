@@ -1,0 +1,616 @@
+{
+  "description": "Water drinking verification test set for the Qwen2.5-VL-3B image pipeline. expected_label: PASS/FAIL/BORDERLINE. MVP 기준(물이 명확히 보이면 PASS, 빈 컵/색 있는 음료/근거 부족은 FAIL). vision_analysis는 GPU 없이 Rule Engine을 검증하기 위해 사람이 검수한 VisionAnalysis 대체 픽스처.",
+  "verification_type": "water",
+  "label_mapping": {
+    "verified": "PASS",
+    "retake_required": "FAIL",
+    "rejected": "FAIL"
+  },
+  "counts": {
+    "total": 18,
+    "uploaded": 8,
+    "generated": 10
+  },
+  "images": [
+    {
+      "filename": "water_test_01.png",
+      "image_path": "data/test_images/water/uploaded/water_test_01.png",
+      "expected_label": "PASS",
+      "source": "uploaded",
+      "reason": "손에 든 투명 컵에 물이 들어 있음",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "hand_holding_glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "손에 든 투명 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_02.png",
+      "image_path": "data/test_images/water/uploaded/water_test_02.png",
+      "expected_label": "PASS",
+      "source": "uploaded",
+      "reason": "투명 컵에 물이 들어 있음",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass_on_table",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "투명 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_03.png",
+      "image_path": "data/test_images/water/uploaded/water_test_03.png",
+      "expected_label": "FAIL",
+      "source": "uploaded",
+      "reason": "컵은 있으나 물이 거의 없거나 빈 컵처럼 보임",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass_on_book",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "책 위의 빈 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_04.png",
+      "image_path": "data/test_images/water/uploaded/water_test_04.png",
+      "expected_label": "FAIL",
+      "source": "uploaded",
+      "reason": "빈 컵 2개로 보이며 물 인증 근거 부족",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "empty_glasses_on_tray",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "트레이 위 빈 유리컵 2개"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_05.png",
+      "image_path": "data/test_images/water/uploaded/water_test_05.png",
+      "expected_label": "PASS",
+      "source": "uploaded",
+      "reason": "손에 든 컵에 물이 들어 있음",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "hand_holding_glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "손에 든 물컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_06.png",
+      "image_path": "data/test_images/water/uploaded/water_test_06.png",
+      "expected_label": "PASS",
+      "source": "uploaded",
+      "reason": "정수기에서 컵에 물을 받는 장면",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "coway 정수기"
+          },
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "받는 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water",
+          "visible_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_07.png",
+      "image_path": "data/test_images/water/uploaded/water_test_07.png",
+      "expected_label": "PASS",
+      "source": "uploaded",
+      "reason": "정수기에서 물을 받는 장면",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "정수기"
+          },
+          {
+            "label": "water_container",
+            "confidence": 0.95,
+            "evidence": "물을 받는 피처"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "water_test_08.png",
+      "image_path": "data/test_images/water/uploaded/water_test_08.png",
+      "expected_label": "PASS",
+      "source": "uploaded",
+      "reason": "정수기에서 컵에 물이 담기는 장면",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "정수기"
+          },
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "물이 담기는 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water",
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_01_full_glass.png",
+      "image_path": "data/test_images/water/generated/generated_water_01_full_glass.png",
+      "expected_label": "PASS",
+      "source": "generated",
+      "reason": "투명 컵에 물이 많이 담긴 이미지",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "물이 가득 찬 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_02_half_glass.png",
+      "image_path": "data/test_images/water/generated/generated_water_02_half_glass.png",
+      "expected_label": "PASS",
+      "source": "generated",
+      "reason": "투명 컵에 물이 절반 정도 담긴 이미지",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "물이 절반 담긴 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_03_hand_holding_water.png",
+      "image_path": "data/test_images/water/generated/generated_water_03_hand_holding_water.png",
+      "expected_label": "PASS",
+      "source": "generated",
+      "reason": "사람이 물컵을 들고 있는 상황을 단순 도형으로 표현",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "hand_holding_glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "손이 감싼 물컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_04_dispenser_filling_cup.png",
+      "image_path": "data/test_images/water/generated/generated_water_04_dispenser_filling_cup.png",
+      "expected_label": "PASS",
+      "source": "generated",
+      "reason": "정수기에서 컵에 물이 나오는 장면",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "정수기"
+          },
+          {
+            "label": "cup",
+            "confidence": 0.95,
+            "evidence": "물을 받는 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_05_water_bottle.png",
+      "image_path": "data/test_images/water/generated/generated_water_05_water_bottle.png",
+      "expected_label": "PASS",
+      "source": "generated",
+      "reason": "투명 물병에 물이 들어 있는 이미지",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "bottle",
+        "objects": [
+          {
+            "label": "water_bottle",
+            "confidence": 0.95,
+            "evidence": "물이 든 투명 물병"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_06_empty_glass.png",
+      "image_path": "data/test_images/water/generated/generated_water_06_empty_glass.png",
+      "expected_label": "FAIL",
+      "source": "generated",
+      "reason": "빈 컵 이미지",
+      "difficulty": "easy",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "빈 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_07_nearly_empty_glass.png",
+      "image_path": "data/test_images/water/generated/generated_water_07_nearly_empty_glass.png",
+      "expected_label": "FAIL",
+      "source": "generated",
+      "reason": "바닥에 물이 아주 조금만 있는 컵 이미지 (물 인증 근거 부족)",
+      "difficulty": "hard",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "바닥에 물 흔적만 있는 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_08_coffee_cup.png",
+      "image_path": "data/test_images/water/generated/generated_water_08_coffee_cup.png",
+      "expected_label": "FAIL",
+      "source": "generated",
+      "reason": "커피나 색 있는 음료가 담긴 컵 이미지",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "cup",
+        "objects": [
+          {
+            "label": "cup",
+            "confidence": 0.95,
+            "evidence": "색 있는 음료가 담긴 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "non_water_beverage"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_09_closed_bottle_no_context.png",
+      "image_path": "data/test_images/water/generated/generated_water_09_closed_bottle_no_context.png",
+      "expected_label": "BORDERLINE",
+      "source": "generated",
+      "reason": "닫힌 병만 있고 물 섭취 인증 근거가 약한 이미지",
+      "difficulty": "hard",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "bottle",
+        "objects": [
+          {
+            "label": "water_bottle",
+            "confidence": 0.95,
+            "evidence": "닫힌 불투명 병"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "opaque_closed_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "filename": "generated_water_10_many_empty_cups.png",
+      "image_path": "data/test_images/water/generated/generated_water_10_many_empty_cups.png",
+      "expected_label": "FAIL",
+      "source": "generated",
+      "reason": "빈 컵 여러 개가 있는 이미지",
+      "difficulty": "medium",
+      "vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "cups",
+        "objects": [
+          {
+            "label": "cup",
+            "confidence": 0.95,
+            "evidence": "빈 컵 여러 개"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    }
+  ],
+  "borderline_cases": [
+    {
+      "filename": "generated_water_09_closed_bottle_no_context.png",
+      "engine_result": "retake_required",
+      "predicted_label": "FAIL",
+      "note": "닫힌/불투명 용기 — 물 섭취 근거 약함. PASS가 아니면 통과로 간주."
+    }
+  ]
+}

@@ -86,6 +86,29 @@ def _tail(pref) -> str:
     return "천천히 준비해볼까요?" if _soft(pref) else "준비해볼까요?"
 
 
+def _strength_reminders(
+    title: str, reminder_strength: Optional[str], date: Optional[str], hhmm: Optional[str]
+) -> List[ReminderEntry]:
+    """Extra reminders whose COUNT and MESSAGE scale with reminder_strength
+    (gentle=1 / normal=2 / strong=3). Returns [] when strength is not provided,
+    so the default plan is unchanged. Message/offsets come from the single
+    source of truth in assistant_style_service."""
+    if not reminder_strength:
+        return []
+    from backend.services import assistant_style_service as style
+    profile = style.build_style_profile({"reminder_strength": reminder_strength})
+    message = style.build_reminder_text(title, profile)
+    out: List[ReminderEntry] = []
+    for mb in style.reminder_offsets(profile):
+        out.append(ReminderEntry(
+            type="reminder", minutes_before=mb,
+            trigger_time=_trigger(date, hhmm, mb),
+            message=message,
+            reason=f"리마인드 강도({reminder_strength}) 설정을 반영했습니다.",
+        ))
+    return out
+
+
 def _checklist(category: Optional[str], location: Optional[str], *, reservation: bool,
                submit: bool) -> List[ChecklistEntry]:
     legacy = _CAT_TO_CHECKLIST.get((category or "").lower(), "etc")
@@ -112,7 +135,7 @@ def _checklist(category: Optional[str], location: Optional[str], *, reservation:
 # --------------------------------------------------------------------------- #
 def build_event_plan(
     db: Session, sched: ScheduleRead, *, user_id: str, is_all_day: bool = False,
-    persist: bool = True,
+    persist: bool = True, reminder_strength: Optional[str] = None,
 ) -> ReminderPlan:
     eff = preference_service.get_effective_user_preference(db, user_id)
     pref, meta = eff["preference"], eff["meta"]
@@ -176,6 +199,14 @@ def build_event_plan(
     else:
         warnings.append("위치 정보가 없어 출발 알림을 생성하지 않았습니다.")
 
+    # 3) reminder-strength scaled reminders (opt-in; default plan unchanged)
+    strength_reminders = _strength_reminders(
+        title, reminder_strength, sched.date, sched.start_time if has_time else None
+    )
+    if strength_reminders:
+        reminders.extend(strength_reminders)
+        used.append("reminder_strength")
+
     checklist = _checklist(
         category, sched.location,
         reservation=(category in _RESERVATION_CATS or "예약" in title),
@@ -197,6 +228,7 @@ def build_event_plan(
 # --------------------------------------------------------------------------- #
 def build_todo_plan(
     db: Session, todo: TodoRead, *, user_id: str, persist: bool = True,
+    reminder_strength: Optional[str] = None,
 ) -> ReminderPlan:
     eff = preference_service.get_effective_user_preference(db, user_id)
     pref, meta = eff["preference"], eff["meta"]
@@ -232,6 +264,14 @@ def build_todo_plan(
                 pass
     else:
         warnings.append("마감일(due_date)이 없어 마감 알림을 생성하지 않았습니다.")
+
+    # reminder-strength scaled reminders (opt-in; default plan unchanged)
+    strength_reminders = _strength_reminders(
+        title, reminder_strength, todo.due_date, _DEADLINE_HOUR if todo.due_date else None
+    )
+    if strength_reminders:
+        reminders.extend(strength_reminders)
+        used.append("reminder_strength")
 
     checklist = _checklist(category, None, reservation=False, submit=(category in _SUBMIT_CATS))
     meta.used_preferences = _dedupe(used)

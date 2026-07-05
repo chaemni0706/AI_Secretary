@@ -116,6 +116,13 @@ def respond(req: ChatRespondRequest) -> ChatRespondData:
             tts_text = tts_response_builder.build_tts_response(
                 intent=voice_intent, slots={}, preferences=preferences,
             )
+            # enforce response_length (and light tone tweaks) on the spoken line
+            try:
+                from backend.services import assistant_style_service
+                profile = assistant_style_service.build_style_profile(preferences)
+                tts_text = assistant_style_service.apply_response_style(tts_text, profile)
+            except Exception:
+                pass
 
         solutions = [Solution(**s) for s in solutions_raw]
         reschedule_candidates = [RescheduleCandidate(**c) for c in reschedule_raw]

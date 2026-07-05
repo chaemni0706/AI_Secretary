@@ -58,11 +58,16 @@ class ScheduleApi {
     String? currentDatetime,
     String timezone = 'Asia/Seoul',
     String inputType = 'text',
+    String userId = 'local-user',
   }) async {
     final body = <String, dynamic>{
       'input': input,
       'input_type': inputType,
       'timezone': timezone,
+      // 사용자별 음성 스타일(assistant_tone 등)을 반영할 수 있도록 user_id 를 함께
+      // 전송한다. 현재 /ai/schedule/parse 는 이 값을 무시(하위 호환)하지만,
+      // 스타일이 적용되는 파이프라인으로 옮겨갈 때 그대로 사용된다.
+      'user_id': userId,
     };
     if (currentDatetime != null) body['current_datetime'] = currentDatetime;
 

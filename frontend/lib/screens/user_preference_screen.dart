@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
 import '../services/user_preferences_api.dart';
+import '../services/voice_tts_service.dart';
 
 /// statusCode/요청 URI/응답 body 까지 포함한 상세 오류 문자열.
 /// debugPrint 로그와 화면 표시(에러 카드/SnackBar)에 그대로 재사용한다.
@@ -27,6 +28,14 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
+
+  final VoiceTtsService _tts = VoiceTtsService();
+
+  @override
+  void dispose() {
+    _tts.dispose();
+    super.dispose();
+  }
 
   Map<String, List<Map<String, String>>> _options = {};
   final Map<String, String> _selected = {
@@ -126,6 +135,38 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           backgroundColor: AppTheme.red,
         ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// 현재 선택을 저장한 뒤, 백엔드가 그 스타일로 만들어 준 tts_text 를 실제로
+  /// 읽어 준다. "설정을 바꾸면 말투가 어떻게 들리는지" 바로 확인용.
+  Future<void> _preview() async {
+    setState(() => _saving = true);
+    try {
+      final result = await UserPreferencesApi.update(
+        assistantTone: _selected['assistant_tone'],
+        responseLength: _selected['response_length'],
+        nudgeStrength: _selected['nudge_strength'],
+      );
+      final ttsText = (result['tts_text'] as String?)?.trim();
+      await _tts.speak(
+        (ttsText != null && ttsText.isNotEmpty)
+            ? ttsText
+            : '설정한 말투로 이렇게 안내해드릴게요.',
+      );
+    } on ApiException catch (e) {
+      debugPrint('[UserPreferenceScreen] preview failed: ${_describeApiError(e)}');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('미리듣기에 실패했습니다: ${e.message}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('미리듣기에 실패했습니다. ($e)')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -255,29 +296,51 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _saving ? null : _save,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.blue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _saving ? null : _preview,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.blue,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(color: AppTheme.blue),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.volume_up_outlined,
+                                    size: 18),
+                                label: const Text('미리듣기'),
                               ),
                             ),
-                            child: _saving
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('저장'),
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _saving ? null : _save,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.blue,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: _saving
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text('저장'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -190,8 +190,15 @@ def build_tts_response(
             normalize_preference_value("response_length", preferences.get("response_length"))
             or DEFAULT_PREFERENCES["response_length"]
         )
+        # Accept the spec field name `reminder_strength` (gentle|normal|strong)
+        # as an alias for the stored `nudge_strength` (low|medium|high).
+        _REMINDER_TO_NUDGE = {"gentle": "low", "normal": "medium", "strong": "high"}
         nudge = (
             normalize_preference_value("nudge_strength", preferences.get("nudge_strength"))
+            or normalize_preference_value(
+                "nudge_strength",
+                _REMINDER_TO_NUDGE.get(str(preferences.get("reminder_strength") or "").lower()),
+            )
             or DEFAULT_PREFERENCES["nudge_strength"]
         )
 

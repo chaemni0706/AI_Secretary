@@ -23,12 +23,17 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from backend.core.config import settings
 from backend.database.schema.personalization_schema import TONES
 from backend.database.schema.schedule_schema import (
     ScheduleDraft,
     ScheduleParseData,
     ScheduleParseRequest,
     ScheduleSlots,
+)
+from backend.services.schedule_title_extractor import (
+    TITLE_CONFIDENCE_THRESHOLD,
+    extract_schedule_title,
 )
 
 _RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
@@ -279,6 +284,29 @@ def _extract_title(text: str, date_expr: Optional[str], time_expr: Optional[str]
     return work.strip()
 
 
+# First-person / intent residue that the legacy cleaning above leaves behind
+# ("나 병원 가려고" keeps 병원 but also 나/가려고). When such residue survives, we
+# re-extract a concise title via the domain-aware title extractor. These markers
+# appear in NONE of the locked title cases or the regression dataset, so this
+# only ever changes the previously-broken path.
+_TITLE_RESIDUE_MARKERS = (
+    "나 ", "내가", "나는", "가려고", "하려고", "가야", "가기로", "하기로",
+    "할 예정", "할 것 같", "가는 거", "먹는 ",
+)
+
+
+def _maybe_refine_title(title: str, text: str) -> str:
+    """Replace a residue-laden title with a clean domain-based one when possible."""
+    if not title:
+        return title
+    if not any(marker in f"{title} " for marker in _TITLE_RESIDUE_MARKERS):
+        return title
+    info = extract_schedule_title(text)
+    if info["title"] and info["confidence"] >= TITLE_CONFIDENCE_THRESHOLD:
+        return info["title"]
+    return title
+
+
 def _detect_category(*texts: str) -> str:
     rules, default = _load_category_rules()
     for text in texts:
@@ -333,6 +361,7 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
     start_time, time_expr, ambiguous = _extract_time(text)
     end_time = _add_one_hour(start_time) if start_time else None
     title = _extract_title(text, date_expr, time_expr)
+    title = _maybe_refine_title(title, text)
 
     category = _detect_category(title, re.sub(re.escape(time_expr or ""), "", text))
     priority = _detect_priority(category, title, text)
@@ -445,3 +474,177 @@ def _apply_tone_style(text: str, tone: Optional[str]) -> str:
     for rule in _load_tone_rules().get(tone, []):
         text = text.replace(rule["find"], rule["replace"])
     return text
+
+
+# --------------------------------------------------------------------------- #
+# LLM fallback (stub) — enabled later without touching callers
+# --------------------------------------------------------------------------- #
+def parse_schedule_with_llm_fallback(
+    request_text: str,
+    *,
+    current_datetime: Optional[str] = None,
+    timezone: str = "Asia/Seoul",
+) -> Optional[dict]:
+    """LLM fallback for hard/complex utterances. STUB — returns None for now.
+
+    Intended trigger conditions (decided by the caller):
+      * rule-based title confidence < ``TITLE_CONFIDENCE_THRESHOLD``
+      * rule-based title is None (unclear)
+      * long / compound sentence likely to hold multiple schedules
+
+    Gated by ``settings.ENABLE_LLM_SCHEDULE_PARSE`` (default False) so the parser
+    works fully offline today. When enabled, wire an OpenAI JSON-mode call here
+    (see ``backend.services.llm_service.generate`` and the JSON-first prompt in
+    ``schedule_llm_parser``) and return a dict shaped like ``build_schedule_plan``
+    so the caller can merge/replace fields transparently.
+
+    Prompt template (fill {today}/{timezone}/{text}); model MUST return JSON only::
+
+        You are a schedule parser for a Korean AI secretary.
+        Base date: {today}   Timezone: {timezone}
+        Rules:
+          1. Convert relative dates (오늘/내일/이번 주 금요일 ...) to YYYY-MM-DD.
+          2. Convert times (오후 3시/저녁 7시/3시 반) to HH:MM (24h).
+          3. Unknown field -> null. NEVER invent a date/time/location.
+          4. confidence in [0, 1].
+        Return ONLY this JSON object:
+          {
+            "title":       string | null,
+            "category":    "health"|"personal"|"meeting"|"study"|"exercise"|"meal"|"other",
+            "date":        "YYYY-MM-DD" | null,
+            "start_time":  "HH:MM" | null,
+            "end_time":    "HH:MM" | null,
+            "confidence":  number
+          }
+        User input: {text}
+    """
+    if not settings.ENABLE_LLM_SCHEDULE_PARSE:
+        return None
+    # TODO: call llm_service.generate(...) with the prompt above, parse JSON,
+    # validate (no fabricated date/time), and return the normalized dict.
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# High-level orchestration (title + slots + clarification, additive)
+# --------------------------------------------------------------------------- #
+def build_schedule_plan(
+    request_text: str,
+    current_datetime: Optional[str] = None,
+    preferences: Optional[dict] = None,
+    user_id: Optional[str] = None,
+) -> dict:
+    """Orchestrate the improved pipeline into a flat, clarification-aware dict.
+
+    Pipeline: rule-based title extraction -> (optional) LLM fallback -> date/time
+    slot extraction (never fabricated) -> missing-field detection -> clarification
+    message. This is ADDITIVE and does not alter the locked ``parse_schedule``
+    response consumed by the Flutter frontend.
+
+    Voice/persona style: pass `preferences` (assistant_tone/response_length/
+    reminder_strength) directly, or a `user_id` to look them up. When neither is
+    given the clarification wording is the default rule-base (unchanged).
+    """
+    # Local imports avoid an import cycle (slot extractor imports this module).
+    from backend.services import schedule_clarification, schedule_rule_loader
+    from backend.services import schedule_slot_extractor
+
+    if preferences is None and user_id:
+        try:
+            from backend.services import user_preference_service
+            preferences = user_preference_service.get_user_preferences(user_id)
+        except Exception:
+            preferences = None
+
+    text = (request_text or "").strip()
+    title_info = extract_schedule_title(text)
+    slots = schedule_slot_extractor.extract_schedule_slots(text, current_datetime)
+
+    # LLM fallback hook (stub returns None unless ENABLE_LLM_SCHEDULE_PARSE).
+    if (
+        title_info["title"] is None
+        or title_info["confidence"] < TITLE_CONFIDENCE_THRESHOLD
+    ):
+        llm = parse_schedule_with_llm_fallback(
+            text, current_datetime=current_datetime
+        )
+        if llm and llm.get("title"):
+            title_info = {
+                "title": llm["title"],
+                "category": llm.get("category", title_info["category"]),
+                "confidence": float(llm.get("confidence", 0.7)),
+                "source": "llm_fallback",
+                "matched_keyword": None,
+                "participants": title_info.get("participants", []),
+            }
+
+    category = title_info["category"]
+    title = title_info["title"]
+    title_confident = bool(title) and title_info["confidence"] >= TITLE_CONFIDENCE_THRESHOLD
+
+    missing: List[str] = []
+    if not title_confident:
+        title = None
+        missing.append("title")
+    # date/time — never fabricated; taken straight from the slot extractor.
+    missing.extend(slots["missing_fields"])
+    # location — category-dependent policy; never fabricated.
+    location = slots["location"]
+    if _needs_location(schedule_rule_loader, category, text, location):
+        missing.append("location")
+
+    date_text = slots["date_expression"] or slots["date"]
+    time_text = slots["time_expression"] or slots["time"]
+    clar = schedule_clarification.build_clarification(
+        category=category,
+        title=title,
+        missing_fields=missing,
+        preferences=preferences,
+        date_text=date_text,
+        time_text=time_text,
+    )
+
+    confidence = title_info["confidence"] if title_confident else min(
+        title_info["confidence"], 0.4
+    )
+    confidence = round(
+        min(0.98, confidence + 0.03 * bool(slots["date"]) + 0.03 * bool(slots["start_time"])),
+        2,
+    )
+
+    return {
+        "title": title,
+        "category": category,
+        "confidence": confidence,
+        "title_source": title_info["source"],
+        "matched_keyword": title_info["matched_keyword"],
+        "participants": title_info.get("participants", []),
+        "date": slots["date"],
+        "time": slots["time"],
+        "start_time": slots["start_time"],
+        "end_time": slots["end_time"],
+        "ambiguous": slots["ambiguous"],
+        "location": location,
+        "missing_fields": missing,
+        "status": clar["status"],
+        "clarification_message": clar["clarification_message"],
+        "tts_text": clar["tts_text"],
+    }
+
+
+def _needs_location(rule_loader, category: str, text: str, location) -> bool:
+    """Category-driven location requirement (see schedule_location_policy.json).
+
+    Order: already-extracted -> no; online keyword -> no; required category ->
+    yes; optional category with a place keyword -> yes; otherwise -> no.
+    """
+    if location:
+        return False
+    policy = rule_loader.load_location_policy()
+    if any(k in text for k in policy.get("online_keywords", [])):
+        return False
+    if category in policy.get("location_required_categories", []):
+        return True
+    if category in policy.get("location_optional_categories", []):
+        return any(k in text for k in policy.get("place_required_keywords", []))
+    return False

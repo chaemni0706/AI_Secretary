@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     LLM_TIMEOUT_SECONDS: float = 8.0
 
+    # --- Schedule parsing ---
+    # Master switch for the rule-based schedule parser's optional LLM fallback
+    # (backend.services.schedule_parser.parse_schedule_with_llm_fallback).
+    # Default OFF so the parser works fully offline with rule-based extraction.
+    ENABLE_LLM_SCHEDULE_PARSE: bool = False
+
     # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error

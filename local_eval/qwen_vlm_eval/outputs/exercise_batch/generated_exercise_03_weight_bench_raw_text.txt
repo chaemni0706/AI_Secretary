@@ -1,0 +1,37 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "weight bench",
+      "description": "a flat surface with two vertical supports and a horizontal bar"
+    },
+    {
+      "name": "barbell",
+      "description": "a long, heavy metal rod with weights attached at each end"
+    }
+  ],
+  "scenes": [
+    "gym environment"
+  ],
+  "visual_evidence": [
+    "weight bench + barbell"
+  ],
+  "negative_evidence": [
+    "unrelated room, desk environment, office environment, clearly wrong activity environment"
+  ],
+  "uncertain_evidence": [
+    "uncertain screen content"
+  ],
+  "text_observed": [
+    "gym: weight bench + barbell"
+  ],
+  "confidence": 0.95
+}
+```

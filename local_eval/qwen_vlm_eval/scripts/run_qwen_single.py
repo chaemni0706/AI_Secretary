@@ -80,6 +80,17 @@ For exercise verification, focus on:
 - home_workout: exercise_mat, resistance_band, dumbbell, kettlebell, pullup_bar, home_workout_pose
 - negative evidence: unrelated_room, desk_environment, office_environment, clearly_wrong_activity_environment
 
+Exercise verification principles (MVP = gym + home_workout, follow strictly):
+- Exercise equipment or an exercise pose must be clearly visible to support a PASS.
+- Running shoes alone are NOT sufficient evidence of exercise (insufficient_exercise_evidence).
+- A water bottle alone is NOT exercise evidence (insufficient_exercise_evidence).
+- Desk / office / laptop / bedroom / bed / food / dining scenes are NOT exercise (unrelated_environment).
+- For gym activity_type: report gym equipment (dumbbell, treadmill, barbell, weight_machine, gym_bench) and/or a gym environment.
+- For home_workout activity_type: report a workout mat, resistance band, home equipment, or a clear home-workout pose.
+- A person merely standing, with no exercise pose and no equipment, is NOT a PASS.
+- If you cannot tell whether it is an exercise scene, use uncertain_exercise_environment (not a positive).
+- A false positive is worse than a false negative for verification. Be conservative.
+
 Return JSON with this exact schema:
 {
   "verification_type": "<water|study|exercise>",

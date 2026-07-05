@@ -1,0 +1,32 @@
+{
+  "filename": "generated_exercise_01_gym_dumbbell.png",
+  "source": "generated",
+  "exercise_activity_type": "gym",
+  "expected_label": "PASS",
+  "predicted_label": "PASS",
+  "engine_result": "verified",
+  "score": 50,
+  "mandatory_passed": true,
+  "ok": true,
+  "exercise_visual_evidence": [
+    "dumbbell_present",
+    "gym_environment"
+  ],
+  "objects": [],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/exercise_batch/generated_exercise_01_gym_dumbbell_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/exercise_batch/generated_exercise_01_gym_dumbbell_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "exercise_environment:gym",
+      "message": "선택한 운동과 관련된 환경이 확인되었습니다.",
+      "score_delta": 30
+    },
+    {
+      "code": "exercise_core_equipment:gym",
+      "message": "선택한 운동과 관련된 핵심 기구 또는 장소 단서가 확인되었습니다.",
+      "score_delta": 20
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/exercise_batch/generated_exercise_01_gym_dumbbell_result.json",
+  "error": ""
+}

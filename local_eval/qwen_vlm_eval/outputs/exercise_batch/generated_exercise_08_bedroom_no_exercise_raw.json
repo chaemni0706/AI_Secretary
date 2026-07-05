@@ -1,0 +1,40 @@
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "bedroom, no exercise"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "bedroom, no exercise"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "bedroom, no exercise"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "bedroom, no exercise"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "bedroom, no exercise"
+    }
+  ],
+  "text_observed": [
+    {
+      "name": "bedroom, no exercise"
+    }
+  ],
+  "confidence": 0.0
+}

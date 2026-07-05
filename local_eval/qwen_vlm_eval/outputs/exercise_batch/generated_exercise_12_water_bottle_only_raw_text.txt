@@ -1,0 +1,44 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "water bottle",
+      "bbox_2d": [219, 198, 287, 356]
+    }
+  ],
+  "scenes": [
+    {
+      "name": "gym environment",
+      "bbox_2d": [0, 0, 504, 504]
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "water bottle",
+      "bbox_2d": [219, 198, 287, 356],
+      "description": "blue water bottle with a blue cap"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "desk_environment",
+      "bbox_2d": [0, 0, 504, 504]
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "uncertain_screen_content",
+      "bbox_2d": [0, 0, 504, 504]
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.0
+}
+```

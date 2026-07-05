@@ -1,0 +1,36 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "treadmill"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "gym"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "bbox_2d": [145, 86, 390, 337],
+      "label": "treadmill"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "bbox_2d": [0, 0, 448, 448],
+      "label": "unrelated_room"
+    }
+  ],
+  "uncertain_evidence": [],
+  "text_observed": [],
+  "confidence": 0.9
+}
+```

@@ -8,6 +8,7 @@ import 'daily_briefing_screen.dart';
 import 'voice_chat_screen.dart';
 import 'voice_schedule_screen.dart';
 import 'mock_call_alert_screen.dart';
+import 'user_preference_screen.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -25,7 +26,7 @@ class MenuScreen extends StatelessWidget {
             SliverToBoxAdapter(child: _buildMvpSection(context)),
             SliverToBoxAdapter(child: _buildVoiceSection(context)),
             SliverToBoxAdapter(child: _buildExtendedSection()),
-            SliverToBoxAdapter(child: _buildSettingsSection()),
+            SliverToBoxAdapter(child: _buildSettingsSection(context)),
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
         ),
@@ -292,12 +293,21 @@ class MenuScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsSection() {
+  Widget _buildSettingsSection(BuildContext context) {
     final settings = [
-      (Icons.notifications_outlined, '알림 설정', AppTheme.blue),
-      (Icons.security_outlined, '개인정보 보호', AppTheme.textSecondary),
-      (Icons.help_outline, '도움말', AppTheme.textSecondary),
-      (Icons.info_outline, '앱 정보', AppTheme.textSecondary),
+      (
+        Icons.record_voice_over_outlined,
+        'AI 음성 스타일',
+        AppTheme.blue,
+        () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UserPreferenceScreen()),
+            ),
+      ),
+      (Icons.notifications_outlined, '알림 설정', AppTheme.blue, null),
+      (Icons.security_outlined, '개인정보 보호', AppTheme.textSecondary, null),
+      (Icons.help_outline, '도움말', AppTheme.textSecondary, null),
+      (Icons.info_outline, '앱 정보', AppTheme.textSecondary, null),
     ];
 
     return Column(
@@ -310,29 +320,33 @@ class MenuScreen extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: List.generate(settings.length, (i) {
-                final (icon, title, color) = settings[i];
+                final (icon, title, color, onTap) = settings[i];
                 return Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      child: Row(
-                        children: [
-                          Icon(icon, color: color, size: 22),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textPrimary,
+                    GestureDetector(
+                      onTap: onTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        child: Row(
+                          children: [
+                            Icon(icon, color: color, size: 22),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textPrimary,
+                                ),
                               ),
                             ),
-                          ),
-                          const Icon(Icons.chevron_right,
-                              color: AppTheme.textSecondary, size: 20),
-                        ],
+                            const Icon(Icons.chevron_right,
+                                color: AppTheme.textSecondary, size: 20),
+                          ],
+                        ),
                       ),
                     ),
                     if (i < settings.length - 1)

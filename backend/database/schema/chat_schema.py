@@ -120,6 +120,13 @@ class ChatRespondData(BaseModel):
     reschedule_candidates: List[RescheduleCandidate] = Field(default_factory=list)
     answer: str
     requires_user_confirmation: bool = True
+    tts_text: Optional[str] = Field(
+        None,
+        description=(
+            "assistant_tone/response_length/nudge_strength 반영 TTS 문장. "
+            "answer가 LLM 산출물인 turn에는 채우지 않는다(null) — rule-based 폴백일 때만 additive로 채운다."
+        ),
+    )
 
 
 class ChatRespondResponse(BaseModel):

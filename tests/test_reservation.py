@@ -38,7 +38,8 @@ def test_response_structure_is_stable(client):
     body = _post(client, [])
     assert body["success"] is True
     data = body["data"]
-    assert set(data.keys()) == {"target_date", "recommended_candidates", "rejected_slots"}
+    # tts_text 는 음성 안내용으로 추가된 필드(additive).
+    assert set(data.keys()) == {"target_date", "recommended_candidates", "rejected_slots", "tts_text"}
     assert data["target_date"] == DATE
     cand = data["recommended_candidates"][0]
     assert set(cand.keys()) == {

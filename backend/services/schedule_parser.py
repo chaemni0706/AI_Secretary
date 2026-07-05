@@ -23,6 +23,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from backend.database.schema.personalization_schema import TONES
 from backend.database.schema.schedule_schema import (
     ScheduleDraft,
     ScheduleParseData,
@@ -102,6 +103,12 @@ def _load_category_rules() -> Tuple[list, str]:
 def _load_priority_rules() -> dict:
     with open(_RULES_DIR / "priority_rules.json", encoding="utf-8") as f:
         return json.load(f)
+
+
+@lru_cache(maxsize=1)
+def _load_tone_rules() -> dict:
+    with open(_RULES_DIR / "tts_tone_rules.json", encoding="utf-8") as f:
+        return json.load(f).get("tones", {})
 
 
 def _base_datetime(req: ScheduleParseRequest) -> datetime:
@@ -394,6 +401,7 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         date_value=date_value,
         start_time=start_time,
     )
+    tts_text = _apply_tone_style(tts_text, req.tone)
 
     return ScheduleParseData(
         intent=intent,
@@ -424,3 +432,16 @@ def _build_tts_text(
     if "date" in missing or "time" in missing:
         return "일정 정보를 일부만 이해했어요. 날짜나 시간을 다시 확인해주세요."
     return f"{title} 일정을 {date_value} {start_time}으로 정리했어요. 등록할까요?"
+
+
+def _apply_tone_style(text: str, tone: Optional[str]) -> str:
+    """Rule-based tone post-process on an already-built tts_text.
+
+    'neutral' (or missing/invalid tone) applies zero rules, so tts_text stays
+    byte-identical to the original un-styled sentence.
+    """
+    if not tone or tone == "neutral" or tone not in TONES:
+        return text
+    for rule in _load_tone_rules().get(tone, []):
+        text = text.replace(rule["find"], rule["replace"])
+    return text

@@ -7,6 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.database.schema.common_schema import InputType, Priority, Source
+from backend.database.schema.personalization_schema import TONES
 
 
 class ScheduleParseRequest(BaseModel):
@@ -16,6 +17,14 @@ class ScheduleParseRequest(BaseModel):
         None, description="Caller's current datetime, ISO 8601 (used to resolve '내일' etc.)"
     )
     timezone: str = "Asia/Seoul"
+    tone: Optional[str] = Field(
+        None,
+        description=(
+            f"Caller-supplied TTS tone, one of {TONES}. Applied as a rule-based "
+            "post-process on tts_text; omitted/invalid values fall back to 'neutral' "
+            "(identical to the previous, un-styled tts_text)."
+        ),
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -24,6 +33,7 @@ class ScheduleParseRequest(BaseModel):
                 "input_type": "text",
                 "current_datetime": "2026-06-29T10:00:00+09:00",
                 "timezone": "Asia/Seoul",
+                "tone": "neutral",
             }
         }
     )

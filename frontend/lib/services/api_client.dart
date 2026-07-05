@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 ///
 /// 환경에 맞게 아래 값 하나만 바꾸면 됩니다.
 // const String baseUrl = 'http://127.0.0.1:8000';
-const String baseUrl = "http://141.223.140.84:8000";
+const String baseUrl = 'http://141.223.140.85:8000';
 
 // Android Emulator용:
 // const String baseUrl = 'http://10.0.2.2:8000';
@@ -26,11 +26,14 @@ const String apiPrefix = '/api/v1';
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
+  final String? requestUri;
+  final dynamic responseBody;
 
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.requestUri, this.responseBody});
 
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() =>
+      'ApiException($statusCode): $message @ $requestUri body=$responseBody';
 }
 
 /// Dio 기반 API 클라이언트 (싱글턴).
@@ -60,21 +63,22 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          debugPrint('[API] → ${options.method} ${options.uri}');
+          debugPrint('[API REQUEST] ${options.method} ${options.uri}');
           handler.next(options);
         },
         onResponse: (response, handler) {
           debugPrint(
-            '[API] ← ${response.statusCode} ${response.requestOptions.uri}',
+            '[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri} '
+            'body=${response.data}',
           );
           handler.next(response);
         },
         onError: (e, handler) {
-          debugPrint('[API] ✗ ERROR ${e.requestOptions.uri}');
-          debugPrint('[API]   type       : ${e.type}');
-          debugPrint('[API]   message    : ${e.message}');
-          debugPrint('[API]   statusCode : ${e.response?.statusCode}');
-          debugPrint('[API]   response   : ${e.response?.data}');
+          debugPrint(
+            '[API ERROR] status=${e.response?.statusCode} '
+            'uri=${e.requestOptions.uri} type=${e.type} '
+            'message=${e.message} body=${e.response?.data}',
+          );
           handler.next(e);
         },
       ),
@@ -86,6 +90,11 @@ class ApiClient {
   late final Dio _dio;
 
   Dio get dio => _dio;
+
+  // NOTE: `path` 는 호출부(각 *_api.dart)에서 이미 `$apiPrefix/...` 형태로 넘긴다.
+  // 여기서 다시 apiPrefix 를 붙이면 기존 서비스들(notification/dashboard/todo/
+  // schedule/booking_message 등)이 전부 `/api/v1/api/v1/...` 이중 prefix 로
+  // 깨지므로 절대 여기서 접두사를 추가하지 않는다.
 
   /// GET 후 envelope 를 풀어 `data` 를 반환.
   Future<dynamic> getData(
@@ -99,6 +108,8 @@ class ApiClient {
       throw ApiException(
         '네트워크 오류: ${e.message ?? e.type.name}',
         statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
       );
     }
   }
@@ -116,6 +127,8 @@ class ApiClient {
       throw ApiException(
         '네트워크 오류: ${e.message ?? e.type.name}',
         statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
       );
     }
   }
@@ -132,12 +145,33 @@ class ApiClient {
       throw ApiException(
         '네트워크 오류: ${e.message ?? e.type.name}',
         statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
+      );
+    }
+  }
+
+  /// PUT 후 envelope 를 풀어 `data` 를 반환.
+  Future<dynamic> putData(
+    String path, {
+    Object? body,
+  }) async {
+    try {
+      final res = await _dio.put(path, data: body);
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw ApiException(
+        '네트워크 오류: ${e.message ?? e.type.name}',
+        statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
       );
     }
   }
 
   /// 공통 envelope 검증 후 `data` 반환. 실패 시 [ApiException].
   dynamic _unwrap(Response res) {
+    final uri = res.requestOptions.uri.toString();
     final body = res.data;
     if (body is Map<String, dynamic>) {
       final success = body['success'] == true;
@@ -148,12 +182,16 @@ class ApiClient {
       throw ApiException(
         message.isNotEmpty ? message : '요청이 실패했습니다.',
         statusCode: res.statusCode,
+        requestUri: uri,
+        responseBody: body,
       );
     }
     // envelope 가 아니면(예상 밖 응답) 그대로 오류 처리.
     throw ApiException(
       '알 수 없는 응답 형식입니다. (status ${res.statusCode})',
       statusCode: res.statusCode,
+      requestUri: uri,
+      responseBody: body,
     );
   }
 }

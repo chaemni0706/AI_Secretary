@@ -20,6 +20,7 @@ from backend.api import (
     chat,
     ledger,
     voice,
+    user_preferences,
 )
 from backend.core.config import settings
 from backend.core.response import register_exception_handlers
@@ -57,6 +58,7 @@ for r in (
     place,
     travel,
     voice,
+    user_preferences,
 ):
     app.include_router(r.router, prefix=settings.API_V1_PREFIX)
 

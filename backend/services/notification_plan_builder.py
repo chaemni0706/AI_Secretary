@@ -28,6 +28,7 @@ from backend.database.schema.notification_plan_schema import (
 )
 from backend.database.schema.todo_schema import TodoRead
 from backend.services import preference_service
+from backend.services import tts_response_builder, user_preference_service
 from backend.services.departure_alert import _build_checklist  # reuse rules loader
 
 _DEFAULT_TRAVEL_MINUTES = 30      # MVP fixed estimate (no traffic API)
@@ -160,10 +161,17 @@ def build_event_plan(
         )
         if extra:
             dep_reason += f", 지각 경향 보정 {extra}분"
+        voice_prefs = user_preference_service.get_user_preferences(user_id)
+        dep_tts = tts_response_builder.build_tts_response(
+            intent="departure_alert",
+            slots={"title": title, "time": when, "place": sched.location},
+            preferences=voice_prefs,
+        )
         reminders.append(ReminderEntry(
             type="departure", minutes_before=dep_mb, trigger_time=trig,
             message=f"기본 이동 시간과 준비 여유 시간을 고려하면 {when}쯤 준비를 시작하면 좋아요.",
             reason=dep_reason + "을 반영했습니다. (실제 교통 API는 사용하지 않는 기본 이동 시간 기준)",
+            tts_text=dep_tts,
         ))
     else:
         warnings.append("위치 정보가 없어 출발 알림을 생성하지 않았습니다.")

@@ -30,8 +30,18 @@ from backend.services import (
     intent_classifier,
     reschedule_recommender,
     solution_recommender,
+    tts_response_builder,
+    user_preference_service,
 )
 from backend.services.emotion_analyzer import analyze_emotion
+
+# rule-based emotion label -> voice-response intent (only the 3 the spec covers;
+# anything else is treated as a generic acknowledgment, not a diagnosis).
+_EMOTION_TO_INTENT = {
+    "fatigue": "emotion_tired",
+    "anxiety": "emotion_anxious",
+    "stress": "emotion_overload",
+}
 
 
 def _emotion_label(message: str, schedule_context: dict | None) -> dict:
@@ -97,6 +107,16 @@ def respond(req: ChatRespondRequest) -> ChatRespondData:
         )
         answer = gen["answer"]
 
+        # tts_text: only for the rule-based fallback path — an LLM-generated
+        # `answer` is left as-is (no LLM code added, no styling of LLM output).
+        tts_text = None
+        if not gen.get("used_llm"):
+            voice_intent = _EMOTION_TO_INTENT.get(emotion_result.get("emotion"), "fallback_understood")
+            preferences = user_preference_service.get_user_preferences(req.user_id)
+            tts_text = tts_response_builder.build_tts_response(
+                intent=voice_intent, slots={}, preferences=preferences,
+            )
+
         solutions = [Solution(**s) for s in solutions_raw]
         reschedule_candidates = [RescheduleCandidate(**c) for c in reschedule_raw]
 
@@ -111,6 +131,7 @@ def respond(req: ChatRespondRequest) -> ChatRespondData:
             reschedule_candidates=reschedule_candidates,
             answer=answer,
             requires_user_confirmation=True,
+            tts_text=tts_text,
         )
     except Exception:
         # Degrade gracefully; never surface a 500 for a chat turn.

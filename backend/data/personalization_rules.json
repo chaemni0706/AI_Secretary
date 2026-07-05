@@ -1,0 +1,46 @@
+{
+  "_comment": "response_length / nudge_strength 규칙. intent_category는 tts_response_builder의 _INTENT_CATEGORY 매핑(schedule/todo/reservation/departure/briefing/emotion/fallback)을 키로 쓴다. 문장은 '친근한 기본 어조'로 작성되어 있고, tone_rules.json이 assistant_tone에 맞게 다듬는다.",
+  "response_length": {
+    "short": {"max_sentences": 1},
+    "normal": {"max_sentences": 2},
+    "detailed": {"max_sentences": 3}
+  },
+  "detailed_suffix_by_category": {
+    "schedule": "필요하면 일정 전 알림도 함께 설정할 수 있어요.",
+    "todo": "필요하면 마감 전 알림도 함께 챙겨드릴 수 있어요.",
+    "reservation": "원하시면 다른 시간대도 더 찾아드릴 수 있어요.",
+    "departure": "필요하면 준비물도 같이 확인해드릴 수 있어요.",
+    "briefing": "필요하면 우선순위별로 더 자세히 안내해드릴 수 있어요.",
+    "emotion": "필요하면 잠깐 쉬어가는 방법도 같이 찾아볼 수 있어요.",
+    "fallback": "다른 표현으로 다시 말씀해주셔도 좋아요."
+  },
+  "nudge_strength": {
+    "low": {
+      "apply_to_categories": []
+    },
+    "medium": {
+      "apply_to_categories": ["schedule", "todo", "departure"]
+    },
+    "high": {
+      "apply_to_categories": ["schedule", "todo", "departure", "briefing"]
+    }
+  },
+  "nudge_sentence_by_category": {
+    "schedule": {
+      "medium": "늦지 않게 한 번 확인해두면 좋겠어요.",
+      "high": "여유를 두려면 지금부터 조금씩 준비해두는 걸 추천드려요."
+    },
+    "todo": {
+      "medium": "늦지 않게 한 번 확인해두면 좋겠어요.",
+      "high": "마감 전에 여유를 두려면 지금부터 조금씩 진행해볼까요?"
+    },
+    "departure": {
+      "medium": "이동 준비를 여유 있게 시작해볼까요?",
+      "high": "교통 상황을 고려해서 조금 더 일찍 준비를 시작해볼까요?"
+    },
+    "briefing": {
+      "medium": "중요한 일정부터 챙겨보면 좋겠어요.",
+      "high": "우선순위가 높은 일정과 준비물을 꼼꼼히 확인해볼까요?"
+    }
+  }
+}

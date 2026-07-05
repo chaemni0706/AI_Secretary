@@ -78,6 +78,10 @@ class MessageCard(BaseModel):
     alternatives: List[str] = Field(default_factory=list)
     generation_source: str = "template"      # template | llm_fallback
     delivery: DeliveryDraft = Field(default_factory=DeliveryDraft)
+    tts_text: Optional[str] = Field(
+        None,
+        description="assistant_tone 반영 TTS 안내 문장(생성된 문의 메시지 자체가 아님). additive.",
+    )
 
 
 class SourceCandidate(BaseModel):

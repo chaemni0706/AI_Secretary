@@ -25,6 +25,7 @@ from backend.database.schema.briefing_schema import (
     PriorityOrderItem,
 )
 from backend.services import llm_service
+from backend.services import tts_response_builder, user_preference_service
 
 _RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "briefing_prompt.txt"
@@ -292,8 +293,21 @@ def generate_briefing(req: DailyBriefingRequest) -> DailyBriefingData:
     if isinstance(max_kp, int) and max_kp > 0:
         key_points = key_points[:max_kp]
 
+    preferences = user_preference_service.get_user_preferences(None)
+    if schedules:
+        tts_text = tts_response_builder.build_tts_response(
+            intent="briefing_today",
+            slots={"count": len(schedules), "main_event": ordered[0].title if ordered else schedules[0].title},
+            preferences=preferences,
+        )
+    else:
+        tts_text = tts_response_builder.build_tts_response(
+            intent="briefing_empty", slots={}, preferences=preferences,
+        )
+
     return DailyBriefingData(
         summary=summary,
         key_points=key_points,
         priority_order=priority_order,
+        tts_text=tts_text,
     )

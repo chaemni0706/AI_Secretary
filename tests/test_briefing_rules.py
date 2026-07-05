@@ -120,5 +120,6 @@ def test_response_schema_unchanged():
     data = bg.generate_briefing(_req(
         [{"title": "병원 예약", "category": "hospital", "start_time": "14:00", "priority": "high"}], []))
     dumped = data.model_dump()
-    assert set(dumped.keys()) == {"summary", "key_points", "priority_order"}
+    # tts_text 는 음성 안내용으로 추가된 필드(additive).
+    assert set(dumped.keys()) == {"summary", "key_points", "priority_order", "tts_text"}
     assert set(dumped["priority_order"][0].keys()) == {"title", "priority", "reason"}

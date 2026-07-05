@@ -21,6 +21,10 @@ class ReminderEntry(BaseModel):
     trigger_time: Optional[str] = Field(None, description="'YYYY-MM-DDTHH:MM:SS' (시간 없으면 null)")
     message: str
     reason: str
+    tts_text: Optional[str] = Field(
+        None,
+        description="assistant_tone/response_length/nudge_strength 반영한 TTS용 문장(출발 알림만). additive.",
+    )
 
 
 class ChecklistEntry(BaseModel):

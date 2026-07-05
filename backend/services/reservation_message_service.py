@@ -24,6 +24,7 @@ from backend.database.schema.reservation_message_schema import (
     SourceCandidate,
 )
 from backend.services import llm_service
+from backend.services import tts_response_builder, user_preference_service
 from backend.services.message_generator import generate_message
 
 # candidate category -> reservation_type LABEL shown in the card
@@ -136,6 +137,13 @@ def build_message_card(req: FromCandidateRequest) -> FromCandidateData:
 
     message_text = " ".join(message_text.split())
 
+    preferences = user_preference_service.get_user_preferences(req.user_id)
+    tts_text = tts_response_builder.build_tts_response(
+        intent="reservation_message_created",
+        slots={"place": c.business_name, "date": c.date, "time": c.start_time},
+        preferences=preferences,
+    )
+
     card = MessageCard(
         title=f"{c.business_name} 예약 {_ACTION_LABEL.get(action, '문의')}",
         message_text=message_text,
@@ -150,6 +158,7 @@ def build_message_card(req: FromCandidateRequest) -> FromCandidateData:
         alternatives=alternatives,
         generation_source=generation_source,
         delivery=DeliveryDraft(),
+        tts_text=tts_text,
     )
     source = SourceCandidate(
         business_id=c.business_id, business_name=c.business_name, category=c.category,

@@ -1,0 +1,33 @@
+{
+  "_comment": "Rule-based TTS tone styling (no LLM). Applied AFTER _build_tts_text() produces the neutral base sentence. Each tone is an ORDERED list of {find, replace} substring rules applied in sequence via str.replace; 'neutral' applies no rules (base sentence returned unchanged) so existing tts_text assertions keep passing.",
+  "tones": {
+    "gentle": [
+      {
+        "find": "일정 정보를 정확히 듣지 못했어요. 날짜와 시간을 포함해서 다시 말해주세요.",
+        "replace": "일정 정보를 정확히 듣지 못했어요. 날짜와 시간을 포함해서 다시 한 번 말씀해주시겠어요?"
+      },
+      {
+        "find": "일정 정보를 일부만 이해했어요. 날짜나 시간을 다시 확인해주세요.",
+        "replace": "일정 정보를 일부만 이해했어요. 날짜나 시간을 다시 한 번 확인해주시겠어요?"
+      },
+      {
+        "find": "정리했어요. 등록할까요?",
+        "replace": "정리해봤어요. 등록해드릴까요?"
+      }
+    ],
+    "warm": [
+      {
+        "find": "일정 정보를 정확히 듣지 못했어요. 날짜와 시간을 포함해서 다시 말해주세요.",
+        "replace": "괜찮아요, 제가 잘 못 들었나 봐요. 날짜와 시간을 포함해서 다시 한 번 말해주세요."
+      },
+      {
+        "find": "일정 정보를 일부만 이해했어요. 날짜나 시간을 다시 확인해주세요.",
+        "replace": "조금만 더 알려주시면 제가 도와드릴 수 있어요. 날짜나 시간을 다시 확인해주세요."
+      },
+      {
+        "find": "정리했어요. 등록할까요?",
+        "replace": "정리했어요! 등록해드릴까요?"
+      }
+    ]
+  }
+}

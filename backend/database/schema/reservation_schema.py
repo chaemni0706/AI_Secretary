@@ -71,6 +71,10 @@ class ReservationCandidateData(BaseModel):
     target_date: str
     recommended_candidates: List[RecommendedCandidate] = Field(default_factory=list)
     rejected_slots: List[RejectedSlot] = Field(default_factory=list)
+    tts_text: Optional[str] = Field(
+        None,
+        description="최상위 추천 후보에 대한 assistant_tone 반영 TTS 문장. additive, 후보가 없으면 null.",
+    )
 
 
 class ReservationCandidateResponse(BaseModel):

@@ -1,0 +1,36 @@
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "bbox_2d": [184, 39, 350, 307],
+      "label": "person wearing a headset"
+    },
+    {
+      "bbox_2d": [36, 74, 212, 258],
+      "label": "person sitting in a chair"
+    }
+  ],
+  "scenes": [
+    "classroom",
+    "office"
+  ],
+  "visual_evidence": [
+    "person wearing a headset",
+    "person sitting in a chair"
+  ],
+  "negative_evidence": [
+    "gaming_content",
+    "entertainment_video",
+    "social_media",
+    "shopping_content",
+    "non_study_screen"
+  ],
+  "uncertain_evidence": [
+    "uncertain_screen_content"
+  ],
+  "text_observed": [
+    "不确定的文本内容"
+  ],
+  "confidence": 0.8
+}

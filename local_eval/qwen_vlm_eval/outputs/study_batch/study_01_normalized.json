@@ -1,0 +1,42 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "desk with study materials",
+  "objects": [
+    {
+      "label": "textbook",
+      "confidence": 0.8,
+      "evidence": "A textbook is open on the desk."
+    },
+    {
+      "label": "workbook",
+      "confidence": 0.8,
+      "evidence": "A workbook is open on the desk."
+    },
+    {
+      "label": "notebook",
+      "confidence": 0.8,
+      "evidence": "Handwritten notes are present on the desk."
+    }
+  ],
+  "visible_text": [
+    "uncertain_screen_content"
+  ],
+  "visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "[]"
+  ],
+  "study_visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

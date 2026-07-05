@@ -1,0 +1,36 @@
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "name": "open_textbook",
+      "description": "A textbook is open on the desk."
+    },
+    {
+      "name": "open_workbook",
+      "description": "A workbook is open on the desk."
+    },
+    {
+      "name": "handwritten_notes",
+      "description": "Handwritten notes are present on the desk."
+    }
+  ],
+  "scenes": [
+    "desk with study materials"
+  ],
+  "visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes"
+  ],
+  "negative_evidence": [
+    []
+  ],
+  "uncertain_evidence": [
+    []
+  ],
+  "text_observed": [
+    "uncertain_screen_content"
+  ],
+  "confidence": 0.8
+}

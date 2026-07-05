@@ -33,10 +33,10 @@ scoring:
     handwritten_notes: 20
     highlighted_text: 15
     problem_solving_material: 20
-    study_content_on_screen: 30
-    lecture_video: 30
-    educational_document: 25
-    code_editor: 25
+    study_content_on_screen: 40
+    lecture_video: 40
+    educational_document: 40
+    code_editor: 40
     study_timer: 10
   similar_object_groups:
     - labels: [desk, laptop, monitor, keyboard, pen]

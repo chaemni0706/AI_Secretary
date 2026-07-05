@@ -269,17 +269,36 @@ def _study_strong_positive_evidence() -> set[str]:
 
 
 def _study_mandatory_passed(analysis: VisionAnalysis) -> bool:
+    """Return True when visible study content is present.
+
+    Policy:
+    - Study material/content is mandatory.
+    - Devices such as laptop, tablet, monitor, or phone are not enough by themselves.
+    - Final verification is still controlled by score thresholds and priority rejection rules.
+    """
     labels = _labels(analysis)
     study_evidence = _study_evidence(analysis)
-    paper_primary = study_evidence.intersection({"open_textbook", "open_workbook", "educational_document"})
-    paper_support = study_evidence.intersection({"handwritten_notes", "highlighted_text", "problem_solving_material"})
-    digital_device = labels.intersection({"laptop", "tablet", "monitor"})
-    digital_content = study_evidence.intersection(_study_digital_evidence())
 
-    paper_pattern = bool(paper_primary) and bool(paper_support)
-    digital_pattern = bool(digital_device) and bool(digital_content)
-    mixed_pattern = bool(study_evidence.intersection(_study_paper_evidence())) and bool(digital_content)
-    return paper_pattern or digital_pattern or mixed_pattern
+    core_study_content = {
+        "open_textbook",
+        "open_workbook",
+        "handwritten_notes",
+        "problem_solving_material",
+        "educational_document",
+        "study_content_on_screen",
+        "lecture_video",
+        "code_editor",
+    }
+
+    if study_evidence.intersection(core_study_content):
+        return True
+
+    # highlighted_text alone can be valid only when a paper study object is also visible.
+    paper_objects = {"book", "textbook", "notebook", "workbook", "printed_document"}
+    if "highlighted_text" in study_evidence and labels.intersection(paper_objects):
+        return True
+
+    return False
 
 
 def _append_study_priority_evidence(analysis: VisionAnalysis, evidence: list[RuleEvidence]) -> None:
@@ -289,6 +308,7 @@ def _append_study_priority_evidence(analysis: VisionAnalysis, evidence: list[Rul
         "entertainment_video": "오락 영상이 확인되어 공부 인증을 거절합니다.",
         "social_media": "소셜 미디어 화면이 확인되어 공부 인증을 거절합니다.",
         "shopping_content": "쇼핑 화면이 확인되어 공부 인증을 거절합니다.",
+        "non_study_screen": "비학습 화면이 확인되어 공부 인증을 거절합니다.",
     }
     for item, message in rejected_items.items():
         if item in study_evidence:
@@ -623,6 +643,7 @@ def _priority_result(evidence: list[RuleEvidence]) -> VerificationResult | None:
             "study_priority:entertainment_video",
             "study_priority:social_media",
             "study_priority:shopping_content",
+            "study_priority:non_study_screen",
         }
     ):
         return "rejected"

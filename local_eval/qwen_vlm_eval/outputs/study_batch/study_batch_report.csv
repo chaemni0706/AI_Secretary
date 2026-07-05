@@ -1,0 +1,11 @@
+image,expected,actual,ok,score,mandatory_passed,study_visual_evidence
+study_01,verified,verified,True,70,True,"open_textbook,open_workbook,handwritten_notes"
+study_02,verified,verified,True,70,True,"open_textbook,open_workbook,handwritten_notes"
+study_03,verified,rejected,False,0,False,
+study_04,verified,verified,True,100,True,"open_textbook,open_workbook,handwritten_notes,study_content_on_screen"
+study_05,verified,verified,True,100,True,"open_textbook,open_workbook,handwritten_notes,highlighted_text,problem_solving_material,study_content_on_screen"
+study_06,verified,rejected,False,10,False,
+study_07,verified,retake_required,False,35,True,"open_workbook,study_timer"
+study_08,rejected,rejected,True,10,False,
+study_09,rejected,rejected,True,10,False,"gaming_content,entertainment_video,social_media,shopping_content,non_study_screen,uncertain_screen_content"
+study_10,rejected,rejected,True,0,False,

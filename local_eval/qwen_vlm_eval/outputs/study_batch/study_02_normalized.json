@@ -1,0 +1,42 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "classroom",
+  "objects": [
+    {
+      "label": "textbook",
+      "confidence": 0.8,
+      "evidence": "position=[1, 245, 316, 428]"
+    },
+    {
+      "label": "workbook",
+      "confidence": 0.8,
+      "evidence": "position=[101, 73, 379, 247]"
+    },
+    {
+      "label": "notebook",
+      "confidence": 0.8,
+      "evidence": "position=[280, 260, 447, 447]"
+    }
+  ],
+  "visible_text": [
+    "unclear text from study materials"
+  ],
+  "visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "[]"
+  ],
+  "study_visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

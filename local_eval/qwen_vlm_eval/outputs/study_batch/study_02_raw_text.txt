@@ -1,0 +1,39 @@
+```json
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "type": "open_textbook",
+      "position": [1, 245, 316, 428]
+    },
+    {
+      "type": "open_workbook",
+      "position": [101, 73, 379, 247]
+    },
+    {
+      "type": "handwritten_notes",
+      "position": [280, 260, 447, 447]
+    }
+  ],
+  "scenes": [
+    "classroom",
+    "library"
+  ],
+  "visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes"
+  ],
+  "negative_evidence": [
+    []
+  ],
+  "uncertain_evidence": [
+    []
+  ],
+  "text_observed": [
+    "unclear text from study materials"
+  ],
+  "confidence": 0.8
+}
+```

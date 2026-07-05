@@ -22,7 +22,8 @@
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [
-    "water_stream"
+    "water_stream",
+    "receiving_water"
   ],
   "exercise_visual_evidence": []
 }

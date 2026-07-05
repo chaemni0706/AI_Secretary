@@ -24,50 +24,30 @@
         1,
         52,
         188,
-        220
+        140
       ]
     }
   ],
   "visual_evidence": [
     {
-      "name": "clear liquid in glass",
-      "position": [
-        74,
-        52,
-        188,
-        220
-      ]
+      "name": "hand holding glass",
+      "description": "A hand holding a glass with a lemon slice inside."
     },
     {
-      "name": "lemon slice in glass",
-      "position": [
-        134,
-        78,
-        163,
-        110
-      ]
+      "name": "glass with lemon slice",
+      "description": "A glass containing a clear liquid with a lemon slice floating in it."
     }
   ],
   "negative_evidence": [
     {
       "name": "non-water beverage",
-      "position": [
-        134,
-        78,
-        163,
-        110
-      ]
+      "description": "The presence of a lemon slice suggests that the liquid is not water."
     }
   ],
   "uncertain_evidence": [
     {
-      "name": "opaque closed container",
-      "position": [
-        134,
-        78,
-        163,
-        110
-      ]
+      "name": "opaque_closed_container",
+      "description": "The glass appears to be opaque and closed, which could make it difficult to see the contents clearly."
     }
   ],
   "text_observed": [],

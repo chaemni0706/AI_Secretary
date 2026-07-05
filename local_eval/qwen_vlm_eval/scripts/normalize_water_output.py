@@ -83,11 +83,16 @@ POSITIVE_PHRASES: list[tuple[str, tuple[str, ...]]] = [
     ("clear liquid in cup", ("visible_clear_liquid", "filled_container")),
     ("clear liquid in the cup", ("visible_clear_liquid", "filled_container")),
     ("clear liquid in a", ("visible_clear_liquid", "filled_container")),
-    ("clear transparent liquid", ("visible_clear_liquid", "filled_container")),
+    # 강한 fill 단서 (filled_container 부여)
+    ("floating in", ("filled_container",)),
+    ("meaningful amount", ("filled_container",)),
+    ("water line", ("filled_container",)),
     ("partially filled", ("filled_container",)),
     ("half full", ("filled_container",)),
     ("half-full", ("filled_container",)),
     ("half filled", ("filled_container",)),
+    # 약한 단서: 투명 유리/맑은 액체 '만'으로는 filled 부여 금지 (visible_clear_liquid만)
+    ("clear transparent liquid", ("visible_clear_liquid",)),
     ("liquid visible", ("visible_clear_liquid",)),
     ("visible liquid", ("visible_clear_liquid",)),
     ("transparent liquid", ("visible_clear_liquid",)),
@@ -99,11 +104,22 @@ POSITIVE_PHRASES: list[tuple[str, tuple[str, ...]]] = [
     # 정수기 / 물줄기
     ("pouring", ("water_stream", "receiving_water")),
     ("dispensing water", ("water_stream", "receiving_water")),
+    ("water being dispensed", ("water_stream", "receiving_water")),
+    ("being dispensed", ("water_stream", "receiving_water")),
+    ("being filled with water", ("water_stream", "receiving_water")),
     ("stream of water", ("water_stream", "receiving_water")),
     ("water flowing", ("water_stream", "receiving_water")),
-    ("water being dispensed", ("water_stream", "receiving_water")),
+    ("dispenser pouring", ("water_stream", "receiving_water")),
+    ("purifier pouring", ("water_stream", "receiving_water")),
+    ("pouring into a cup", ("water_stream", "receiving_water")),
+    ("pouring into a glass", ("water_stream", "receiving_water")),
     ("filling the glass", ("water_stream", "receiving_water")),
     ("filling the cup", ("water_stream", "receiving_water")),
+    ("cup under dispenser", ("container_under_dispenser", "receiving_water")),
+    ("glass under dispenser", ("container_under_dispenser", "receiving_water")),
+    ("under the dispenser", ("container_under_dispenser",)),
+    ("cup receiving water", ("receiving_water",)),
+    ("glass receiving water", ("receiving_water",)),
     ("receiving water", ("receiving_water",)),
     # 밀봉 물병
     ("sealed water bottle", ("sealed_water_bottle",)),
@@ -111,22 +127,62 @@ POSITIVE_PHRASES: list[tuple[str, tuple[str, ...]]] = [
     ("unopened bottle", ("sealed_water_bottle",)),
 ]
 
-# --- 명시적 빈/소량 표현 → empty_container (hard negative) ---
-EMPTY_PHRASES: tuple[str, ...] = (
-    "empty cup",
-    "empty glass",
-    "glass is empty",
-    "cup is empty",
-    "no water in the cup",
-    "no water in the glass",
-    "almost empty",
-    "nearly empty",
+# --- 소량 표현 → empty_container (water_amount가 partial/filled면 무시 = 과소평가 보정) ---
+AMOUNT_EMPTY_PHRASES: tuple[str, ...] = (
     "tiny amount",
     "small amount",
     "few drops",
     "only at the bottom",
     "little liquid",
     "trace of liquid",
+)
+
+# --- 명시적 빈/반사/유리표면 표현 → empty_container (water_amount와 무관, 항상 hard) ---
+# 반사·유리 광택·빈 유리는 물이 아니므로 water_amount=partial 이어도 FAIL로 본다 (false positive 방지).
+HARD_EMPTY_PHRASES: tuple[str, ...] = (
+    "empty cup",
+    "empty glass",
+    "empty cups",
+    "empty glasses",
+    "glass is empty",
+    "cup is empty",
+    "nearly empty",
+    "almost empty",
+    "no water in the cup",
+    "no water in the glass",
+    "no water",
+    "no liquid",
+    "no visible water",
+    "no visible liquid",
+    "without water",
+    "no water line",
+    "reflection",
+    "glass reflection",
+    "glass shine",
+    "light reflection",
+    "transparent glass only",
+    "clear glass only",
+    "glass surface",
+    "only the glass",
+    "just the glass",
+    "just glasses",
+)
+
+# --- 여러 개의 컵/유리컵 → 단일 섭취 인증 불가 (BORDERLINE로 강등) ---
+MULTI_CONTAINER_PHRASES: tuple[str, ...] = (
+    "two glasses",
+    "three glasses",
+    "four glasses",
+    "multiple glasses",
+    "several glasses",
+    "pair of glasses",
+    "both glasses",
+    "two cups",
+    "three cups",
+    "multiple cups",
+    "several cups",
+    "glasses on a tray",
+    "cups on a tray",
 )
 
 # --- 부정문 검사를 거치는 negative 자연어 구 → 토큰 ---
@@ -181,6 +237,33 @@ CONFIRMED_OPAQUE: tuple[str, ...] = (
     "contents are not visible",
 )
 
+# 가정/조건문 단서: 실제 관측이 아니라 "would/could/if ... " 형태의 가상 진술.
+# negative 근거와 empty 근거 양쪽에서 무효화한다.
+HYPOTHETICAL_CUES: tuple[str, ...] = (
+    "would indicate",
+    "could indicate",
+    "which could indicate",
+    "could potentially",
+    "potentially contain",
+    "the presence of",
+    "if the glass",
+    "if the cup",
+    "if it were",
+    "if ",
+    "may appear",
+    "might appear",
+    "may look",
+    "could appear",
+    "would appear",
+    "suggests that",
+    "due to reflection",
+    "due to reflections",
+    "due to transparency",
+    "may be empty",
+    "might be empty",
+    "could be empty",
+)
+
 # 부정문 단서: negative 근거를 무효화한다.
 NEGATION_CUES: tuple[str, ...] = (
     "no other",
@@ -197,7 +280,7 @@ NEGATION_CUES: tuple[str, ...] = (
     "no non",
     "appears to be water",
     "is water",
-)
+) + HYPOTHETICAL_CUES
 
 # 물 인증 관련 허용 object label (water.yaml allowed_labels)
 WATER_OBJECT_LABELS = {
@@ -275,9 +358,14 @@ def resolve_scene(raw: dict):
 
 
 def _canon_object(label: str) -> str | None:
-    key = str(label).strip().lower().replace(" ", "_")
+    key = str(label).strip().lower().replace(" ", "_").replace("/", "_").replace("-", "_")
     key = WATER_OBJECT_ALIASES.get(key, key)
-    return key if key in WATER_OBJECT_LABELS else None
+    if key in WATER_OBJECT_LABELS:
+        return key
+    # "water dispenser/purifier", "water_purifier", "dispenser/purifier" 등 변형 흡수
+    if "dispenser" in key or "purifier" in key:
+        return "water_dispenser"
+    return None
 
 
 def normalize_objects(raw_objects, confidence):
@@ -319,9 +407,15 @@ def _evidence_item_text(item) -> tuple[str, str, str]:
 
 
 def _looks_negated(text: str) -> bool:
-    """negative 근거를 무효화하는 부정문/모순 표현이 있는지."""
+    """negative 근거를 무효화하는 부정문/모순/가정 표현이 있는지."""
     low = str(text).lower()
     return any(cue in low for cue in NEGATION_CUES)
+
+
+def _is_hypothetical(text: str) -> bool:
+    """'would/could/if/may appear/due to reflections' 같은 가정·조건 표현인지 (empty 판정 방어용)."""
+    low = str(text).lower()
+    return any(cue in low for cue in HYPOTHETICAL_CUES)
 
 
 def _match_phrases(text: str, table: list[tuple[str, tuple[str, ...]]]) -> list[str]:
@@ -362,6 +456,24 @@ def _object_text(raw: dict) -> str:
     return " ".join(parts)
 
 
+def _text_units(raw: dict) -> list[str]:
+    """가정문 판정을 문장 단위로 하기 위해 scene/evidence/object 텍스트를 개별 단위로 반환."""
+    units = []
+    for scene in as_list(raw.get("scenes")):
+        _, _, full = _evidence_item_text(scene)
+        units.append(full.lower())
+    if raw.get("scene"):
+        units.append(str(scene_to_string(raw.get("scene")) or "").lower())
+    for key in ("visual_evidence", "negative_evidence", "uncertain_evidence"):
+        for item in as_list(raw.get(key)):
+            _, _, full = _evidence_item_text(item)
+            units.append(full.lower())
+    for obj in as_list(raw.get("objects")):
+        _, _, full = _evidence_item_text(obj)
+        units.append(full.lower())
+    return units
+
+
 def _scene_and_evidence_text(raw: dict) -> str:
     parts = []
     for scene in as_list(raw.get("scenes")):
@@ -398,7 +510,9 @@ def build_water_evidence(raw: dict) -> tuple[list[dict], list[str]]:
     """raw → (정규화 objects, water_visual_evidence tokens)."""
     confidence = float(raw.get("confidence", 0.8) or 0.8)
     amount = str(raw.get("water_amount") or "").strip().lower()
-    amount_sufficient = amount in {"partial", "filled"}
+    # water_amount="partial"은 filled_container를 스스로 부여하지 못하는 '보조 신호'다.
+    # filled는 명시적 강한 fill 단서(glass of water / filled with water / water_amount=filled 등)에서만 온다.
+    amount_filled = amount == "filled"
     amount_insufficient = amount in {"none", "tiny"}
     amount_uncertain = amount == "uncertain"
 
@@ -423,8 +537,8 @@ def build_water_evidence(raw: dict) -> tuple[list[dict], list[str]]:
             positives.append(canon)
         positives.extend(_match_phrases(low_full, POSITIVE_PHRASES))
 
-        # 명시적 빈/소량 → empty_container (water_amount가 충분이면 무시)
-        if not amount_sufficient and (_has_any(low_full, EMPTY_PHRASES) or canon == "empty_container"):
+        # 소량 표현 → empty_container (water_amount가 충분이면 과소평가로 보고 무시)
+        if not amount_filled and (_has_any(low_full, AMOUNT_EMPTY_PHRASES) or canon == "empty_container"):
             hard.append("empty_container")
 
         # 부정문이면 negative 근거로 보지 않음
@@ -437,26 +551,45 @@ def build_water_evidence(raw: dict) -> tuple[list[dict], list[str]]:
                 soft.append("non_water_beverage")  # 이름만 → 제거 가능
 
         if not negated and (canon == "opaque_closed_container" or _has_any(low_full, OPAQUE_PHRASES)):
-            if _has_any(low_desc, CONFIRMED_OPAQUE):
-                hard.append("opaque_closed_container")  # 설명이 실제 불투명/안 보임 → 확정
-            else:
-                soft.append("opaque_closed_container")  # 이름만 → 제거 가능
+            # opaque_closed_container는 hard negative가 아니다 (hard는 empty/색음료/여러컵/reflection뿐).
+            # 항상 soft로 두어, 강한 긍정(glass/cup + 투명 액체 + filled) 앞에서는 제거되고
+            # filled가 없으면(예: 닫힌 불투명 병) 그대로 남아 BORDERLINE(retake)로 간다.
+            soft.append("opaque_closed_container")
 
         if not negated and (canon == "uncertain_liquid" or _has_any(low_full, UNCERTAIN_PHRASES)):
             soft.append("uncertain_liquid")
 
     positives = _dedupe(positives)
 
-    # water_amount 힌트 반영
+    # 전체 텍스트(scene+evidence+object) 기반 신호
+    all_text = (_scene_and_evidence_text(raw) + " " + _object_text(raw)).lower()
+
+    # 명시적 빈/반사/유리표면 → hard empty. 단, 문장 단위로 검사해 가정문
+    # ("may appear to be empty due to reflections")은 제외한다 (false negative 방지).
+    for unit in _text_units(raw):
+        if _has_any(unit, HARD_EMPTY_PHRASES) and not _is_hypothetical(unit):
+            hard.append("empty_container")
+            break
+
+    # 여러 개의 컵/유리컵 → 단일 섭취 인증 불가 → filled 제거 + uncertain (BORDERLINE)
+    multi_container = _has_any(all_text, MULTI_CONTAINER_PHRASES)
+
+    # water_amount 힌트 반영 (partial은 filled를 스스로 부여하지 않음)
     if amount_insufficient:
         positives = [p for p in positives if p != "filled_container"]
         hard.append("empty_container")
     elif amount_uncertain:
         positives = [p for p in positives if p != "filled_container"]
         soft.append("uncertain_liquid")
-    elif amount_sufficient:
+    elif amount_filled:
         if {"visible_water", "visible_clear_liquid"}.intersection(positives) and "filled_container" not in positives:
             positives.append("filled_container")
+
+    # 여러 컵/유리컵: 명시적 empty가 없더라도 단일 섭취를 확정할 수 없으므로
+    # filled_container를 제거하고 uncertain_liquid로 강등한다 (→ PASS 불가, BORDERLINE).
+    if multi_container and "empty_container" not in hard:
+        positives = [p for p in positives if p != "filled_container"]
+        soft.append("uncertain_liquid")
 
     hard = _dedupe(hard)
     soft = _dedupe(soft)
@@ -466,6 +599,23 @@ def build_water_evidence(raw: dict) -> tuple[list[dict], list[str]]:
 
     objects = _resolve_objects(raw, confidence, has_liquid, has_filled)
     obj_labels = {o["label"] for o in objects}
+
+    # 정수기/물 받는 컨텍스트: opaque_closed_container 환각 완화
+    # (정수기에서 물을 받는 장면인데 Qwen이 'opaque closed'를 붙여도 PASS 가능해야 함)
+    # 단, empty/색음료 같은 진짜 disqualifying hard negative가 있으면 완화하지 않는다.
+    dispenser_ctx = ("water_dispenser" in obj_labels) or ("dispenser" in all_text) or ("purifier" in all_text)
+    flow_present = bool(
+        {"water_stream", "receiving_water", "container_under_dispenser", "filled_container"}.intersection(positives)
+    )
+    container_present = bool(CONTAINER_LABELS.intersection(obj_labels))
+    disqualifying = ("empty_container" in hard) or ("non_water_beverage" in hard)
+    if dispenser_ctx and flow_present and container_present and not disqualifying:
+        # 정수기/물 받는 장면: 이름만 있는 soft 모순 근거(opaque, uncertain, name-only non_water)를 모두 제거.
+        # (confirmed empty/색음료 hard negative는 disqualifying으로 이미 걸러져 여기 오지 않는다.)
+        soft = []
+        # req4: water_stream이 있으면 receiving_water를 보강해 Rule Engine의 dispenser 패턴이 작동하게 함
+        if "water_stream" in positives and "receiving_water" not in positives:
+            positives.append("receiving_water")
 
     # 강한 긍정 + hard negative 없음 → soft 모순 근거 제거
     has_container = bool(CUP_GLASS_LABELS.intersection(obj_labels))

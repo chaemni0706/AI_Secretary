@@ -9,7 +9,7 @@
   "objects": [
     {
       "label": "glass",
-      "confidence": 0.95,
+      "confidence": 0.8,
       "evidence": "A transparent glass containing clear liquid."
     }
   ],
@@ -18,7 +18,8 @@
   "study_visual_evidence": [],
   "water_visual_evidence": [
     "visible_clear_liquid",
-    "filled_container"
+    "empty_container",
+    "opaque_closed_container"
   ],
   "exercise_visual_evidence": []
 }

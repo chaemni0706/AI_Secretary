@@ -8,8 +8,8 @@
   "mandatory_passed": true,
   "ok": true,
   "water_visual_evidence": [
-    "visible_clear_liquid",
-    "filled_container"
+    "filled_container",
+    "visible_clear_liquid"
   ],
   "objects": [
     "glass"

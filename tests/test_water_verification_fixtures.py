@@ -414,20 +414,19 @@ def test_name_only_negatives_with_fallback_glass_pass():
     assert wv.normalize_verdict(normalized).label == wv.PASS
 
 
-def test_empty_container_from_no_liquid_phrase_is_removed():
-    """empty 근거가 'no liquid is visible'뿐이면 강한 긍정 앞에서 제거된다."""
+def test_no_liquid_visible_cue_blocks_pass():
+    """FP 방지 우선: raw에 'no liquid'/'no water' 신호가 있으면 강한 긍정이 있어도 PASS 금지."""
     raw = {
         "objects": [{"name": "glass"}],
         "visual_evidence": [
             {"name": "visible_water", "description": "clear liquid visible inside the glass"},
             {"name": "filled_container", "description": "glass filled with water"},
         ],
-        "uncertain_evidence": [{"name": "opaque_closed_container",
-                                "description": "no liquid is visible"}],
+        "uncertain_evidence": [{"name": "note", "description": "no liquid is visible in the glass"}],
     }
     normalized = nwo.normalize_water_evidence(raw)
-    assert "empty_container" not in normalized["water_visual_evidence"]
-    assert wv.normalize_verdict(normalized).label == wv.PASS
+    assert "empty_container" in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
 
 
 def test_confirmed_colored_beverage_stays_fail():
@@ -485,17 +484,15 @@ def test_no_other_beverages_is_not_mapped_negative():
     assert "empty_container" not in tokens
 
 
-def test_closed_but_strong_positive_removes_empty_and_passes():
-    """'glass appears to be closed but no liquid is visible'가 있어도
-    visible_water + filled_container가 있으면 모순 근거가 제거되어 PASS 가능."""
+def test_name_only_opaque_with_strong_positive_removes_and_passes():
+    """이름만 있는 opaque_closed_container는 visible_water + filled_container 앞에서 제거되어 PASS."""
     raw = {
         "objects": [{"name": "glass"}],
         "visual_evidence": [
             {"name": "visible_water", "description": "clear liquid visible inside the glass"},
             {"name": "filled_container", "description": "glass filled with water"},
         ],
-        "uncertain_evidence": [{"name": "opaque_closed_container",
-                                "description": "glass appears to be closed but no liquid is visible"}],
+        "uncertain_evidence": [{"name": "opaque_closed_container"}],  # 이름만, 근거 설명 없음
     }
     normalized = nwo.normalize_water_evidence(raw)
     assert "empty_container" not in normalized["water_visual_evidence"]
@@ -571,6 +568,349 @@ def test_water_amount_absent_is_backward_compatible():
         ],
     }
     assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label == wv.PASS
+
+
+# ----- 요구사항 4: 빈 유리컵 / 반사 / 여러 컵 → PASS 금지 (water_test_04 회귀 방지) -----
+
+def test_two_empty_glasses_is_not_pass():
+    """빈 유리컵 2개 (명시적 empty) → PASS 금지."""
+    raw = {
+        "objects": [{"name": "glass", "description": "a transparent glass"}],
+        "scenes": [{"description": "two empty glasses on a tray"}],
+        "visual_evidence": [{"name": "clear liquid in glass"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "empty_container" in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
+
+
+def test_two_glasses_on_tray_without_empty_is_borderline_not_pass():
+    """여러 유리컵(명시적 empty 없음, water_test_04 실제 raw 형태) → PASS 금지 (BORDERLINE)."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "A transparent glass containing clear liquid."}],
+        "scenes": [{"name": "table", "description": "A table with two glasses on a tray."}],
+        "visual_evidence": [
+            {"name": "glass", "description": "A transparent glass containing clear liquid."},
+            {"name": "tray", "description": "A metal tray holding two glasses."},
+        ],
+        "negative_evidence": [{"name": "non_water_beverage",
+                               "description": "The liquid in the glass appears to be water."}],
+        "uncertain_evidence": [{"name": "opaque_closed_container",
+                                "description": "The glass is transparent, so it is not an opaque closed container."}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "filled_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
+
+
+def test_transparent_glass_reflection_is_not_pass():
+    """유리 반사를 물로 오인한 경우 → PASS 금지."""
+    raw = {
+        "objects": [{"name": "glass"}],
+        "visual_evidence": [{"name": "clear liquid in glass",
+                             "description": "reflection on the transparent glass surface"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "empty_container" in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
+
+
+def test_clear_glass_only_without_water_line_is_not_pass():
+    """물 라인 없이 빈 유리컵만 → PASS 금지."""
+    raw = {
+        "objects": [{"name": "glass"}],
+        "visual_evidence": [{"name": "glass", "description": "clear glass only, no water line visible"}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
+@pytest.mark.parametrize("cue", ["two empty glasses", "no water in the glass", "reflection on the glass"])
+def test_strong_positive_overridden_by_empty_or_reflection_cue(cue):
+    """visible_clear_liquid + filled_container가 있어도 raw에 empty/reflection 신호가 있으면 PASS 금지."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass"}],
+        "visual_evidence": [
+            {"name": "visible_water", "description": "clear liquid visible inside the glass"},
+            {"name": "filled_container", "description": "glass filled with water"},
+        ],
+        "scenes": [{"description": cue}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
+# ----- 요구사항 5: 정수기/물 받는 장면 false negative 완화 -----
+
+def test_dispenser_glass_with_opaque_hallucination_passes():
+    """정수기 + glass + visible_water + filled + opaque(환각) → PASS (opaque 완화)."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [
+            {"name": "water dispenser", "description": "A white water dispenser"},
+            {"name": "glass", "description": "A clear glass being filled with water"},
+        ],
+        "scenes": [{"description": "a water dispenser filling a glass on a kitchen counter"}],
+        "visual_evidence": [
+            {"name": "visible_water", "description": "clear liquid visible in the glass"},
+            {"name": "filled_container", "description": "glass filled with water"},
+        ],
+        "uncertain_evidence": [{"name": "opaque_closed_container",
+                                "description": "the glass is opaque and closed"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "opaque_closed_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+@pytest.mark.parametrize("name", [
+    "water dispenser/purifier",
+    "dispenser/purifier",
+    "water purifier",
+    "purifier",
+    "water dispenser",
+])
+def test_dispenser_object_alias_normalizes(name):
+    objs = nwo.normalize_objects([{"name": name}], 0.9)
+    assert "water_dispenser" in {o["label"] for o in objs}
+
+
+def test_water_stream_cup_dispenser_context_passes():
+    """water_stream + cup + dispenser context → receiving 보강되어 PASS (water_test_08 형태)."""
+    raw = {
+        "objects": [{"name": "water dispenser/purifier"}, {"name": "cup"}],
+        "scenes": [{"name": "water dispenser/purifier pouring into a cup"}],
+        "visual_evidence": [{"name": "water stream"}, {"name": "filled container"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "water_dispenser" in {o["label"] for o in normalized["objects"]}
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_dispenser_relief_does_not_apply_to_multiple_empty_glasses():
+    """정수기 완화 규칙이 water_test_04(여러 빈 유리컵)을 PASS로 되돌리면 안 된다."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "A transparent glass containing clear liquid."}],
+        "scenes": [{"description": "A table with two glasses on a tray."}],
+        "visual_evidence": [{"name": "glass", "description": "A transparent glass containing clear liquid."},
+                            {"name": "tray", "description": "A metal tray holding two glasses."}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
+def test_dispenser_relief_blocked_by_empty_hard_negative():
+    """정수기 컨텍스트라도 명시적 empty가 있으면 완화하지 않고 FAIL 유지."""
+    raw = {
+        "objects": [{"name": "water dispenser"}, {"name": "glass"}],
+        "scenes": [{"description": "an empty glass under a water dispenser"}],
+        "visual_evidence": [{"name": "water stream"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "empty_container" in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
+
+
+# ----- 요구사항 7: hypothetical negative + filled_container 강화 (이번 라운드 raw 기반) -----
+
+def test_wt02_glass_of_water_scene_with_hypothetical_negatives_passes():
+    """scene에 'glass of water'가 있고 가정문 negative뿐이면 PASS (water_test_02 형태)."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "transparent glass containing clear liquid"}],
+        "scenes": [{"name": "table", "description": "a table with a glass of water, a notebook, and a pen"}],
+        "visual_evidence": [
+            {"name": "glass", "description": "transparent glass containing clear liquid"},
+            {"name": "table", "description": "a table with a glass of water, a notebook, and a pen"},
+        ],
+        "negative_evidence": [{"name": "non_water_beverage",
+                               "description": "the presence of a non-water beverage would indicate that the liquid is not water"}],
+        "uncertain_evidence": [{"name": "opaque_closed_container",
+                                "description": "if the glass were opaque or closed, it could potentially contain a non-water beverage"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "non_water_beverage" not in normalized["water_visual_evidence"]
+    assert "opaque_closed_container" not in normalized["water_visual_evidence"]
+    assert "filled_container" in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_wt03_transparent_glass_containing_clear_liquid_is_not_pass():
+    """'transparent glass containing clear liquid' + water_amount=partial 만으로는 PASS 금지 (water_test_03)."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "transparent glass containing clear liquid"}],
+        "scenes": [{"name": "table", "description": "a blue book on a table"}],
+        "visual_evidence": [{"description": "transparent glass containing clear liquid"}],
+        "negative_evidence": [{"description": "the liquid appears to be water"}],
+        "uncertain_evidence": [{"description": "the glass is transparent and the liquid is clear"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "filled_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
+
+
+def test_wt06_dispenser_reflection_hypothetical_empty_passes():
+    """정수기 + being filled + 'may appear to be empty due to reflections' → empty 무시하고 PASS (water_test_06)."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [
+            {"name": "water dispenser", "description": "A white water dispenser with a digital display"},
+            {"name": "glass", "description": "A clear glass being filled with water"},
+        ],
+        "scenes": [{"description": "A kitchen counter with a water dispenser"}],
+        "visual_evidence": [{"description": "A clear glass being filled with water"}],
+        "uncertain_evidence": [{"description": "The glass may appear to be empty due to reflections or transparency"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "empty_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_partial_amount_alone_does_not_grant_filled():
+    """water_amount=partial + 'transparent glass containing clear liquid' → filled 없음 → PASS 금지."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "transparent glass containing clear liquid"}],
+        "visual_evidence": [{"description": "transparent glass containing clear liquid"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "filled_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label != wv.PASS
+
+
+def test_glass_of_water_grants_filled_and_passes():
+    """'glass of water' + visible clear liquid → filled 부여 → PASS."""
+    raw = {
+        "objects": [{"name": "glass"}],
+        "visual_evidence": [{"description": "a glass of water with clear liquid"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "filled_container" in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_being_filled_with_water_dispenser_passes():
+    """being filled with water + dispenser → PASS."""
+    raw = {
+        "objects": [{"name": "water dispenser"}, {"name": "glass"}],
+        "scenes": [{"description": "a glass being filled at a water dispenser"}],
+        "visual_evidence": [{"description": "a clear glass being filled with water"}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label == wv.PASS
+
+
+@pytest.mark.parametrize("desc", [
+    "an empty glass on the table",
+    "the glass is nearly empty",
+    "a glass with a tiny amount of liquid",
+])
+def test_actual_empty_still_not_pass(desc):
+    """실제 empty/nearly empty/tiny amount는 강한 fill 단서가 없으면 PASS 금지."""
+    raw = {"objects": [{"name": "glass"}], "visual_evidence": [{"description": desc}]}
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
+# ----- 이번 라운드 raw 기반: opaque는 soft, 정수기 name-only non_water 제거 -----
+
+def test_wt01_opaque_hallucination_with_filled_glass_passes():
+    """실제 water_test_01: filled + clear liquid인데 opaque 환각/가정 negative → PASS."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "hand holding glass"}],
+        "scenes": [{"name": "hand holding glass with lemon slice"}],
+        "visual_evidence": [
+            {"name": "hand holding glass", "description": "A hand holding a glass with a lemon slice inside."},
+            {"name": "glass with lemon slice", "description": "A glass containing a clear liquid with a lemon slice floating in it."},
+        ],
+        "negative_evidence": [{"name": "non-water beverage",
+                               "description": "The presence of a lemon slice suggests that the liquid is not water."}],
+        "uncertain_evidence": [{"name": "opaque_closed_container",
+                                "description": "The glass appears to be opaque and closed, which could make it difficult to see the contents clearly."}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "opaque_closed_container" not in normalized["water_visual_evidence"]
+    assert "non_water_beverage" not in normalized["water_visual_evidence"]
+    assert {"visible_clear_liquid", "filled_container"}.issubset(normalized["water_visual_evidence"])
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_wt02_glass_of_water_with_opaque_and_negated_nonwater_passes():
+    """실제 water_test_02: glass of water + 'closed and opaque' + 'is not water'(부정문) → PASS."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "transparent glass containing clear liquid"}],
+        "scenes": [{"name": "table", "description": "a table with a glass of water, a notebook, and a pen"}],
+        "visual_evidence": [
+            {"name": "glass", "description": "transparent glass containing clear liquid"},
+            {"name": "table", "description": "a table with a glass of water, a notebook, and a pen"},
+        ],
+        "negative_evidence": [{"name": "non_water_beverage", "description": "the liquid in the glass is not water"}],
+        "uncertain_evidence": [{"name": "opaque_closed_container", "description": "the glass appears to be closed and opaque"}],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "opaque_closed_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_wt08_dispenser_name_only_nonwater_and_opaque_removed_passes():
+    """실제 water_test_08: 정수기 + water_stream + filled + 이름만 non_water/opaque → PASS."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "water dispenser"}, {"name": "glass"}],
+        "scenes": ["water dispenser pouring water into a glass"],
+        "visual_evidence": ["water_stream", "filled_container"],
+        "negative_evidence": ["non_water_beverage"],
+        "uncertain_evidence": ["opaque_closed_container"],
+    }
+    normalized = nwo.normalize_water_evidence(raw)
+    assert "non_water_beverage" not in normalized["water_visual_evidence"]
+    assert "opaque_closed_container" not in normalized["water_visual_evidence"]
+    assert wv.normalize_verdict(normalized).label == wv.PASS
+
+
+def test_wt03_weak_clear_liquid_only_not_pass():
+    """실제 water_test_03: 약한 clear liquid만 + partial → PASS 금지 유지."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "transparent glass containing clear liquid"}],
+        "scenes": [{"name": "table", "description": "a blue book on a table"}],
+        "visual_evidence": [{"description": "transparent glass containing clear liquid"}],
+        "negative_evidence": [{"description": "the liquid appears to be water"}],
+        "uncertain_evidence": [{"description": "the glass is transparent and the liquid is clear"}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
+def test_wt04_multiple_glasses_not_pass():
+    """실제 water_test_04: 여러 유리컵 → PASS 금지 유지."""
+    raw = {
+        "water_amount": "partial",
+        "objects": [{"name": "glass", "description": "A transparent glass containing clear liquid."}],
+        "scenes": [{"description": "A table with two glasses on a tray."}],
+        "visual_evidence": [{"name": "glass", "description": "A transparent glass containing clear liquid."},
+                            {"name": "tray", "description": "A metal tray holding two glasses."}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw)).label != wv.PASS
+
+
+def test_dispenser_relief_does_not_pass_colored_or_empty():
+    """FP 가드: 정수기 컨텍스트라도 실제 색음료/empty가 있으면 PASS 금지."""
+    # 색음료
+    raw_coffee = {
+        "objects": [{"name": "water dispenser"}, {"name": "cup"}],
+        "scenes": [{"description": "a cup near a dispenser"}],
+        "visual_evidence": [{"name": "water stream"}],
+        "negative_evidence": [{"name": "non_water_beverage", "description": "the cup contains coffee, a brown beverage"}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw_coffee)).label != wv.PASS
+    # empty
+    raw_empty = {
+        "objects": [{"name": "water dispenser"}, {"name": "glass"}],
+        "scenes": [{"description": "an empty glass under the dispenser"}],
+        "visual_evidence": [{"name": "water stream"}],
+    }
+    assert wv.normalize_verdict(nwo.normalize_water_evidence(raw_empty)).label != wv.PASS
 
 
 def test_dispenser_phrase_mapping_pass():

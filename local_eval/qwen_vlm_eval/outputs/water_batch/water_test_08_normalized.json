@@ -5,22 +5,28 @@
     "usable": true,
     "issues": []
   },
-  "scene": "water dispenser/purifier pouring into a cup",
+  "scene": "water dispenser pouring water into a glass",
   "objects": [
     {
-      "label": "cup",
+      "label": "water_dispenser",
+      "confidence": 0.9,
+      "evidence": null
+    },
+    {
+      "label": "glass",
       "confidence": 0.9,
       "evidence": null
     }
   ],
   "visible_text": [
-    "{'text': 'BRITA', 'position': [341, 168, 409, 234]}"
+    "BRITA"
   ],
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [
     "water_stream",
-    "filled_container"
+    "filled_container",
+    "receiving_water"
   ],
   "exercise_visual_evidence": []
 }

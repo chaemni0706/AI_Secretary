@@ -14,24 +14,37 @@
   ],
   "scenes": [
     {
-      "description": "a glass of water with a small amount of liquid visible"
+      "name": "table",
+      "description": "a table with a glass of water, a notebook, and a pen"
     }
   ],
   "visual_evidence": [
     {
-      "description": "a transparent glass with a small amount of clear liquid visible inside"
+      "name": "glass",
+      "description": "transparent glass containing clear liquid"
+    },
+    {
+      "name": "table",
+      "description": "a table with a glass of water, a notebook, and a pen"
     }
   ],
   "negative_evidence": [
     {
-      "description": "no other beverages or liquids visible in the glass"
+      "name": "non_water_beverage",
+      "description": "the liquid in the glass is not water"
     }
   ],
   "uncertain_evidence": [
     {
-      "description": "the amount of liquid is not fully visible, suggesting it might be less than a full glass"
+      "name": "opaque_closed_container",
+      "description": "the glass appears to be closed and opaque"
     }
   ],
-  "text_observed": [],
+  "text_observed": [
+    {
+      "name": "notebook",
+      "description": "a notebook with writing on it"
+    }
+  ],
   "confidence": 0.8
 }

@@ -116,6 +116,11 @@ python local_eval/qwen_vlm_eval/scripts/run_qwen_water_batch.py --model Qwen/Qwe
 - `empty_container`는 명시적 빈/소량 표현("empty glass", "small amount", "few drops" 등)에서만 매핑한다.
 - 강한 긍정(glass/cup + 투명 액체 + filled + hard negative 없음)이면 모순 근거를 제거한다.
 - Qwen raw의 선택적 `water_amount`(none|tiny|partial|filled|uncertain): none/tiny/uncertain은 PASS 금지, partial/filled는 PASS 가능.
+- 명시적 빈/반사/유리표면 신호("empty glass", "no water", "no liquid", "reflection", "glass surface", "clear glass only")는 water_amount와 무관하게 항상 empty_container(FAIL) 처리한다. (반사·광택을 물로 오인하는 false positive 방지)
+- 여러 개의 컵/유리컵("two glasses", "glasses on a tray")은 단일 섭취 인증 불가로 보고 filled_container를 제거해 PASS를 막는다(→ BORDERLINE).
+- **filled_container는 강한 fill 단서에서만 부여**한다: "glass/cup of water", "filled with water", "being filled with water", "clear liquid in glass", "floating in", "meaningful amount", "water line", "half full", water_stream, `water_amount="filled"`. "transparent glass containing clear liquid"·bare "clear liquid"·`water_amount="partial"` 단독으로는 부여하지 않는다(반사/투명 유리 false positive 방지).
+- **가정/조건문**("would indicate", "could potentially", "if the glass were opaque", "may appear empty due to reflections")은 실제 관측이 아니므로 negative/empty 근거로 매핑하지 않는다.
+- 정수기/물 받는 장면(dispenser/purifier + water_stream/receiving/being filled + cup/glass)에서는 opaque_closed_container 환각을 제거해 PASS를 허용한다(단, 실제 empty/색음료가 있으면 유지).
 
 배치의 `predicted_label`은 `verified→PASS`, `rejected→FAIL`, `retake_required→BORDERLINE_CASE`이며,
 `ok`는 PASS 게이팅 일치(기대/예측이 둘 다 PASS이거나 둘 다 non-PASS)로 계산한다.

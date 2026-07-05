@@ -8,6 +8,7 @@
   "mandatory_passed": false,
   "ok": true,
   "water_visual_evidence": [
+    "empty_container",
     "non_water_beverage",
     "opaque_closed_container"
   ],
@@ -17,6 +18,11 @@
   "raw_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_10_many_empty_cups_raw.json",
   "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_10_many_empty_cups_normalized.json",
   "rule_evidence": [
+    {
+      "code": "water_priority:empty_container",
+      "message": "빈 용기가 확인되어 물 인증을 거절합니다.",
+      "score_delta": 0
+    },
     {
       "code": "water_priority:non_water_beverage",
       "message": "물이 아닌 음료가 확인되어 물 인증을 거절합니다.",

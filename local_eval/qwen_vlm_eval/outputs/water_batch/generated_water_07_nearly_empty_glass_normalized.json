@@ -16,6 +16,8 @@
   "visible_text": [],
   "visual_evidence": [],
   "study_visual_evidence": [],
-  "water_visual_evidence": [],
+  "water_visual_evidence": [
+    "empty_container"
+  ],
   "exercise_visual_evidence": []
 }

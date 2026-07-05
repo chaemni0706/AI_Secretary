@@ -8,7 +8,8 @@
   "mandatory_passed": true,
   "ok": true,
   "water_visual_evidence": [
-    "water_stream"
+    "water_stream",
+    "receiving_water"
   ],
   "objects": [
     "water_dispenser",

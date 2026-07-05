@@ -16,7 +16,7 @@
   "scenes": [
     {
       "name": "table",
-      "description": "blue surface with a glass on top"
+      "description": "a table with a book on it"
     }
   ],
   "visual_evidence": [
@@ -28,13 +28,13 @@
   "negative_evidence": [
     {
       "name": "non_water_beverage",
-      "description": "no indication of non-water beverage"
+      "description": "the liquid appears to be water"
     }
   ],
   "uncertain_evidence": [
     {
       "name": "opaque_closed_container",
-      "description": "glass appears to be closed and opaque"
+      "description": "the glass is transparent and the liquid is clear"
     }
   ],
   "text_observed": [],

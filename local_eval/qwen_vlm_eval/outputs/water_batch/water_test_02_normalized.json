@@ -5,7 +5,7 @@
     "usable": true,
     "issues": []
   },
-  "scene": "a glass of water with a small amount of liquid visible",
+  "scene": "table",
   "objects": [
     {
       "label": "glass",
@@ -13,11 +13,14 @@
       "evidence": "transparent glass containing clear liquid"
     }
   ],
-  "visible_text": [],
+  "visible_text": [
+    "{'name': 'notebook', 'description': 'a notebook with writing on it'}"
+  ],
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [
     "visible_clear_liquid",
+    "visible_water",
     "filled_container"
   ],
   "exercise_visual_evidence": []

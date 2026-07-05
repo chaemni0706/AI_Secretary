@@ -10,41 +10,35 @@
   "objects": [
     {
       "name": "hand",
-      "pose": "holding a glass"
+      "description": "A hand holding a glass"
     }
   ],
   "scenes": [
     {
-      "description": "a hand holding a glass near a water dispenser"
+      "name": "desk",
+      "description": "A desk with a glass and a water dispenser"
     }
   ],
   "visual_evidence": [
     {
-      "type": "containers",
       "name": "glass",
-      "description": "transparent glass containing clear liquid"
+      "description": "A clear glass containing water"
     },
     {
-      "type": "positive_evidence",
-      "name": "visible_water",
-      "description": "clear liquid visible in the glass"
-    },
-    {
-      "type": "positive_evidence",
-      "name": "filled_container",
-      "description": "glass appears to contain a meaningful amount of clear liquid"
+      "name": "water dispenser",
+      "description": "A white water dispenser pouring water into the glass"
     }
   ],
   "negative_evidence": [
     {
-      "type": "non_water_beverage",
-      "description": "no indication that the liquid is not water"
+      "name": "non_water_beverage",
+      "description": "The glass does not contain coffee or any other non-water beverage"
     }
   ],
   "uncertain_evidence": [
     {
-      "type": "opaque_closed_container",
-      "description": "the glass is opaque and closed, making it difficult to see the liquid"
+      "name": "opaque_closed_container",
+      "description": "The glass appears to be closed, but the liquid inside is not fully visible"
     }
   ],
   "text_observed": [],

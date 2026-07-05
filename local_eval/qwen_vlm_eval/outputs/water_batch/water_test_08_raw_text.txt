@@ -9,38 +9,29 @@
   },
   "objects": [
     {
-      "name": "water dispenser/purifier",
+      "name": "water dispenser",
       "position": [128, 0, 587, 392]
     },
     {
-      "name": "cup",
-      "position": [60, 184, 286, 392]
+      "name": "glass",
+      "position": [61, 184, 286, 392]
     }
   ],
   "scenes": [
-    {
-      "name": "water dispenser/purifier pouring into a cup"
-    }
+    "water dispenser pouring water into a glass"
   ],
   "visual_evidence": [
-    {
-      "name": "water stream",
-      "position": [128, 0, 587, 392],
-      "confidence": 0.9
-    },
-    {
-      "name": "filled container",
-      "position": [60, 184, 286, 392],
-      "confidence": 0.8
-    }
+    "water_stream",
+    "filled_container"
   ],
-  "negative_evidence": [],
-  "uncertain_evidence": [],
+  "negative_evidence": [
+    "non_water_beverage"
+  ],
+  "uncertain_evidence": [
+    "opaque_closed_container"
+  ],
   "text_observed": [
-    {
-      "text": "BRITA",
-      "position": [341, 168, 409, 234]
-    }
+    "BRITA"
   ],
   "confidence": 0.9
 }

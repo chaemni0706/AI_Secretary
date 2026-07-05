@@ -51,6 +51,16 @@ Be conservative about the AMOUNT of liquid (avoid false positives):
 - Reflections, transparent glass edges, or background color must NOT be interpreted as water.
 - If the amount of liquid is unclear, prefer uncertain_liquid instead of filled_container.
 - A false positive is worse than a false negative for verification. For borderline transparent cups, be conservative.
+- Empty transparent glasses MUST be reported as empty_container, not visible_water/visible_clear_liquid.
+- Reflections, glass shine, transparent material, or background color MUST NOT be treated as visible_water or visible_clear_liquid.
+- Multiple empty glasses/cups are FAIL: report empty_container and describe them (e.g. "two empty glasses on a tray").
+- Do NOT output filled_container unless the water line or a meaningful liquid volume is clearly visible inside the container.
+- Do NOT mark filled_container from a transparent glass appearance alone ("transparent glass containing clear liquid" is NOT enough).
+- Do NOT treat reflections, highlights, glass edges, or background colors as water.
+- Use filled_container only when a meaningful water volume, a visible water line, or a filling action is clearly present.
+- Use water_amount carefully: use "partial" only when a moderate amount is clearly visible; if the amount is unclear, use "uncertain" (not "partial").
+- Do NOT output hypothetical statements as evidence. Phrases like "would indicate", "could potentially", "if the glass were opaque", or "may appear empty due to reflections" are NOT observations and must not be placed in negative_evidence or uncertain_evidence.
+- For dispenser scenes, "being filled with water" or a water stream into a cup/glass is valid positive evidence.
 - Also report the observed amount in the "water_amount" field: one of none, tiny, partial, filled, uncertain.
   Use "none" for empty, "tiny" for a few drops / only at the bottom, "partial" for clearly some but not full,
   "filled" for a clearly filled container, "uncertain" if the amount cannot be judged.

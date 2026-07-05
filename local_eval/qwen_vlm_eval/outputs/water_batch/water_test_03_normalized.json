@@ -17,9 +17,7 @@
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [
-    "visible_clear_liquid",
-    "filled_container",
-    "opaque_closed_container"
+    "visible_clear_liquid"
   ],
   "exercise_visual_evidence": []
 }

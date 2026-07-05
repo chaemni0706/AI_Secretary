@@ -19,6 +19,7 @@
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [
+    "empty_container",
     "non_water_beverage",
     "opaque_closed_container"
   ],

@@ -16,7 +16,7 @@
   "scenes": [
     {
       "name": "table",
-      "description": "A table with two glasses on a tray."
+      "description": "A table with a metal tray holding two glasses."
     }
   ],
   "visual_evidence": [
@@ -25,23 +25,23 @@
       "description": "A transparent glass containing clear liquid."
     },
     {
-      "name": "tray",
+      "name": "metal tray",
       "description": "A metal tray holding two glasses."
     }
   ],
   "negative_evidence": [
     {
-      "name": "non_water_beverage",
-      "description": "The liquid in the glass appears to be water."
+      "name": "non-water_beverage",
+      "description": "The contents of the glasses do not appear to be water."
     }
   ],
   "uncertain_evidence": [
     {
       "name": "opaque_closed_container",
-      "description": "The glass is transparent, so it is not an opaque closed container."
+      "description": "The glasses appear to be empty or nearly empty."
     }
   ],
   "text_observed": [],
-  "confidence": 0.95
+  "confidence": 0.8
 }
 ```

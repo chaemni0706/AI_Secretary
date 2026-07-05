@@ -9,6 +9,7 @@
   "ok": true,
   "water_visual_evidence": [
     "visible_clear_liquid",
+    "visible_water",
     "filled_container"
   ],
   "objects": [

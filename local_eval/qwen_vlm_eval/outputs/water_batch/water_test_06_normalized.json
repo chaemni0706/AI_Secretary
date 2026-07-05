@@ -5,28 +5,29 @@
     "usable": true,
     "issues": []
   },
-  "scene": "A kitchen counter with a water dispenser, a glass being filled, and a bowl of limes in the background",
+  "scene": "A kitchen counter with a tiled backsplash and a bowl of limes in the background",
   "objects": [
     {
       "label": "water_dispenser",
-      "confidence": 0.95,
+      "confidence": 0.85,
       "evidence": "A white water dispenser with a digital display"
     },
     {
       "label": "glass",
-      "confidence": 0.95,
+      "confidence": 0.85,
       "evidence": "A clear glass being filled with water"
     }
   ],
   "visible_text": [
-    "COWAY"
+    "{'description': \"The word 'COWAY' on the water dispenser\"}"
   ],
   "visual_evidence": [],
   "study_visual_evidence": [],
   "water_visual_evidence": [
     "visible_water",
     "filled_container",
-    "opaque_closed_container"
+    "water_stream",
+    "receiving_water"
   ],
   "exercise_visual_evidence": []
 }

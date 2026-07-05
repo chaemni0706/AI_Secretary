@@ -11,40 +11,75 @@ import 'mock_call_alert_screen.dart';
 import 'user_preference_screen.dart';
 
 class MenuScreen extends StatelessWidget {
-  const MenuScreen({super.key});
+  final bool isDrawer;
+
+  const MenuScreen({super.key, this.isDrawer = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: AppTheme.screenBackground,
-      child: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildSearchBar()),
-            SliverToBoxAdapter(child: _buildMvpSection(context)),
-            SliverToBoxAdapter(child: _buildVoiceSection(context)),
-            SliverToBoxAdapter(child: _buildExtendedSection()),
-            SliverToBoxAdapter(child: _buildSettingsSection(context)),
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: isDrawer
+            ? const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(24),
+                ),
+              )
+            : AppTheme.screenBackground,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader(context)),
+                SliverToBoxAdapter(child: _buildSearchBar()),
+                SliverToBoxAdapter(child: _buildMvpSection(context)),
+                SliverToBoxAdapter(child: _buildVoiceSection(context)),
+                SliverToBoxAdapter(child: _buildExtendedSection()),
+                SliverToBoxAdapter(child: _buildSettingsSection(context)),
+                const SliverToBoxAdapter(child: SizedBox(height: 80)),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Text(
-        '전체',
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.textPrimary,
-          letterSpacing: -0.5,
-        ),
+  void _openService(BuildContext context, Widget screen) {
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (isDrawer) {
+      Navigator.of(context).pop();
+    }
+    rootNavigator.push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 16, 4),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              '전체',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          if (isDrawer)
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close, color: AppTheme.textPrimary),
+              tooltip: '닫기',
+            ),
+        ],
       ),
     );
   }
@@ -69,13 +104,14 @@ class MenuScreen extends StatelessWidget {
           style: TextStyle(fontSize: 14, color: AppTheme.textPrimary),
           decoration: InputDecoration(
             hintText: '기능 검색',
-            hintStyle:
-                TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-            prefixIcon:
-                Icon(Icons.search, color: AppTheme.textSecondary, size: 20),
+            hintStyle: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            prefixIcon: Icon(
+              Icons.search,
+              color: AppTheme.textSecondary,
+              size: 20,
+            ),
             border: InputBorder.none,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           ),
         ),
       ),
@@ -89,30 +125,21 @@ class MenuScreen extends StatelessWidget {
         color: AppTheme.blue,
         title: '브리핑 상세',
         subtitle: '오늘 요약·주의사항',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BriefingScreen()),
-        ),
+        onTap: () => _openService(context, const BriefingScreen()),
       ),
       _MenuItem(
         icon: Icons.event_available_outlined,
         color: AppTheme.green,
         title: '예약 후보 추천',
         subtitle: '빈 시간 찾기',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BookingRecommendScreen()),
-        ),
+        onTap: () => _openService(context, const BookingRecommendScreen()),
       ),
       _MenuItem(
         icon: Icons.forum_outlined,
         color: AppTheme.teal,
         title: '예약 메시지',
         subtitle: '정중한 문의 생성',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BookingMessageScreen()),
-        ),
+        onTap: () => _openService(context, const BookingMessageScreen()),
       ),
       _MenuItem(
         icon: Icons.backpack_outlined,
@@ -129,17 +156,7 @@ class MenuScreen extends StatelessWidget {
         const SectionHeader(title: 'MVP 기능'),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 2.2,
-            children: items
-                .map((item) => _MenuCard(item: item))
-                .toList(),
-          ),
+          child: _MenuList(items: items),
         ),
       ],
     );
@@ -152,40 +169,28 @@ class MenuScreen extends StatelessWidget {
         color: AppTheme.blue,
         title: '음성으로 일정 만들기',
         subtitle: '말하면 일정 등록',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VoiceScheduleScreen()),
-        ),
+        onTap: () => _openService(context, const VoiceScheduleScreen()),
       ),
       _MenuItem(
         icon: Icons.wb_sunny_outlined,
         color: AppTheme.blue,
         title: '오늘의 브리핑',
         subtitle: '하루 요약·듣기',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DailyBriefingScreen()),
-        ),
+        onTap: () => _openService(context, const DailyBriefingScreen()),
       ),
       _MenuItem(
         icon: Icons.mic_none_outlined,
         color: AppTheme.purple,
         title: 'AI 음성 챗봇',
         subtitle: '감정 기반 코칭',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const VoiceChatScreen()),
-        ),
+        onTap: () => _openService(context, const VoiceChatScreen()),
       ),
       _MenuItem(
         icon: Icons.phone_in_talk_outlined,
         color: AppTheme.teal,
         title: '챔니 전화 알림',
         subtitle: '일정 전 음성 알림',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MockCallAlertScreen()),
-        ),
+        onTap: () => _openService(context, const MockCallAlertScreen()),
       ),
     ];
 
@@ -195,15 +200,7 @@ class MenuScreen extends StatelessWidget {
         const SectionHeader(title: 'AI 음성 비서'),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.5,
-            children: items.map((item) => _MenuCard(item: item)).toList(),
-          ),
+          child: _MenuList(items: items),
         ),
       ],
     );
@@ -233,7 +230,9 @@ class MenuScreen extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -258,7 +257,9 @@ class MenuScreen extends StatelessWidget {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.textSecondary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -323,12 +324,14 @@ class MenuScreen extends StatelessWidget {
                 final (icon, title, color, onTap) = settings[i];
                 return Column(
                   children: [
-                    GestureDetector(
+                    InkWell(
                       onTap: onTap,
-                      behavior: HitTestBehavior.opaque,
+                      borderRadius: BorderRadius.circular(18),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         child: Row(
                           children: [
                             Icon(icon, color: color, size: 22),
@@ -343,8 +346,11 @@ class MenuScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const Icon(Icons.chevron_right,
-                                color: AppTheme.textSecondary, size: 20),
+                            const Icon(
+                              Icons.chevron_right,
+                              color: AppTheme.textSecondary,
+                              size: 20,
+                            ),
                           ],
                         ),
                       ),
@@ -383,42 +389,82 @@ class _MenuItem {
   });
 }
 
-class _MenuCard extends StatelessWidget {
-  final _MenuItem item;
+class _MenuList extends StatelessWidget {
+  final List<_MenuItem> items;
 
-  const _MenuCard({required this.item});
+  const _MenuList({required this.items});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: item.onTap,
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: item.color.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(9),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: List.generate(items.length, (i) {
+          final item = items[i];
+          return Column(
+            children: [
+              InkWell(
+                onTap: item.onTap,
+                borderRadius: BorderRadius.circular(18),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: item.color.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(item.icon, color: item.color, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.subtitle,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.textSecondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Icon(item.icon, color: item.color, size: 18),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(item.subtitle, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
-                ],
-              ),
-            ),
-          ],
-        ),
+              if (i < items.length - 1)
+                const Divider(
+                  height: 1,
+                  indent: 66,
+                  endIndent: 0,
+                  color: AppTheme.separator,
+                ),
+            ],
+          );
+        }),
       ),
     );
   }

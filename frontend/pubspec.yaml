@@ -41,6 +41,10 @@ dependencies:
   firebase_core: ^4.0.0
   firebase_messaging: ^16.0.0
 
+  # 로컬 알림 (자동 브리핑 — 설정 시각에 전화형 알림 화면을 띄운다)
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+
   # 로컬 저장
   shared_preferences: ^2.5.3
 

@@ -16,12 +16,16 @@ Never raises: unknown/invalid values fall back to the default for that axis.
 
 from __future__ import annotations
 
+import re
 from typing import Dict, Optional
 
 DEFAULT_PREFERENCES: Dict[str, str] = {
     "assistant_tone": "friendly",
     "response_length": "normal",
     "nudge_strength": "medium",
+    # additive: 'HH:mm' 자동 브리핑 시각, ""이면 비활성화. 자유 형식이라 VALID_VALUES
+    # (enum) 이 아니라 _BRIEFING_TIME_RE 로 별도 검증한다.
+    "briefing_time": "",
 }
 
 VALID_VALUES: Dict[str, tuple] = {
@@ -29,6 +33,9 @@ VALID_VALUES: Dict[str, tuple] = {
     "response_length": ("short", "normal", "detailed"),
     "nudge_strength": ("low", "medium", "high"),
 }
+
+BRIEFING_TIME_KEY = "briefing_time"
+_BRIEFING_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
 # Display metadata for the two axes that have no dedicated JSON file
 # (assistant_tone's display names live in backend/data/tone_profiles.json).
@@ -70,6 +77,13 @@ def get_default_preferences() -> Dict[str, str]:
 def normalize_preference_value(category: str, value: Optional[str]) -> Optional[str]:
     """Return `value` if it is a valid option for `category`, else None.
     Unknown categories also return None (never raises)."""
+    if category == BRIEFING_TIME_KEY:
+        if not isinstance(value, str):
+            return None
+        value = value.strip()
+        if value == "":
+            return ""  # explicit disable
+        return value if _BRIEFING_TIME_RE.match(value) else None
     options = VALID_VALUES.get(category)
     if not options or not isinstance(value, str):
         return None
@@ -83,7 +97,7 @@ def validate_preferences(preferences: dict) -> Dict[str, str]:
     if not isinstance(preferences, dict):
         return {}
     cleaned: Dict[str, str] = {}
-    for category in VALID_VALUES:
+    for category in list(VALID_VALUES) + [BRIEFING_TIME_KEY]:
         val = normalize_preference_value(category, preferences.get(category))
         if val is not None:
             cleaned[category] = val

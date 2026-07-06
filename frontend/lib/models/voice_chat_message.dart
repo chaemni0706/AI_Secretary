@@ -1,9 +1,10 @@
-/// 음성 챗봇 화면에서 사용하는 채팅 메시지 및 감정 분석 모델.
-///
-/// 감정 분석 관련 모델은 백엔드 `POST /api/v1/emotion/analyze` 의
-/// 공통 응답 `{ success, message, data }` 중 `data` 구조에 맞춘 것이다.
+import '../services/voice_router_api.dart';
 
-/// 메시지 발신자 구분.
+/// 음성 라우터 화면(voice_chat_screen)에서 사용하는 채팅 메시지 모델.
+///
+/// AI 메시지는 `POST /api/v1/voice/route` 의 결과([VoiceRouteResult])를 그대로
+/// 들고 있어서, 화면이 intent 별로 카드를 다르게 그릴 수 있다.
+
 enum ChatRole { user, assistant }
 
 /// 채팅 말풍선 1개를 나타낸다.
@@ -11,23 +12,21 @@ class VoiceChatMessage {
   final ChatRole role;
   final String text;
 
-  /// AI 메시지에 한해 감정 분석 결과를 함께 담는다(사용자 메시지는 null).
-  final EmotionAnalysis? analysis;
-
-  /// AI 메시지에 한해 "음성으로 듣기" 대상 문장을 담는다.
-  final String? ttsText;
+  /// AI 메시지에 한해 라우팅 결과 전체를 담는다(사용자 메시지는 null).
+  final VoiceRouteResult? route;
 
   const VoiceChatMessage({
     required this.role,
     required this.text,
-    this.analysis,
-    this.ttsText,
+    this.route,
   });
 
   bool get isUser => role == ChatRole.user;
 }
 
 /// `/api/v1/emotion/analyze` 의 data 구조.
+/// (온디바이스 감정 fallback 서비스들이 사용. voice_chat_screen 은 서버 라우터를
+///  쓰지만, emotion_api / LocalEmotionClassifier 등은 이 구조를 그대로 사용한다.)
 class EmotionAnalysis {
   final Emotion emotion;
   final Burden burden;

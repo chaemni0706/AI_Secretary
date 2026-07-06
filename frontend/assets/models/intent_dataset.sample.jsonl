@@ -1,0 +1,12 @@
+{"text": "내일 2시에 회의 잡아줘", "label": "create_schedule"}
+{"text": "오늘 6시에 운동 등록해줘", "label": "create_schedule"}
+{"text": "다음주 월요일 10시 병원 예약", "label": "create_schedule"}
+{"text": "금요일까지 과제 제출해야 해", "label": "create_todo"}
+{"text": "장보기 목록 정리하기", "label": "create_todo"}
+{"text": "오늘 브리핑 해줘", "label": "ask_briefing"}
+{"text": "오늘 일정 요약해서 알려줘", "label": "ask_briefing"}
+{"text": "오늘 너무 힘들어", "label": "emotion_coaching"}
+{"text": "요즘 불안하고 잠이 안 와", "label": "emotion_coaching"}
+{"text": "미용실 예약하고 싶어", "label": "reservation_request"}
+{"text": "치과 예약 문의 메시지 만들어줘", "label": "reservation_request"}
+{"text": "그냥 아무거나", "label": "unknown"}

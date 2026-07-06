@@ -10,7 +10,8 @@ import 'package:flutter/foundation.dart';
 ///
 /// 환경에 맞게 아래 값 하나만 바꾸면 됩니다.
 // const String baseUrl = 'http://127.0.0.1:8000';
-const String baseUrl = 'http://141.223.140.84:8000';
+// const String baseUrl = 'http://141.223.140.84:8000';
+const String baseUrl = 'http://192.168.0.73:8000';
 
 // Android Emulator용:
 // const String baseUrl = 'http://10.0.2.2:8000';
@@ -169,6 +170,24 @@ class ApiClient {
   }) async {
     try {
       final res = await _dio.put(path, data: body);
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw ApiException(
+        '네트워크 오류: ${e.message ?? e.type.name}',
+        statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
+      );
+    }
+  }
+
+  /// DELETE 후 envelope 를 풀어 `data` 를 반환.
+  Future<dynamic> deleteData(
+    String path, {
+    Object? body,
+  }) async {
+    try {
+      final res = await _dio.delete(path, data: body);
       return _unwrap(res);
     } on DioException catch (e) {
       throw ApiException(

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/schedule_model.dart';
+import '../services/api_client.dart';
+import '../services/dashboard_api.dart';
+import '../services/schedule_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../theme/schedule_styles.dart';
@@ -10,6 +13,48 @@ class ScheduleDetailScreen extends StatelessWidget {
 
   const ScheduleDetailScreen({super.key, required this.schedule});
 
+  /// 삭제 확인 다이얼로그 → DELETE /local/schedules/{id} → 대시보드 새로고침 → 뒤로.
+  Future<void> _confirmDelete(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('일정 삭제'),
+        content: Text("'${schedule.title}' 일정을 삭제할까요?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await scheduleApi.delete(schedule.id);
+      triggerDashboardRefresh(); // 홈/캘린더 갱신
+      messenger.showSnackBar(
+        const SnackBar(content: Text('일정을 삭제했어요.')),
+      );
+      navigator.pop();
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('삭제 실패: ${e.message}')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('삭제 중 오류: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final category = ScheduleStyles.categoryLabel(schedule.category);
@@ -19,7 +64,17 @@ class ScheduleDetailScreen extends StatelessWidget {
       decoration: AppTheme.screenBackground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: const Text('일정 상세'), centerTitle: false),
+        appBar: AppBar(
+          title: const Text('일정 상세'),
+          centerTitle: false,
+          actions: [
+            IconButton(
+              onPressed: () => _confirmDelete(context),
+              icon: const Icon(Icons.delete_outline, color: AppTheme.red),
+              tooltip: '삭제',
+            ),
+          ],
+        ),
         body: SafeArea(
           top: false,
           child: ListView(

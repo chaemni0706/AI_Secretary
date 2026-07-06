@@ -1,0 +1,457 @@
+"""Voice route orchestrator — dispatches a classified voice utterance to the
+EXISTING feature service for its intent and shapes a uniform
+``{intent, tts_text, screen_action, data, context}`` response.
+
+No existing endpoint/service is modified in its public contract here; this
+module only calls them. See ``voice_intent_router.py`` for classification and
+``backend/api/voice.py`` for the HTTP entry point (``POST /voice/route``).
+
+Never raises: any handler failure degrades to a safe fallback_chat response so
+a voice turn never surfaces a 500.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime
+from typing import List
+
+from sqlalchemy.orm import Session
+
+from backend.core.config import settings
+from backend.database import repository as repo
+from backend.database.schema.briefing_schema import (
+    BriefingSchedule,
+    BriefingTodo,
+    DailyBriefingRequest,
+)
+from backend.database.schema.chat_schema import (
+    ChatRespondRequest,
+    ScheduleContext,
+    ScheduleEvent,
+)
+from backend.database.schema.local_schedule_schema import ScheduleDraftInput, ScheduleRead
+from backend.database.schema.schedule_schema import ScheduleParseRequest
+from backend.database.schema.voice_route_schema import (
+    ScreenAction,
+    VoiceRouteData,
+    VoiceRouteRequest,
+)
+from backend.services import (
+    briefing_generator,
+    chat_orchestrator,
+    local_schedule_service,
+    notification_plan_builder,
+    place_recommendation_service,
+    todo_service,
+    voice_intent_router,
+)
+from backend.services.naver_place_client import NaverApiError, NaverConfigError
+from backend.services.schedule_parser import parse_schedule
+
+_logger = logging.getLogger("voice_route")
+
+_DEFAULT_REMINDER_MINUTES = 30
+
+
+# --------------------------------------------------------------------------- #
+# small shared helpers
+# --------------------------------------------------------------------------- #
+def _today(req: VoiceRouteRequest) -> str:
+    if req.current_datetime:
+        try:
+            return datetime.fromisoformat(req.current_datetime).date().isoformat()
+        except ValueError:
+            pass
+    return datetime.now().date().isoformat()
+
+
+def _todays_schedules(db: Session, user_id: str, date_str: str) -> List[ScheduleRead]:
+    items = local_schedule_service.list_schedules(db, user_id=user_id)
+    return [s for s in items if s.date == date_str and (s.status or "").upper() != "CANCELLED"]
+
+
+def _naive_now_iso(req: VoiceRouteRequest) -> str:
+    """Naive (no tzinfo) 'now' ISO string, matching the naive event start_time/
+    end_time strings built for ScheduleContext below. Flutter sends
+    current_datetime WITH an offset (e.g. '+09:00'); solution_recommender's
+    datetime comparisons raise TypeError when comparing an offset-aware `now`
+    against the naive event times, which chat_orchestrator's broad except
+    silently swallows into a bland fallback answer. Stripping tzinfo here
+    keeps both sides naive and avoids that silent degrade."""
+    if req.current_datetime:
+        try:
+            return datetime.fromisoformat(req.current_datetime).replace(tzinfo=None).isoformat()
+        except ValueError:
+            pass
+    return datetime.now().isoformat()
+
+
+def _schedule_summary_sentence(todays: List[ScheduleRead]) -> str:
+    if not todays:
+        return "오늘은 등록된 일정이 없어요."
+    listing = ", ".join(
+        f"{(s.start_time + ' ') if s.start_time else ''}{s.title}".strip() for s in todays
+    )
+    return f"오늘은 {listing} 일정이 있어요."
+
+
+def _build_coaching_message(
+    chat_answer: str,
+    todays: List[ScheduleRead],
+    solutions: List[dict],
+    reschedule_candidates: List[dict],
+) -> str:
+    """감정 공감 + 오늘 일정 요약 + 휴식/일정 조정 제안을 하나의 응답으로 합친다.
+
+    ``chat_answer`` 는 ``chat_orchestrator``(기존 /chat/respond 파이프라인)가
+    이미 만든 "공감 문장 + 최우선 해결책 + 확인 질문" 한 세트다(예: "일이 많아
+    막막하게 느껴지는 마음이 이해돼요. 할 일을 3단계로 나누기 방법이 도움이
+    될 수 있어요. ... 정리해볼까요?"). 여기에 음성 비서 전용으로 오늘 일정
+    요약과, 있다면 그 밖의 대안 해결책/일정 조정 후보 수를 덧붙여 스펙이
+    요구하는 3요소(공감·일정 요약·휴식/일정 조정 제안)를 항상 포함시킨다.
+    ``chat_orchestrator``/``solution_recommender`` 자체는 건드리지 않는다.
+    """
+    parts: List[str] = []
+    if chat_answer:
+        parts.append(chat_answer.strip())
+    parts.append(_schedule_summary_sentence(todays))
+
+    extra_titles = [s.get("title") for s in solutions[1:3] if s.get("title")]
+    if extra_titles:
+        parts.append(f"그 밖에 {', '.join(extra_titles)}도 도움이 될 수 있어요.")
+
+    if reschedule_candidates:
+        parts.append(f"미룰 수 있는 일정 후보도 {len(reschedule_candidates)}개 찾아봤어요.")
+
+    return " ".join(p for p in parts if p)
+
+
+# --------------------------------------------------------------------------- #
+# 1. reservation_recommendation — place/store discovery (NOT schedule_create)
+# --------------------------------------------------------------------------- #
+def _handle_reservation_recommendation(req: VoiceRouteRequest) -> VoiceRouteData:
+    naver_ready = settings.naver_configured
+    _logger.info(
+        "[VOICE ROUTE] reservation_recommendation start text=%r naver_configured=%s",
+        req.text, naver_ready,
+    )
+    try:
+        data = place_recommendation_service.recommend_places({
+            "user_id": req.user_id,
+            "input": req.text,
+            "current_datetime": req.current_datetime,
+            "timezone": req.timezone,
+            "location": req.location,
+        })
+    except (NaverConfigError, NaverApiError) as exc:
+        _logger.warning(
+            "[VOICE ROUTE] reservation_recommendation degraded (naver_configured=%s): %s",
+            naver_ready, exc,
+        )
+        return VoiceRouteData(
+            intent="reservation_recommendation",
+            tts_text="지금은 추천 서비스에 연결할 수 없어요. 잠시 후 다시 시도해주세요.",
+            screen_action=ScreenAction(
+                type="navigate", target="reservation_recommendation", payload={}
+            ),
+            data={"recommended_places": [], "error": str(exc)},
+        )
+
+    places = data.recommended_places
+    if places:
+        tts_text = f"추천 후보를 찾아봤어요. {places[0].name} 등 {len(places)}곳을 화면에서 확인해보세요."
+        _logger.info(
+            "[VOICE ROUTE] reservation_recommendation success query=%r results=%d top=%r",
+            data.query, len(places), places[0].name,
+        )
+    else:
+        tts_text = "조건에 맞는 추천 장소를 찾지 못했어요. 다른 지역이나 종류로 다시 말씀해주세요."
+        _logger.info(
+            "[VOICE ROUTE] reservation_recommendation success query=%r results=0", data.query,
+        )
+    return VoiceRouteData(
+        intent="reservation_recommendation",
+        tts_text=tts_text,
+        screen_action=ScreenAction(
+            type="navigate", target="reservation_recommendation", payload={"query": data.query}
+        ),
+        data=data.model_dump(),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 2. emotion_schedule_coaching — empathy + today's schedule + solutions
+# --------------------------------------------------------------------------- #
+def _handle_emotion_schedule_coaching(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
+    user_id, _ = repo.ensure_default_owner(db)
+    date_str = _today(req)
+    todays = _todays_schedules(db, user_id, date_str)
+    now_iso = _naive_now_iso(req)
+
+    schedule_context = ScheduleContext(
+        current_time=now_iso,
+        today_schedule=[
+            ScheduleEvent(
+                id=s.id, title=s.title, category=s.category, priority=s.priority,
+                start_time=f"{s.date}T{s.start_time}:00",
+                end_time=f"{s.date}T{s.end_time or s.start_time}:00",
+                is_fixed=False,
+            )
+            for s in todays if s.start_time
+        ],
+    )
+    chat_data = chat_orchestrator.respond(
+        ChatRespondRequest(message=req.text, schedule_context=schedule_context)
+    )
+
+    solutions_raw = [s.model_dump() for s in chat_data.solutions]
+    reschedule_raw = [c.model_dump() for c in chat_data.reschedule_candidates]
+    # 공감(chat_orchestrator) + 오늘 일정 요약 + 휴식/일정 조정 제안을 항상
+    # 함께 담는다 — chat_data.tts_text 단독으로는 공감 문장만 짧게 나온다.
+    tts_text = _build_coaching_message(chat_data.answer, todays, solutions_raw, reschedule_raw)
+    action_buttons = sorted({b for s in chat_data.solutions for b in s.action_buttons}) or [
+        "오늘 일정 보기", "휴식 추가", "일정 미루기", "알림 설정",
+    ]
+    return VoiceRouteData(
+        intent="emotion_schedule_coaching",
+        tts_text=tts_text,
+        screen_action=ScreenAction(
+            type="show_card", target="emotion_schedule_coaching",
+            payload={"action_buttons": action_buttons},
+        ),
+        data={
+            "answer": chat_data.answer,
+            "today_schedule": [s.model_dump() for s in todays],
+            "solutions": solutions_raw,
+            "reschedule_candidates": reschedule_raw,
+            "selected_solution_category": chat_data.selected_solution_category,
+        },
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 3. daily_briefing
+# --------------------------------------------------------------------------- #
+def _handle_daily_briefing(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
+    user_id, _ = repo.ensure_default_owner(db)
+    date_str = _today(req)
+    todays = _todays_schedules(db, user_id, date_str)
+    todos = [t for t in todo_service.list_todos(db, user_id=user_id) if not t.completed]
+
+    briefing_req = DailyBriefingRequest(
+        date=date_str,
+        schedules=[
+            BriefingSchedule(
+                title=s.title, category=s.category or "etc",
+                start_time=s.start_time, end_time=s.end_time, priority=s.priority,
+            )
+            for s in todays
+        ],
+        todos=[BriefingTodo(title=t.title, priority=t.priority, is_done=t.completed) for t in todos],
+    )
+    data = briefing_generator.generate_briefing(briefing_req)
+
+    # 날씨 연동 지점(TODO): 실제 날씨 API 키가 연결되면 이 fallback 문구 대신
+    # briefing_generator 쪽에서 날씨 문장을 만들어 tts_text에 포함시킨다.
+    weather_note = "날씨 연동은 아직 준비 중이라 오늘 일정 중심으로 안내해드릴게요."
+    tts_text = f"{data.tts_text} {weather_note}" if data.tts_text else weather_note
+    return VoiceRouteData(
+        intent="daily_briefing",
+        tts_text=tts_text,
+        screen_action=ScreenAction(type="show_card", target="daily_briefing", payload={}),
+        data=data.model_dump(),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 4. schedule_query
+# --------------------------------------------------------------------------- #
+def _handle_schedule_query(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
+    user_id, _ = repo.ensure_default_owner(db)
+    date_str = _today(req)
+    todays = _todays_schedules(db, user_id, date_str)
+    if todays:
+        listing = ", ".join(f"{(s.start_time + ' ') if s.start_time else ''}{s.title}".strip() for s in todays)
+        tts_text = f"오늘은 {listing} 일정이 있어요."
+    else:
+        tts_text = "오늘 등록된 일정이 없어요."
+    return VoiceRouteData(
+        intent="schedule_query",
+        tts_text=tts_text,
+        screen_action=ScreenAction(type="navigate", target="calendar", payload={"date": date_str}),
+        data={"today_schedule": [s.model_dump() for s in todays]},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 5. reminder_setting — only meaningful with a pending schedule_created context
+# --------------------------------------------------------------------------- #
+def _handle_reminder_setting(db: Session, req: VoiceRouteRequest, classified: dict) -> VoiceRouteData:
+    ctx = req.context or {}
+    schedule_id = ctx.get("schedule_id")
+    item_type = ctx.get("item_type", "EVENT")
+
+    if classified.get("reminder_decline"):
+        return VoiceRouteData(
+            intent="reminder_setting",
+            tts_text="네, 알림 없이 진행할게요.",
+            screen_action=ScreenAction(type="none", payload={}),
+            data={"reminder_enabled": False},
+        )
+
+    minutes = classified.get("reminder_minutes")
+    minutes_before = minutes if minutes is not None else _DEFAULT_REMINDER_MINUTES
+
+    if not schedule_id or item_type != "EVENT":
+        # TODO 항목이거나 대상 일정이 없으면(=이번 MVP 범위 밖) 안내만 하고 계획은 만들지 않는다.
+        return VoiceRouteData(
+            intent="reminder_setting",
+            tts_text=f"알림을 {minutes_before}분 전으로 설정할게요.",
+            screen_action=ScreenAction(type="none", payload={}),
+            data={"reminder_enabled": True, "reminder_minutes_before": minutes_before},
+        )
+
+    sched = local_schedule_service.get_schedule(db, schedule_id)
+    if sched is None:
+        return VoiceRouteData(
+            intent="reminder_setting",
+            tts_text="방금 등록한 일정을 찾지 못해 알림을 설정하지 못했어요.",
+            screen_action=ScreenAction(type="none", payload={}),
+            data={"reminder_enabled": False},
+        )
+
+    user_id, _ = repo.ensure_default_owner(db)
+    plan = notification_plan_builder.build_event_plan(
+        db, sched, user_id=user_id, persist=True, custom_reminder_minutes=minutes_before,
+    )
+    return VoiceRouteData(
+        intent="reminder_setting",
+        tts_text=f"좋아요. 일정 {minutes_before}분 전에 알려드릴게요.",
+        screen_action=ScreenAction(type="show_card", target="reminder_plan", payload={}),
+        data={
+            "reminder_enabled": True,
+            "reminder_minutes_before": minutes_before,
+            "reminder_plan": plan.model_dump(),
+        },
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 6. schedule_create — same parser + persistence path as the existing voice
+#    schedule screen, but registers immediately and offers a reminder confirm.
+# --------------------------------------------------------------------------- #
+def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
+    parsed = parse_schedule(ScheduleParseRequest(
+        input=req.text, input_type="voice", current_datetime=req.current_datetime,
+        timezone=req.timezone, assistant_tone=req.assistant_tone,
+        response_length=req.response_length, reminder_strength=req.reminder_strength,
+    ))
+    draft = parsed.schedule_draft
+    registerable = (
+        parsed.intent in ("create_schedule", "create_todo")
+        and "date" not in parsed.missing_fields
+        and "time" not in parsed.missing_fields
+        and bool(draft.title)
+    )
+    if not registerable:
+        return VoiceRouteData(
+            intent="schedule_create",
+            tts_text=parsed.tts_text or "날짜와 시간을 포함해서 다시 말씀해주세요.",
+            screen_action=ScreenAction(type="show_card", target="schedule_draft", payload={}),
+            data={"schedule_draft": draft.model_dump(), "missing_fields": parsed.missing_fields},
+        )
+
+    user_id, calendar_id = repo.ensure_default_owner(db)
+    draft_input = ScheduleDraftInput(**draft.model_dump())
+    try:
+        if parsed.intent == "create_todo":
+            created_todo = todo_service.create_todo_from_draft(db, draft_input, user_id=user_id)
+            item_id, title, item_type = created_todo.id, created_todo.title, "TODO"
+            created_payload = created_todo.model_dump()
+        else:
+            created_sched = local_schedule_service.create_schedule_from_draft(
+                db, draft_input, user_id=user_id, calendar_id=calendar_id
+            )
+            item_id, title, item_type = created_sched.id, created_sched.title, "EVENT"
+            created_payload = created_sched.model_dump()
+    except ValueError as exc:
+        return VoiceRouteData(
+            intent="schedule_create",
+            tts_text="일정을 저장하지 못했어요. 다시 말씀해주세요.",
+            screen_action=ScreenAction(type="show_card", target="schedule_draft", payload={}),
+            data={"error": str(exc)},
+        )
+
+    tts_text = f"{title} 일정을 추가했어요. 이 일정 전에 알림을 받을까요?"
+    return VoiceRouteData(
+        intent="schedule_create",
+        tts_text=tts_text,
+        screen_action=ScreenAction(
+            type="show_card", target="schedule_created", payload={"item_id": item_id}
+        ),
+        data={"item_type": item_type, "item": created_payload},
+        context={"type": "schedule_created", "schedule_id": item_id, "title": title, "item_type": item_type},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 7. fallback_chat
+# --------------------------------------------------------------------------- #
+def _handle_fallback_chat(req: VoiceRouteRequest) -> VoiceRouteData:
+    chat_data = chat_orchestrator.respond(ChatRespondRequest(message=req.text))
+    tts_text = chat_data.tts_text or chat_data.answer
+    return VoiceRouteData(
+        intent="fallback_chat",
+        tts_text=tts_text,
+        screen_action=ScreenAction(type="none", payload={}),
+        data={"answer": chat_data.answer},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# public entry point
+# --------------------------------------------------------------------------- #
+def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
+    text = (req.text or "").strip()
+    if not text:
+        return VoiceRouteData(
+            intent="fallback_chat",
+            tts_text="음성을 인식하지 못했어요. 다시 말씀해주세요.",
+            screen_action=ScreenAction(type="none", payload={}),
+            data={},
+        )
+
+    classified = voice_intent_router.select_voice_intent(text, context=req.context)
+    intent = classified["intent"]
+    _logger.info(
+        "[VOICE ROUTE] text=%r intent=%s matched=%s",
+        text, intent, classified.get("matched_keywords"),
+    )
+
+    try:
+        if intent == "reservation_recommendation":
+            result = _handle_reservation_recommendation(req)
+        elif intent == "emotion_schedule_coaching":
+            result = _handle_emotion_schedule_coaching(db, req)
+        elif intent == "daily_briefing":
+            result = _handle_daily_briefing(db, req)
+        elif intent == "schedule_query":
+            result = _handle_schedule_query(db, req)
+        elif intent == "reminder_setting":
+            result = _handle_reminder_setting(db, req, classified)
+        elif intent == "schedule_create":
+            result = _handle_schedule_create(db, req)
+        else:
+            result = _handle_fallback_chat(req)
+    except Exception:
+        _logger.exception("[VOICE ROUTE] handler failed for intent=%s text=%r", intent, text)
+        result = VoiceRouteData(
+            intent="fallback_chat",
+            tts_text="죄송해요, 지금은 처리하지 못했어요. 다시 말씀해주시겠어요?",
+            screen_action=ScreenAction(type="none", payload={}),
+            data={},
+        )
+
+    result.debug = {"matched_keywords": classified.get("matched_keywords", {})}
+    return result

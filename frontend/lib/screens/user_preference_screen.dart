@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
+import '../services/briefing_scheduler_service.dart';
+import '../services/schedule_api.dart';
 import '../services/user_preferences_api.dart';
 import '../services/preference_store.dart';
 import '../services/voice_tts_service.dart';
@@ -45,6 +47,22 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
     'nudge_strength': 'medium',
   };
 
+  /// 'HH:mm' 자동 브리핑 시각. 빈 문자열이면 비활성화(additive).
+  String _briefingTime = '';
+
+  /// 일정 사전 알림 리드타임(분). 0이면 끔. 클라이언트 로컬 설정.
+  int _leadMinutes = 30;
+
+  /// 선택 가능한 리드타임 옵션(분 → 표시 라벨).
+  static const List<(int, String)> _leadOptions = [
+    (0, '끔'),
+    (5, '5분 전'),
+    (10, '10분 전'),
+    (30, '30분 전'),
+    (60, '1시간 전'),
+    (120, '2시간 전'),
+  ];
+
   static const _sectionTitles = {
     'assistant_tone': 'AI 비서 말투',
     'response_length': '응답 길이',
@@ -54,6 +72,7 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
   @override
   void initState() {
     super.initState();
+    _leadMinutes = preferenceStore.alertLeadMinutes;
     _load();
   }
 
@@ -71,6 +90,7 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         for (final key in _selected.keys) {
           if (prefs[key] is String) _selected[key] = prefs[key] as String;
         }
+        _briefingTime = (prefs['briefing_time'] as String?) ?? '';
         _options = options.map(
           (key, value) => MapEntry(
             key,
@@ -85,6 +105,7 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         assistantTone: _selected['assistant_tone'],
         responseLength: _selected['response_length'],
         nudgeStrength: _selected['nudge_strength'],
+        briefingTime: _briefingTime,
       );
     } on ApiException catch (e) {
       debugPrint('[UserPreferenceScreen] load failed: ${_describeApiError(e)}');
@@ -110,13 +131,32 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         assistantTone: _selected['assistant_tone'],
         responseLength: _selected['response_length'],
         nudgeStrength: _selected['nudge_strength'],
+        briefingTime: _briefingTime,
       );
       // 저장 즉시 전역 캐시 갱신 → 이후 채팅/음성 요청이 새 말투를 사용.
       preferenceStore.updateLocal(
         assistantTone: _selected['assistant_tone'],
         responseLength: _selected['response_length'],
         nudgeStrength: _selected['nudge_strength'],
+        briefingTime: _briefingTime,
       );
+      // 자동 브리핑 알림도 즉시 재예약(빈 문자열이면 취소)한다.
+      if (_briefingTime.isEmpty) {
+        await briefingSchedulerService.cancel();
+      } else {
+        await briefingSchedulerService.scheduleDailyBriefing(_briefingTime);
+      }
+      // 일정 사전 알림 리드타임 저장 + 앞으로의 일정에 재예약(오프라인이면 스킵).
+      preferenceStore.updateLocal(alertLeadMinutes: _leadMinutes);
+      try {
+        final schedules = await scheduleApi.list();
+        await briefingSchedulerService.syncScheduleAlerts(
+          schedules,
+          leadMinutes: _leadMinutes,
+        );
+      } catch (e) {
+        debugPrint('[UserPreferenceScreen] schedule alert re-sync failed: $e');
+      }
       if (!mounted) return;
       final ttsText = (result['tts_text'] as String?) ?? '설정을 저장했습니다.';
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,6 +228,168 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// 자동 브리핑 시각 설정 — 저장 시 [briefingSchedulerService] 가 로컬 알림을
+  /// 재예약(빈 문자열이면 취소)한다.
+  Widget _buildBriefingTimeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 10),
+          child: Text(
+            '자동 브리핑',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: _saving ? null : _pickBriefingTime,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.65),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.separator),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time_outlined,
+                          size: 18, color: AppTheme.textSecondary),
+                      const SizedBox(width: 8),
+                      Text(
+                        _briefingTime.isEmpty ? '설정 안 함' : _briefingTime,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_briefingTime.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _saving ? null : () => setState(() => _briefingTime = ''),
+                icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                tooltip: '끄기',
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickBriefingTime() async {
+    final initial = _parseHhmm(_briefingTime) ?? const TimeOfDay(hour: 8, minute: 0);
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked == null) return;
+    setState(() {
+      _briefingTime =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    });
+  }
+
+  TimeOfDay? _parseHhmm(String value) {
+    final m = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(value.trim());
+    if (m == null) return null;
+    return TimeOfDay(hour: int.parse(m.group(1)!), minute: int.parse(m.group(2)!));
+  }
+
+  /// 일정 사전 알림(리드타임) 설정 — 몇 분/시간 전에 전화형 알림을 울릴지 선택.
+  Widget _buildAlertLeadSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 4),
+          child: Text(
+            '일정 사전 알림',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 10),
+          child: Text(
+            '일정 시작 전에 전화형 알림으로 미리 알려드려요.',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _leadOptions.map((opt) {
+            final (minutes, label) = opt;
+            final isSelected = _leadMinutes == minutes;
+            return GestureDetector(
+              onTap: _saving
+                  ? null
+                  : () => setState(() => _leadMinutes = minutes),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                decoration: BoxDecoration(
+                  color:
+                      isSelected ? AppTheme.blue : Colors.white.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? AppTheme.blue : AppTheme.separator,
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _saving ? null : _runTestAlert,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.purple,
+            side: const BorderSide(color: AppTheme.purple),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          icon: const Icon(Icons.notifications_active_outlined, size: 18),
+          label: const Text('테스트 알림 (10초 후)'),
+        ),
+      ],
+    );
+  }
+
+  /// 데모용: 10초 뒤 전화형 사전 알림을 한 번 띄운다.
+  Future<void> _runTestAlert() async {
+    await briefingSchedulerService.scheduleTestAlert(seconds: 10);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('10초 뒤 테스트 알림이 울려요. (알림 권한 필요)'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Widget _buildOptionSection(String category) {
@@ -309,6 +511,10 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
                               _buildOptionSection('response_length'),
                               const SizedBox(height: 20),
                               _buildOptionSection('nudge_strength'),
+                              const SizedBox(height: 20),
+                              _buildBriefingTimeSection(),
+                              const SizedBox(height: 20),
+                              _buildAlertLeadSection(),
                             ],
                           ),
                         ),

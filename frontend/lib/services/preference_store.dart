@@ -28,6 +28,7 @@ class PreferenceStore extends ChangeNotifier {
   static const _kNudge = 'pref_nudge_strength';
   static const _kTtsSpeed = 'pref_tts_speed';
   static const _kVoiceStyle = 'pref_voice_style';
+  static const _kAlertLead = 'pref_alert_lead_minutes';
 
   String userId = 'local-user';
 
@@ -39,6 +40,13 @@ class PreferenceStore extends ChangeNotifier {
   // 클라이언트 로컬 전용 설정.
   String ttsSpeed = 'normal'; // slow | normal | fast
   String voiceStyle = 'friendly'; // friendly | calm | clear | energetic
+
+  /// 'HH:mm' 자동 브리핑 시각. 빈 문자열이면 비활성화(additive).
+  String briefingTime = '';
+
+  /// 일정 시작 몇 분 전에 전화형 알림을 울릴지(리드타임, 분). 0 이하면 비활성.
+  /// 클라이언트 로컬 전용(백엔드 미저장).
+  int alertLeadMinutes = 30;
 
   bool _loaded = false;
   bool get isLoaded => _loaded;
@@ -97,11 +105,12 @@ class PreferenceStore extends ChangeNotifier {
       assistantTone = (prefs['assistant_tone'] as String?) ?? assistantTone;
       responseLength = (prefs['response_length'] as String?) ?? responseLength;
       nudgeStrength = (prefs['nudge_strength'] as String?) ?? nudgeStrength;
+      briefingTime = (prefs['briefing_time'] as String?) ?? briefingTime;
       _loaded = true;
       await _saveCache();
       debugPrint('[STYLE] PreferenceStore synced: '
           'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
-          'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle');
+          'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle briefingTime=$briefingTime');
       notifyListeners();
     } catch (e) {
       debugPrint('[STYLE] PreferenceStore server sync failed (using cache/defaults): $e');
@@ -115,17 +124,21 @@ class PreferenceStore extends ChangeNotifier {
     String? nudgeStrength,
     String? ttsSpeed,
     String? voiceStyle,
+    String? briefingTime,
+    int? alertLeadMinutes,
   }) {
     if (assistantTone != null) this.assistantTone = assistantTone;
     if (responseLength != null) this.responseLength = responseLength;
     if (nudgeStrength != null) this.nudgeStrength = nudgeStrength;
     if (ttsSpeed != null) this.ttsSpeed = ttsSpeed;
     if (voiceStyle != null) this.voiceStyle = voiceStyle;
+    if (briefingTime != null) this.briefingTime = briefingTime;
+    if (alertLeadMinutes != null) this.alertLeadMinutes = alertLeadMinutes;
     _loaded = true;
     debugPrint('[STYLE] PreferenceStore updated: '
         'tone=${this.assistantTone} length=${this.responseLength} '
         'nudge=${this.nudgeStrength} ttsSpeed=${this.ttsSpeed} '
-        'voiceStyle=${this.voiceStyle}');
+        'voiceStyle=${this.voiceStyle} briefingTime=${this.briefingTime}');
     // 캐시는 비동기로 저장(실패해도 앱 흐름 방해 없음).
     _saveCache();
     notifyListeners();
@@ -174,6 +187,7 @@ class PreferenceStore extends ChangeNotifier {
       nudgeStrength = sp.getString(_kNudge) ?? nudgeStrength;
       ttsSpeed = sp.getString(_kTtsSpeed) ?? ttsSpeed;
       voiceStyle = sp.getString(_kVoiceStyle) ?? voiceStyle;
+      alertLeadMinutes = sp.getInt(_kAlertLead) ?? alertLeadMinutes;
       debugPrint('[STYLE] PreferenceStore cache restored: '
           'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
           'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle');
@@ -190,6 +204,7 @@ class PreferenceStore extends ChangeNotifier {
       await sp.setString(_kNudge, nudgeStrength);
       await sp.setString(_kTtsSpeed, ttsSpeed);
       await sp.setString(_kVoiceStyle, voiceStyle);
+      await sp.setInt(_kAlertLead, alertLeadMinutes);
     } catch (e) {
       debugPrint('[STYLE] PreferenceStore cache save failed: $e');
     }

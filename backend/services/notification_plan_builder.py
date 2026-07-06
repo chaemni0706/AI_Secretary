@@ -141,11 +141,16 @@ def _checklist(category: Optional[str], location: Optional[str], *, reservation:
 def build_event_plan(
     db: Session, sched: ScheduleRead, *, user_id: str, is_all_day: bool = False,
     persist: bool = True, reminder_strength: Optional[str] = None,
+    custom_reminder_minutes: Optional[int] = None,
 ) -> ReminderPlan:
+    """`custom_reminder_minutes` (additive, default None) overrides the default
+    reminder's minutes-before exactly — no late-prone padding — so a voice
+    request like "1시간 전에 알려줘" is honored literally. Omitted, behavior is
+    byte-identical to before (uses the stored `default_reminder_minutes`)."""
     eff = preference_service.get_effective_user_preference(db, user_id)
     pref, meta = eff["preference"], eff["meta"]
     warnings: List[str] = []
-    used: List[str] = ["default_reminder_minutes"]
+    used: List[str] = []
 
     category = (sched.category or "").lower()
     title = sched.title or "일정"
@@ -162,13 +167,19 @@ def build_event_plan(
     reminders: List[ReminderEntry] = []
 
     # 1) default reminder
-    default_mb = max(0, pref.default_reminder_minutes) + (_LATE_PRONE_EXTRA if pref.late_prone else 0)
-    reason = "사용자 기본 알림 시간"
-    if _soft(pref):
-        reason += "과 부드러운 알림 톤"
-    if pref.late_prone:
-        reason += ", 지각 경향 보정"
-        used.append("late_prone")
+    if custom_reminder_minutes is not None:
+        default_mb = max(0, custom_reminder_minutes)
+        reason = "사용자가 음성으로 요청한 알림 시간"
+        used.append("custom_reminder_minutes")
+    else:
+        default_mb = max(0, pref.default_reminder_minutes) + (_LATE_PRONE_EXTRA if pref.late_prone else 0)
+        reason = "사용자 기본 알림 시간"
+        used.append("default_reminder_minutes")
+        if _soft(pref):
+            reason += "과 부드러운 알림 톤"
+        if pref.late_prone:
+            reason += ", 지각 경향 보정"
+            used.append("late_prone")
     reminders.append(ReminderEntry(
         type="default", minutes_before=default_mb,
         trigger_time=_trigger(sched.date, sched.start_time, default_mb) if has_time else None,

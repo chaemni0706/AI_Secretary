@@ -154,6 +154,11 @@ class ScheduleApi {
     return ScheduleModel.fromJson(data as Map<String, dynamic>);
   }
 
+  /// 삭제: `DELETE /api/v1/local/schedules/{id}`
+  Future<void> delete(String id) async {
+    await apiClient.deleteData('$apiPrefix/local/schedules/$id');
+  }
+
   /// 목록: `GET /api/v1/local/schedules`
   Future<List<ScheduleModel>> list({String? date}) async {
     final data = await apiClient.getData(

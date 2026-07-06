@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
-import '../services/schedule_api.dart';
 import '../services/preference_store.dart';
-import '../services/todo_api.dart';
-import '../services/dashboard_api.dart';
+import '../services/voice_router_api.dart';
 import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
+import '../widgets/voice_intent_card.dart';
 
+/// 메인 화면 우측 하단 "AI" 버튼으로 열리는 텍스트/음성 겸용 챗봇 화면.
+///
+/// `voice_chat_screen.dart` 와 마찬가지로 `POST /api/v1/voice/route` 하나로
+/// 발화를 보낸다 — 텍스트로 치든 마이크로 말하든 같은 intent 분류기를 타므로
+/// 같은 문장이 화면마다 다르게 처리되는 일이 없다(이전에는 이 화면만
+/// `/ai/schedule/parse` 로 직행해 모든 입력이 일정으로 해석됐었음).
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
 
@@ -20,7 +24,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // 음성 입출력 서비스 (기존 서비스 재사용).
   final VoiceSttService _stt = VoiceSttService();
   final VoiceTtsService _tts = VoiceTtsService();
 
@@ -28,33 +31,30 @@ class _AiChatScreenState extends State<AiChatScreen> {
   static const bool autoSendAfterVoiceInput = true;
 
   bool _isListening = false;
-  bool _parsing = false;
-  bool _saving = false;
+  bool _sending = false;
 
   /// 마이크 상태 안내 문구 (null 이면 표시 안 함).
   String? _voiceStatus;
 
-  /// 이번 전송이 음성 입력에서 시작됐는지(응답 TTS 재생 여부 판단).
-  bool _fromVoice = false;
-
   /// 음성 인식 누적 텍스트.
   String _recognized = '';
 
-  /// 마지막 parse 결과 (저장 대상).
-  ParseResult? _lastParse;
+  /// 직전 turn 에서 서버가 돌려준 pending context(예: 방금 등록한 일정).
+  /// 다음 발화 한 번에만 유효하며, 사용 여부와 무관하게 매 턴 종료 시 비운다.
+  Map<String, dynamic>? _pendingContext;
+
+  final List<_ChatMessage> _messages = [
+    const _ChatMessage(
+      text: '무엇을 도와드릴까요? 일정 등록/조회, 가게 추천, 오늘 브리핑, 감정 코칭까지 뭐든 말씀해보세요.',
+      isUser: false,
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
     _tts.init();
   }
-
-  final List<_ChatMessage> _messages = [
-    const _ChatMessage(
-      text: '무엇을 도와드릴까요? 예: "내일 오후 2시에 치과 예약 잡아줘"',
-      isUser: false,
-    ),
-  ];
 
   @override
   void dispose() {
@@ -75,7 +75,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       await _finishListening();
       return;
     }
-    if (_parsing || _saving) return;
+    if (_sending) return;
 
     final granted = await _stt.ensureMicPermission();
     if (!mounted) return;
@@ -145,8 +145,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  void _addMessage(String text, {required bool isUser}) {
-    setState(() => _messages.add(_ChatMessage(text: text, isUser: isUser)));
+  void _addMessage(String text, {required bool isUser, VoiceRouteResult? route}) {
+    setState(() => _messages.add(_ChatMessage(text: text, isUser: isUser, route: route)));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -158,69 +158,65 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
   }
 
-  /// 1) 자연어 → parse
+  /// 발화 전송 → 통합 라우팅(`/voice/route`) → 응답 표시 (+음성 입력이면 TTS)
   ///
-  /// TTS 정책(의도된 동작):
-  /// - 마이크로 말한 경우([fromVoice]==true): input_type="voice" 로 보내고
-  ///   AI 응답을 TTS 로 자동 재생한다.
-  /// - 키보드로 입력한 경우([fromVoice]==false): 화면에만 표시하고 소리는 내지 않는다.
-  ///   (조용한 상황에서 타이핑했는데 갑자기 말이 나오는 것을 막기 위함)
+  /// TTS 정책(기존 그대로 유지): 마이크로 말한 경우만 자동 재생하고, 키보드
+  /// 입력은 화면에만 표시한다(조용한 상황에서 타이핑했는데 갑자기 말이 나오는
+  /// 것을 막기 위함).
   Future<void> _send({bool fromVoice = false}) async {
     final text = _inputController.text.trim();
-    if (text.isEmpty || _parsing) return;
-    _fromVoice = fromVoice;
+    if (text.isEmpty || _sending) return;
+
+    final contextToSend = _pendingContext;
+    _pendingContext = null;
+
     _inputController.clear();
     _addMessage(text, isUser: true);
     setState(() {
-      _parsing = true;
+      _sending = true;
       _voiceStatus = fromVoice ? '답변 생성 중...' : null;
     });
 
     try {
       await preferenceStore.ensureLoaded();
-      final result = await scheduleApi.parse(
+      final result = await voiceRouterApi.route(
         text,
         currentDatetime: DateTime.now().toIso8601String(),
-        inputType: fromVoice ? 'voice' : 'text',
+        context: contextToSend,
         assistantTone: preferenceStore.assistantTone,
         responseLength: preferenceStore.responseLength,
         reminderStrength: preferenceStore.reminderStrength,
       );
       if (!mounted) return;
       setState(() {
-        _lastParse = result;
-        _parsing = false;
+        _pendingContext = result.context;
+        _sending = false;
         _voiceStatus = null;
       });
-      final draft = result.scheduleDraft;
-      final kind = result.isTodo ? '할 일' : '일정';
-      final reply =
-          '"${draft['title'] ?? text}"($kind)로 인식했어요. 아래에서 확인 후 저장하세요.';
-      _addMessage(reply, isUser: false);
+      _addMessage(
+        result.ttsText.isNotEmpty ? result.ttsText : '확인했어요.',
+        isUser: false,
+        route: result,
+      );
+      handleVoiceSideEffects(result);
+      if (mounted) handleVoiceScreenAction(context, result);
 
-      // 음성 입력이었으면 AI 응답을 읽어준다. tts_text 우선, 없으면 화면 문구.
-      if (_fromVoice) {
-        final speakText =
-            (result.ttsText != null && result.ttsText!.trim().isNotEmpty)
-            ? result.ttsText!
-            : reply;
-        await _speak(speakText);
-      }
+      if (fromVoice) await _speak(result.ttsText);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _parsing = false;
+        _sending = false;
         _voiceStatus = null;
       });
       final msg = (e.statusCode == null)
           ? '서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해주세요.'
-          : '인식에 실패했어요: ${e.message}';
+          : '요청을 처리하지 못했어요: ${e.message}';
       _addMessage(msg, isUser: false);
-      if (_fromVoice) await _speak('요청을 처리하지 못했어요. 다시 시도해주세요.');
+      if (fromVoice) await _speak('요청을 처리하지 못했어요. 다시 시도해주세요.');
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _parsing = false;
+        _sending = false;
         _voiceStatus = null;
       });
       _addMessage('오류가 발생했어요: $e', isUser: false);
@@ -236,65 +232,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  /// 2) parse 결과 저장 → 3) 대시보드 새로고침 트리거
-  Future<void> _save() async {
-    final parse = _lastParse;
-    if (parse == null || _saving) return;
-
-    final draft = Map<String, dynamic>.from(parse.scheduleDraft);
-
-    // 일정 저장은 date 가 필수다. 파서가 날짜를 인식하지 못했으면(예: 날짜 표현이
-    // 없는 문장) 임의로 오늘로 저장하지 않고, 사용자에게 날짜를 알려달라고 안내한다.
-    // (일정만 해당. To-do 는 마감일이 없어도 저장 가능.)
-    final rawDate = draft['date'];
-    final dateMissing = rawDate == null || rawDate.toString().trim().isEmpty;
-    if (!parse.isTodo && dateMissing) {
-      _addMessage(
-        '날짜를 인식하지 못했어요. "7월 3일", "7/3", "내일"처럼 날짜를 포함해 다시 말씀해 주세요.',
-        isUser: false,
-      );
-      return;
-    }
-
-    final rawTitle = draft['title'];
-    if (rawTitle == null || rawTitle.toString().trim().isEmpty) {
-      draft['title'] = '새 일정';
-    }
-
-    setState(() => _saving = true);
-    try {
-      final String savedTitle;
-      if (parse.isTodo) {
-        final todo = await todoApi.createFromDraft(draft);
-        savedTitle = todo.title;
-      } else {
-        final sch = await scheduleApi.createFromDraft(
-          draft,
-          intent: parse.intent,
-        );
-        savedTitle = sch.title;
-      }
-      // 홈 대시보드 새로고침 트리거.
-      triggerDashboardRefresh();
-      setState(() {
-        _saving = false;
-        _lastParse = null;
-      });
-      _addMessage('"$savedTitle" 저장 완료! 홈 화면에 반영됩니다.', isUser: false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('저장되었습니다.')));
-      }
-    } on ApiException catch (e) {
-      setState(() => _saving = false);
-      _addMessage('저장 실패: ${e.message}', isUser: false);
-    } catch (e) {
-      setState(() => _saving = false);
-      _addMessage('저장 중 오류: $e', isUser: false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -306,7 +243,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             children: [
               _buildHeader(),
               Expanded(child: _buildChatArea()),
-              if (_parsing)
+              if (_sending)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: SizedBox(
@@ -315,7 +252,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-              if (_lastParse != null) _buildResultCard(_lastParse!),
               if (_voiceStatus != null) _buildVoiceStatus(_voiceStatus!),
               _buildInputArea(),
             ],
@@ -392,164 +328,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
-  Widget _buildResultCard(ParseResult parse) {
-    final draft = parse.scheduleDraft;
-    final title = (draft['title'] ?? '(제목 없음)').toString();
-    final category = (draft['category'] ?? '기타').toString();
-    final date = (draft['date'] ?? '-').toString();
-    final start = (draft['start_time'] ?? '').toString();
-    final end = (draft['end_time'] ?? '').toString();
-    final timeText = start.isEmpty
-        ? '-'
-        : (end.isEmpty ? start : '$start – $end');
-    final isTodo = parse.isTodo;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppTheme.teal.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    isTodo ? Icons.check_circle_outline : Icons.event_outlined,
-                    color: AppTheme.teal,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        '${isTodo ? "할 일" : "일정"} · $category',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(color: AppTheme.separator, height: 1),
-            const SizedBox(height: 10),
-            _resultRow(isTodo ? '마감일' : '날짜', date),
-            if (!isTodo) ...[
-              const SizedBox(height: 6),
-              _resultRow('시간', timeText),
-            ],
-            if (parse.missingFields.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              _resultRow('누락', parse.missingFields.join(', ')),
-            ],
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            '저장하기',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _saving
-                        ? null
-                        : () => setState(() => _lastParse = null),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.textPrimary,
-                      side: const BorderSide(color: AppTheme.separator),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      '취소',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _resultRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 48,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildVoiceStatus(String status) {
     final listening = _isListening;
     return Padding(
@@ -620,7 +398,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: (_parsing || _saving) ? null : _handleMicPressed,
+                    onTap: _sending ? null : _handleMicPressed,
                     child: Container(
                       width: 34,
                       height: 34,
@@ -644,7 +422,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: _send,
+            onTap: _sending ? null : () => _send(),
             child: Container(
               width: 42,
               height: 42,
@@ -672,7 +450,10 @@ class _ChatMessage {
   final String text;
   final bool isUser;
 
-  const _ChatMessage({required this.text, required this.isUser});
+  /// AI 메시지에 한해 `/voice/route` 결과 전체를 담는다(사용자 메시지는 null).
+  final VoiceRouteResult? route;
+
+  const _ChatMessage({required this.text, required this.isUser, this.route});
 }
 
 class _ChatBubble extends StatelessWidget {
@@ -684,65 +465,79 @@ class _ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: message.isUser
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment:
+            message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          if (!message.isUser) ...[
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.purple, AppTheme.blue],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 14,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.7,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: message.isUser
-                    ? AppTheme.blue
-                    : Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(message.isUser ? 16 : 4),
-                  bottomRight: Radius.circular(message.isUser ? 4 : 16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+          Row(
+            mainAxisAlignment: message.isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!message.isUser) ...[
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.purple, AppTheme.blue],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-              ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: message.isUser ? Colors.white : AppTheme.textPrimary,
-                  height: 1.4,
+                  child: const Icon(
+                    Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.7,
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: message.isUser
+                        ? AppTheme.blue
+                        : Colors.white.withOpacity(0.85),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(message.isUser ? 16 : 4),
+                      bottomRight: Radius.circular(message.isUser ? 4 : 16),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    message.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: message.isUser ? Colors.white : AppTheme.textPrimary,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              if (message.isUser) const SizedBox(width: 4),
+            ],
           ),
-          if (message.isUser) const SizedBox(width: 4),
+          if (!message.isUser && message.route != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 36, right: 32),
+              child: buildVoiceIntentCard(context, message.route!),
+            ),
+          ],
         ],
       ),
     );

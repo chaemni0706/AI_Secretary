@@ -7,6 +7,7 @@ import 'screens/calendar_screen.dart';
 import 'screens/widget_dashboard_screen.dart';
 import 'screens/ledger_screen.dart';
 import 'screens/my_page_screen.dart';
+import 'screens/image_verification_screen.dart';
 import 'data/dashboard_navigation.dart';
 import 'services/preference_store.dart';
 import 'theme/app_theme.dart';
@@ -109,8 +110,10 @@ class _MainNavigatorState extends State<MainNavigator> {
                 tooltip: '카메라',
                 color: AppTheme.teal,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('이미지 인식 기능은 준비 중입니다.')),
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ImageVerificationScreen(),
+                    ),
                   );
                 },
               ),

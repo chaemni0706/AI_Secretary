@@ -31,6 +31,12 @@ class ApiException implements Exception {
 
   ApiException(this.message, {this.statusCode, this.requestUri, this.responseBody});
 
+  /// 서버에 도달하지 못한 오류(연결 거부/타임아웃/오프라인 등)인지 여부.
+  /// statusCode 가 없으면 요청이 기기를 벗어나지 못했거나 응답이 없는 경우로 본다.
+  /// 이 값이 true 일 때만 온디바이스 fallback(로컬 파서/브리핑/공감)으로 전환한다.
+  /// (4xx/5xx 는 서버가 응답한 것이므로 fallback 하지 않고 그대로 전달한다.)
+  bool get isNetworkError => statusCode == null;
+
   @override
   String toString() =>
       'ApiException($statusCode): $message @ $requestUri body=$responseBody';
@@ -48,7 +54,12 @@ class ApiClient {
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
-        headers: {'Content-Type': 'application/json'},
+        // 공통 헤더: JSON 요청/응답 + 클라이언트 타임존(서버가 상대날짜 해석에 참고 가능).
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Client-Timezone': 'Asia/Seoul',
+        },
         // 4xx/5xx 도 예외 없이 받아서 envelope 를 직접 해석한다.
         validateStatus: (_) => true,
       ),

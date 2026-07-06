@@ -1,5 +1,6 @@
 import '../models/schedule_model.dart';
 import 'api_client.dart';
+import 'local_schedule_parser.dart';
 import 'schedule_draft_mapper.dart';
 
 /// `POST /api/v1/ai/schedule/parse` 결과.
@@ -16,12 +17,17 @@ class ParseResult {
   /// 없을 수 있으므로(구버전 호환) 화면에서 fallback 을 마련한다.
   final String? ttsText;
 
+  /// 파싱 출처: "server"(기본) 또는 "on_device"(오프라인 로컬 파서 fallback).
+  /// 화면/로그에서 신뢰 수준을 구분하는 용도. 기존 코드는 몰라도 무방하다.
+  final String source;
+
   const ParseResult({
     required this.intent,
     required this.confidence,
     required this.scheduleDraft,
     this.missingFields = const [],
     this.ttsText,
+    this.source = 'server',
   });
 
   bool get isTodo => intent == 'create_todo';
@@ -77,11 +83,20 @@ class ScheduleApi {
     if (responseLength != null) body['response_length'] = responseLength;
     if (reminderStrength != null) body['reminder_strength'] = reminderStrength;
 
-    final data = await apiClient.postData(
-      '$apiPrefix/ai/schedule/parse',
-      body: body,
-    );
-    return ParseResult.fromJson(data as Map<String, dynamic>);
+    try {
+      final data = await apiClient.postData(
+        '$apiPrefix/ai/schedule/parse',
+        body: body,
+      );
+      return ParseResult.fromJson(data as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      // 서버 미도달(오프라인/타임아웃)일 때만 온디바이스 파서로 fallback 한다.
+      // 4xx/5xx(서버가 응답한 경우)는 그대로 전달(잘못된 요청 등 원인 노출).
+      if (e.isNetworkError) {
+        return LocalScheduleParser.parse(input, inputType: inputType);
+      }
+      rethrow;
+    }
   }
 
   /// 2) 일정 저장: `POST /api/v1/local/schedules/from-draft`

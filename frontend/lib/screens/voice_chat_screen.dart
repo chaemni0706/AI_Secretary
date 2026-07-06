@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/voice_chat_message.dart';
-import '../services/mock_voice_service.dart';
+import '../services/emotion_api.dart';
 import '../services/preference_store.dart';
 import '../services/voice_api.dart';
 import '../services/voice_stt_service.dart';
@@ -16,9 +16,10 @@ import '../services/voice_tts_service.dart';
 ///  - 전송 버튼: 입력창 문장을 사용자 메시지로 추가 → 동일 흐름.
 ///  - "음성으로 듣기": flutter_tts 로 실제 재생.
 ///
-/// NOTE(다음 단계): 감정 코칭 응답은 아직 [mockVoiceService] 를 통해 Mock 을
-/// 반환한다. STT/TTS 는 이미 온디바이스 실동작이며, /emotion/analyze 실연결 +
-/// 오프라인 fallback 은 후속 단계에서 [_sendMessage] 내부만 교체하면 된다.
+/// 감정 코칭은 실제 `/emotion/analyze`([emotionApi])를 호출하며, 서버 실패 시
+/// EmotionApi 내부에서 온디바이스 공감 fallback([LocalEmotion])으로 대체된다.
+/// STT/TTS 는 온디바이스 실동작. (실 응답 스키마상 schedule_suggestions 는
+/// 비어 있을 수 있어, 해당 카드는 값이 있을 때만 표시한다.)
 class VoiceChatScreen extends StatefulWidget {
   const VoiceChatScreen({super.key});
 
@@ -27,7 +28,6 @@ class VoiceChatScreen extends StatefulWidget {
 }
 
 class _VoiceChatScreenState extends State<VoiceChatScreen> {
-  final _service = mockVoiceService;
   // AI 일정 생성 화면과 동일한 STT 서비스를 재사용한다.
   final VoiceSttService _stt = VoiceSttService();
   final VoiceTtsService _ttsService = VoiceTtsService();
@@ -161,25 +161,34 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     _inputController.clear();
     _scrollToBottom();
 
-    // Mock: 감정 코칭 응답을 받아 envelope 중 data 만 파싱.
-    // 말투/음성 설정을 계약 필드로 함께 전달(실 /emotion/analyze 연결 시 그대로 사용).
+    // 실제 /emotion/analyze 호출. 말투/음성 설정을 계약 필드로 함께 전달한다.
+    // 서버 실패 시 EmotionApi 내부에서 온디바이스 공감 fallback 으로 대체된다
+    // (이 호출은 예외를 던지지 않는다 → 앱 크래시 없음).
     await preferenceStore.ensureLoaded();
-    final res = await _service.getEmotionCoaching(
+    final analysis = await emotionApi.analyze(
       trimmed,
+      inputType: 'text',
       userContext: preferenceStore.userContext,
       voice: preferenceStore.voice,
     );
     if (!mounted) return;
-    final analysis =
-        EmotionAnalysis.fromJson(res['data'] as Map<String, dynamic>);
 
     setState(() {
       _messages.add(VoiceChatMessage(
         role: ChatRole.assistant,
-        text: analysis.coachingReply,
+        text: analysis.coachingReply.isNotEmpty
+            ? analysis.coachingReply
+            : '이야기해 주셔서 고마워요.',
         analysis: analysis,
         ttsText: analysis.ttsText,
       ));
+      // 위기/주의 안전 안내가 있으면 별도 말풍선으로 표시한다.
+      if (analysis.safetyNote.trim().isNotEmpty) {
+        _messages.add(VoiceChatMessage(
+          role: ChatRole.assistant,
+          text: analysis.safetyNote,
+        ));
+      }
       _sending = false;
     });
     _scrollToBottom();
@@ -431,8 +440,11 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             if (m.analysis != null) ...[
               const SizedBox(height: 10),
               _buildEmotionCard(m.analysis!),
-              const SizedBox(height: 10),
-              _buildSuggestionsCard(m.analysis!),
+              // 일정 조정 추천은 값이 있을 때만 표시(실 서버 응답엔 없을 수 있음).
+              if (m.analysis!.scheduleSuggestions.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _buildSuggestionsCard(m.analysis!),
+              ],
             ],
           ],
         ),

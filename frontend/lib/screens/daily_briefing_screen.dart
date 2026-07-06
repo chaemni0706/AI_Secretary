@@ -5,6 +5,7 @@ import '../widgets/glass_card.dart';
 import '../models/daily_briefing_mock.dart';
 import '../data/mock_voice_data.dart';
 import '../services/mock_voice_service.dart';
+import '../services/voice_api.dart';
 import '../services/voice_tts_service.dart';
 
 /// 하루 브리핑 화면 (Mock).
@@ -69,7 +70,8 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
     ]);
 
     debugPrint('Daily briefing TTS text: "$ttsText"');
-    await _ttsService.speak(ttsText);
+    // /voice/tts 응답 규칙에 따라 재생(서버 오류 시 원문을 기기 TTS 로).
+    await voiceApi.speak(_ttsService, ttsText, source: 'briefing');
   }
 
   /// 후보들 중 비어 있지 않은 첫 문자열을 고른다. 없으면 안내 문구를 반환한다.

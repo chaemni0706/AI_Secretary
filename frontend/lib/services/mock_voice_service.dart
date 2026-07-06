@@ -26,9 +26,17 @@ class MockVoiceService {
 
   /// 감정 기반 코칭 Mock 응답 반환.
   /// [text] 는 사용자의 발화/입력이며, 이번 단계에서는 응답에 영향을 주지 않는다.
-  Future<Map<String, dynamic>> getEmotionCoaching(String text) async {
+  ///
+  /// [userContext]/[voice] 는 말투/음성 설정 계약 필드다. 현재 Mock 은 무시하지만,
+  /// 실제 `/emotion/analyze` 연결 시 아래 TODO 의 body 에 그대로 넣으면 된다.
+  Future<Map<String, dynamic>> getEmotionCoaching(
+    String text, {
+    Map<String, dynamic>? userContext,
+    Map<String, dynamic>? voice,
+  }) async {
     await Future.delayed(_fakeLatency);
-    // TODO(backend): apiClient.postData('$apiPrefix/emotion/analyze', body: {'text': text})
+    // TODO(backend): apiClient.postData('$apiPrefix/emotion/analyze', body: {
+    //   'input': text, 'user_context': userContext, 'voice': voice })
     return mockEmotionAnalyze;
   }
 

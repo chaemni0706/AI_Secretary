@@ -3,19 +3,22 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/voice_chat_message.dart';
-import '../data/mock_voice_data.dart';
 import '../services/mock_voice_service.dart';
+import '../services/preference_store.dart';
+import '../services/voice_api.dart';
+import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
 
-/// AI 음성 챗봇 화면 (Mock).
+/// AI 음성 챗봇 화면.
 ///
-/// 실제 STT/TTS 는 연결하지 않는다.
-///  - 마이크 버튼: 미리 정해둔 사용자 발화를 입력한 것처럼 처리 → AI Mock 응답.
-///  - 전송 버튼: 입력창 문장을 사용자 메시지로 추가 → 동일한 AI Mock 응답.
-///  - "음성으로 듣기": 실제 TTS 대신 SnackBar 안내.
+///  - 마이크 버튼: 온디바이스 STT(speech_to_text)로 음성을 텍스트로 변환한 뒤,
+///    그 텍스트를 [_sendMessage] 로 전달한다(= 서버에는 텍스트만 전달).
+///  - 전송 버튼: 입력창 문장을 사용자 메시지로 추가 → 동일 흐름.
+///  - "음성으로 듣기": flutter_tts 로 실제 재생.
 ///
-/// 추후 STT/TTS 연결을 위한 진입점:
-///   `_handleMockSpeechInput()`, `_sendMessage(text)`, `_playTts(text)`
+/// NOTE(다음 단계): 감정 코칭 응답은 아직 [mockVoiceService] 를 통해 Mock 을
+/// 반환한다. STT/TTS 는 이미 온디바이스 실동작이며, /emotion/analyze 실연결 +
+/// 오프라인 fallback 은 후속 단계에서 [_sendMessage] 내부만 교체하면 된다.
 class VoiceChatScreen extends StatefulWidget {
   const VoiceChatScreen({super.key});
 
@@ -25,12 +28,23 @@ class VoiceChatScreen extends StatefulWidget {
 
 class _VoiceChatScreenState extends State<VoiceChatScreen> {
   final _service = mockVoiceService;
+  // AI 일정 생성 화면과 동일한 STT 서비스를 재사용한다.
+  final VoiceSttService _stt = VoiceSttService();
   final VoiceTtsService _ttsService = VoiceTtsService();
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
 
   final List<VoiceChatMessage> _messages = [];
   bool _sending = false;
+
+  /// 음성 인식 진행 여부.
+  bool _isListening = false;
+
+  /// 마이크 상태/안내 문구(null 이면 표시 안 함).
+  String? _voiceStatus;
+
+  /// 음성 인식 누적 텍스트.
+  String _recognized = '';
 
   @override
   void initState() {
@@ -40,16 +54,98 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
 
   @override
   void dispose() {
+    _stt.cancelListening();
     _ttsService.stop();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  /// 마이크 버튼: 미리 정해둔 사용자 발화가 인식된 것처럼 처리.
-  /// (추후 speech_to_text 연동 시 인식 결과를 [_sendMessage] 로 전달)
-  void _handleMockSpeechInput() {
-    _sendMessage(mockUserSpeechText);
+  // ---------------------------------------------------------------------- //
+  // 음성 입력 (STT) — 마이크 → 인식 → 입력창 → 전송
+  // ---------------------------------------------------------------------- //
+
+  /// 마이크 버튼: 듣는 중이면 정지, 아니면 권한 확인 후 인식을 시작한다.
+  Future<void> _handleMicPressed() async {
+    if (_isListening) {
+      await _stt.stopListening();
+      await _finishListening();
+      return;
+    }
+    if (_sending) return;
+
+    final granted = await _stt.ensureMicPermission();
+    if (!mounted) return;
+    if (!granted) {
+      setState(() => _voiceStatus = SttMessages.micDenied);
+      return;
+    }
+
+    final ready = await _stt.initialize(
+      onStatus: (s) {
+        // 인식이 끝나면(done/notListening) 자동으로 마무리.
+        if ((s == 'done' || s == 'notListening') && _isListening) {
+          _finishListening();
+        }
+      },
+      onError: (_) {
+        if (mounted && _isListening) {
+          setState(() {
+            _isListening = false;
+            _voiceStatus = SttMessages.error;
+          });
+        }
+      },
+    );
+    if (!mounted) return;
+    if (!ready) {
+      setState(() => _voiceStatus = SttMessages.unavailable);
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+      _recognized = '';
+      _voiceStatus = '듣는 중...';
+    });
+
+    final started = await _stt.startListening(
+      onResult: (r) {
+        _recognized = r.text;
+        if (mounted) {
+          setState(() => _inputController.text = r.text);
+        }
+      },
+      onError: (msg) {
+        if (mounted && _isListening) {
+          setState(() {
+            _isListening = false;
+            _voiceStatus = msg;
+          });
+        }
+      },
+      localeId: 'ko_KR',
+    );
+    if (!started && mounted && _isListening) {
+      setState(() {
+        _isListening = false;
+        _voiceStatus = SttMessages.error;
+      });
+    }
+  }
+
+  /// 인식 종료 처리: 결과가 있으면 전송, 무음이면 안내 문구.
+  Future<void> _finishListening() async {
+    if (!_isListening || !mounted) return;
+    setState(() => _isListening = false);
+
+    final text = _recognized.trim();
+    if (text.isEmpty) {
+      setState(() => _voiceStatus = SttMessages.empty);
+      return;
+    }
+    setState(() => _voiceStatus = null);
+    await _sendMessage(text);
   }
 
   /// 사용자 메시지를 추가하고, 로딩 후 AI Mock 응답을 붙인다.
@@ -66,7 +162,13 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     _scrollToBottom();
 
     // Mock: 감정 코칭 응답을 받아 envelope 중 data 만 파싱.
-    final res = await _service.getEmotionCoaching(trimmed);
+    // 말투/음성 설정을 계약 필드로 함께 전달(실 /emotion/analyze 연결 시 그대로 사용).
+    await preferenceStore.ensureLoaded();
+    final res = await _service.getEmotionCoaching(
+      trimmed,
+      userContext: preferenceStore.userContext,
+      voice: preferenceStore.voice,
+    );
     if (!mounted) return;
     final analysis =
         EmotionAnalysis.fromJson(res['data'] as Map<String, dynamic>);
@@ -83,11 +185,20 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     _scrollToBottom();
   }
 
-  /// "음성으로 듣기" — flutter_tts 로 실제 음성을 재생한다.
+  /// "음성으로 듣기" — /voice/tts 규칙에 따라 기기 TTS 로 재생한다.
   /// AI 메시지의 tts_text 우선, 없으면 coaching_reply(=말풍선 text) 사용.
+  /// 빈 텍스트면 재생하지 않고 안내한다.
   Future<void> _playTts(String text) async {
     debugPrint('Voice chat TTS text: $text');
-    await _ttsService.speak(text);
+    if (text.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('읽어드릴 내용이 없어요.')),
+        );
+      }
+      return;
+    }
+    await voiceApi.speak(_ttsService, text, source: 'chatbot_reply');
   }
 
   void _scrollToBottom() {
@@ -145,10 +256,39 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                         },
                       ),
               ),
+              if (_voiceStatus != null) _buildVoiceStatus(_voiceStatus!),
               _buildInputBar(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 마이크 상태/안내 문구를 입력창 위에 작게 표시한다.
+  Widget _buildVoiceStatus(String status) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _isListening ? Icons.mic : Icons.info_outline,
+            size: 14,
+            color: _isListening ? AppTheme.red : AppTheme.textSecondary,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              status,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _isListening ? AppTheme.red : AppTheme.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -462,18 +602,23 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
       ),
       child: Row(
         children: [
-          // 마이크 버튼
+          // 마이크 버튼 (온디바이스 STT). 듣는 중이면 정지 아이콘.
           GestureDetector(
-            onTap: _sending ? null : _handleMockSpeechInput,
+            onTap: _sending ? null : _handleMicPressed,
             child: Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppTheme.purple.withOpacity(0.14),
+                color: _isListening
+                    ? AppTheme.red.withOpacity(0.16)
+                    : AppTheme.purple.withOpacity(0.14),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mic_none_rounded,
-                  color: AppTheme.purple, size: 22),
+              child: Icon(
+                _isListening ? Icons.stop_rounded : Icons.mic_none_rounded,
+                color: _isListening ? AppTheme.red : AppTheme.purple,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(width: 8),

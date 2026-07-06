@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_client.dart';
+import '../services/dashboard_api.dart';
 import '../services/schedule_api.dart';
 import '../services/preference_store.dart';
 import '../services/voice_api.dart';
@@ -187,7 +188,10 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
       await scheduleApi.createFromDraft(
         result.scheduleDraft,
         intent: result.intent,
+        inputType: 'voice',
       );
+      // 홈/캘린더 대시보드 새로고침 트리거(다른 저장 경로와 동일하게).
+      triggerDashboardRefresh();
       setState(() {
         _isSaving = false;
         _saved = true;
@@ -208,10 +212,10 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
     }
   }
 
-  /// 서버 /voice/tts fallback 으로 문장을 받아(없으면 그대로) flutter_tts 재생.
+  /// /voice/tts 응답 규칙(server_tts/flutter_tts/오류 fallback)에 따라 재생.
+  /// 재생 엔진은 온디바이스 flutter_tts([_tts])를 재사용한다.
   Future<void> _speak(String text) async {
-    final phrase = await voiceApi.tts(text, source: 'voice_schedule');
-    await _tts.speak(phrase);
+    await voiceApi.speak(_tts, text, source: 'voice_schedule');
   }
 
   // --------------------------------------------------------------------- //

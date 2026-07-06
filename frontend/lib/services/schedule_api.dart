@@ -1,5 +1,6 @@
 import '../models/schedule_model.dart';
 import 'api_client.dart';
+import 'schedule_draft_mapper.dart';
 
 /// `POST /api/v1/ai/schedule/parse` 결과.
 ///
@@ -84,14 +85,45 @@ class ScheduleApi {
   }
 
   /// 2) 일정 저장: `POST /api/v1/local/schedules/from-draft`
+  ///
+  /// 서버 draft 든 (향후) 온디바이스 parser draft 든 [ScheduleDraftMapper.normalize]
+  /// 로 동일하게 정규화한 뒤 저장한다. 필드가 일부 비어도 기본값으로 안전 처리된다.
+  ///
+  /// [inputType] 은 source 추론용("voice"면 source="voice"). [preventDuplicate]
+  /// 가 true 면 같은 날짜의 기존 일정을 조회해 (날짜+시작시간+제목) 중복이면
+  /// [ApiException]("이미 같은 일정이 있어요.") 을 던진다(기본값 false = 기존 동작).
   Future<ScheduleModel> createFromDraft(
     Map<String, dynamic> scheduleDraft, {
     String? intent,
+    String inputType = 'text',
+    bool preventDuplicate = false,
   }) async {
+    final normalized = ScheduleDraftMapper.normalize(
+      scheduleDraft,
+      intent: intent,
+      inputType: inputType,
+    );
+
+    if (preventDuplicate) {
+      final date = normalized['date'] as String?;
+      if (date != null && date.isNotEmpty) {
+        try {
+          final existing = await list(date: date);
+          if (ScheduleDraftMapper.isDuplicate(normalized, existing)) {
+            throw ApiException('이미 같은 일정이 있어요.');
+          }
+        } on ApiException {
+          rethrow; // 중복 경고는 그대로 전달
+        } catch (_) {
+          // 목록 조회 실패는 저장을 막지 않는다(중복 검사만 건너뜀).
+        }
+      }
+    }
+
     final data = await apiClient.postData(
       '$apiPrefix/local/schedules/from-draft',
       body: {
-        'schedule_draft': scheduleDraft,
+        'schedule_draft': normalized,
         if (intent != null) 'intent': intent,
       },
     );

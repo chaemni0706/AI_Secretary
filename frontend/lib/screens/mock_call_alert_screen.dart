@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/mock_call_alert.dart';
 import '../services/mock_voice_service.dart';
+import '../services/preference_store.dart';
+import '../services/voice_api.dart';
 import '../services/voice_tts_service.dart';
 
 /// 가짜 전화 알림 화면 (Mock).
@@ -53,10 +55,12 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
 
   /// "알림 듣기" — flutter_tts 로 voice_alert_text 를 실제로 재생한다.
   Future<void> _playAlertVoice() async {
-    final text = _data?.alertPlan.voiceAlertText ??
+    final base = _data?.alertPlan.voiceAlertText ??
         '챔니가 알려드려요. 곧 일정이 시작돼요.';
+    // reminder_strength 에 따라 알림 문구 강도를 로컬에서 조절(gentle/strong).
+    final text = preferenceStore.applyReminderStrength(base);
     debugPrint('Mock call alert TTS text: $text');
-    await _ttsService.speak(text);
+    await voiceApi.speak(_ttsService, text, source: 'call_alert');
   }
 
   /// "확인했어요" — TTS 정지 후 화면을 닫는다.

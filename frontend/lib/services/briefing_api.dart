@@ -2,6 +2,7 @@ import '../models/briefing_model.dart';
 import '../models/dashboard_model.dart';
 import 'api_client.dart';
 import 'dashboard_api.dart';
+import 'preference_store.dart';
 
 /// 하루 브리핑 API.
 ///
@@ -35,12 +36,16 @@ class BriefingApi {
         .toList();
 
     // 3) 브리핑 생성 요청.
+    //    user_context/voice 는 말투/길이/음성 옵션 계약 필드. 서버가 아직
+    //    미소비해도 무해(미지 필드 무시)하며, 반영 시 그 말투로 브리핑을 만든다.
     final data = await apiClient.postData(
       '$apiPrefix/briefings/daily',
       body: {
         'date': targetDate,
         'schedules': schedules,
         'todos': todos,
+        'user_context': preferenceStore.userContext,
+        'voice': preferenceStore.voice,
       },
     );
     return BriefingModel.fromJson(data as Map<String, dynamic>);

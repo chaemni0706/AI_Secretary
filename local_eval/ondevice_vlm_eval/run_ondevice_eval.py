@@ -1,4 +1,4 @@
-"""On-device VLM 후보 모델 비교 평가 러너.
+"""On-device VLM 후보 모델 비교 평가 러너 (+ 정량 지표 저장).
 
 동일한 water/exercise/study 테스트셋으로 여러 소형 VLM 후보(MiniCPM-V / MobileVLM /
 SmolVLM / Qwen2.5-VL-AWQ)를 비교한다. wakeup은 VLM 대상이 아니므로 평가에서 제외한다.
@@ -6,8 +6,12 @@ SmolVLM / Qwen2.5-VL-AWQ)를 비교한다. wakeup은 VLM 대상이 아니므로 
     image → adapter.analyze() → VisionAnalysis dict → evaluate_image_verification(type, ...) → 판정
 
 실제 모델은 아직 미탑재(stub). --simulate(기본) 모드에서는 각 이미지의 매니페스트 픽스처를
-'모델 출력'으로 대체해 파이프라인/리포트 구조를 end-to-end로 검증한다. 실제 모델이 붙으면
---no-simulate로 어댑터의 실제 추론을 사용한다.
+'모델 출력'으로 대체해 파이프라인/리포트 구조를 end-to-end로 검증한다.
+
+실행마다 run_id 폴더(outputs/runs/{timestamp}_{models}_{types}/)에 아래를 저장한다:
+    per_image_report.csv / predictions.jsonl / metrics_summary.csv|json /
+    confusion_matrix.csv / latency_summary.csv / error_cases.csv /
+    experiment_report.md / raw_outputs/ / normalized_outputs/
 
 실행:
     python local_eval/ondevice_vlm_eval/run_ondevice_eval.py
@@ -20,8 +24,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 import time
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
@@ -32,7 +39,7 @@ for p in (str(ROOT), str(THIS_DIR)):
 
 import yaml  # noqa: E402
 
-from adapters import ADAPTER_REGISTRY, ModelNotAvailable, build_adapter  # noqa: E402
+from adapters import ModelNotAvailable, build_adapter  # noqa: E402
 
 from backend.database.schema.image_verification_schema import (  # noqa: E402
     ImageVerificationContext,
@@ -41,7 +48,7 @@ from backend.database.schema.image_verification_schema import (  # noqa: E402
 from backend.services.image_verification_rule_engine import evaluate_image_verification  # noqa: E402
 
 CANDIDATES_YAML = THIS_DIR / "model_candidates.yaml"
-DEFAULT_OUTPUT = THIS_DIR / "outputs" / "ondevice_eval_report.csv"
+RUNS_DIR = THIS_DIR / "outputs" / "runs"
 
 WATER_MANIFEST = ROOT / "data" / "test_images" / "water" / "water_manifest.json"
 EXERCISE_MANIFEST = ROOT / "data" / "test_images" / "exercise" / "exercise_manifest.json"
@@ -57,12 +64,36 @@ EVIDENCE_FIELD = {
     "study": "study_visual_evidence",
 }
 VERIFICATION_TYPES = ("water", "exercise", "study")  # wakeup 제외
+NON_CLASSIFIED = {"SKIPPED", "ERROR", "UNKNOWN"}  # 혼동행렬/지표에서 제외하는 predicted 값
 
+# per_image_report.csv 컬럼 (= 각 row dict 의 키)
 CSV_FIELDS = [
-    "model_name", "verification_type", "filename", "expected_label", "predicted_label",
-    "engine_result", "ok", "false_positive", "latency_ms", "model_size_mb",
-    "runtime_target", "visual_evidence", "objects",
+    "run_id", "timestamp", "model_name", "model_path", "verification_type", "filename",
+    "expected_label", "predicted_label", "engine_result", "ok", "false_positive",
+    "false_negative", "latency_ms", "model_load_time_ms", "peak_gpu_memory_mb",
+    "model_size_mb", "runtime_target", "visual_evidence", "objects",
+    "raw_output_path", "normalized_output_path", "error",
 ]
+
+METRICS_FIELDS = [
+    "model_name", "verification_type", "num_samples", "tp", "tn", "fp", "fn",
+    "accuracy", "precision", "recall", "f1", "false_positive_rate", "false_negative_rate",
+    "avg_latency_ms", "p50_latency_ms", "p95_latency_ms", "max_latency_ms",
+    "model_size_mb", "runtime_target", "android_feasibility",
+]
+CONFUSION_FIELDS = ["model_name", "verification_type", "tp", "tn", "fp", "fn"]
+LATENCY_FIELDS = ["model_name", "verification_type", "avg_latency_ms", "p50_latency_ms",
+                  "p95_latency_ms", "min_latency_ms", "max_latency_ms"]
+
+
+@dataclass
+class RunContext:
+    run_id: str
+    timestamp: str
+    run_dir: Path
+    raw_dir: Path
+    normalized_dir: Path
+    write_outputs: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -80,17 +111,14 @@ def load_candidates(only: list[str] | None = None) -> list[dict]:
 
 def _load_json_manifest_items(manifest_path: Path, verification_type: str) -> list[dict]:
     images = json.loads(manifest_path.read_text(encoding="utf-8"))["images"]
-    items = []
-    for e in images:
-        items.append({
-            "verification_type": verification_type,
-            "filename": e["filename"],
-            "image_path": str(ROOT / e["image_path"]),
-            "expected_label": e["expected_label"],
-            "exercise_activity_type": e.get("exercise_activity_type"),
-            "fixture": e["vision_analysis"],
-        })
-    return items
+    return [{
+        "verification_type": verification_type,
+        "filename": e["filename"],
+        "image_path": str(ROOT / e["image_path"]),
+        "expected_label": e["expected_label"],
+        "exercise_activity_type": e.get("exercise_activity_type"),
+        "fixture": e["vision_analysis"],
+    } for e in images]
 
 
 def _load_study_items() -> list[dict]:
@@ -135,17 +163,32 @@ def _context(item: dict) -> ImageVerificationContext:
     return ImageVerificationContext()
 
 
+def _context_dict(item: dict) -> dict:
+    return {"verification_type": item["verification_type"],
+            "exercise_activity_type": item.get("exercise_activity_type")}
+
+
 def _label_ok(expected: str, predicted: str) -> bool:
     if expected == "BORDERLINE":
         return predicted != "PASS"
     return (expected == "PASS") == (predicted == "PASS")
 
 
-def evaluate_model(candidate: dict, items: list[dict], fixture_lookup, simulate: bool) -> list[dict]:
+def evaluate_model(candidate: dict, items: list[dict], fixture_lookup, simulate: bool,
+                   run_ctx: RunContext | None = None) -> list[dict]:
+    """한 모델 후보에 대해 전체 아이템 평가. run_ctx가 있으면 normalized_outputs를 파일로 저장."""
+    load_t0 = time.perf_counter()
     adapter = build_adapter(candidate["adapter"], meta=candidate, fixture_lookup=fixture_lookup)
+    model_load_time_ms = round((time.perf_counter() - load_t0) * 1000, 3)
+
+    run_id = run_ctx.run_id if run_ctx else ""
+    timestamp = run_ctx.timestamp if run_ctx else ""
+    adapter_key = candidate.get("adapter", "model")
+
     rows = []
     for item in items:
         vt = item["verification_type"]
+        stem = Path(item["filename"]).stem
         t0 = time.perf_counter()
         analysis_dict = None
         error = ""
@@ -156,16 +199,22 @@ def evaluate_model(candidate: dict, items: list[dict], fixture_lookup, simulate:
                 raise ModelNotAvailable(f"{candidate['model_name']} not available")
         except ModelNotAvailable as exc:
             if not simulate:
-                rows.append(_row(candidate, item, predicted="SKIPPED", engine_result="model_not_available",
-                                 ok=False, fp=False, latency_ms=0.0, evidence=[], objects=[], ))
+                rows.append(_row(candidate, item, run_id=run_id, timestamp=timestamp,
+                                 predicted="SKIPPED", engine_result="model_not_available",
+                                 ok=False, fp=False, fn=False, latency_ms=0.0,
+                                 model_load_time_ms=model_load_time_ms, evidence=[], objects=[],
+                                 raw_output_path="", normalized_output_path="", error=str(exc)))
                 continue
             analysis_dict = fixture_lookup(item["filename"])  # 픽스처로 시뮬레이션
             error = "simulated_from_fixture"
         latency_ms = round((time.perf_counter() - t0) * 1000, 3)
 
         if analysis_dict is None:
-            rows.append(_row(candidate, item, predicted="ERROR", engine_result="no_fixture",
-                             ok=False, fp=False, latency_ms=latency_ms, evidence=[], objects=[]))
+            rows.append(_row(candidate, item, run_id=run_id, timestamp=timestamp,
+                             predicted="ERROR", engine_result="no_fixture", ok=False, fp=False, fn=False,
+                             latency_ms=latency_ms, model_load_time_ms=model_load_time_ms,
+                             evidence=[], objects=[], raw_output_path="", normalized_output_path="",
+                             error="no_fixture_available"))
             continue
 
         analysis = VisionAnalysis.model_validate(analysis_dict)
@@ -174,21 +223,39 @@ def evaluate_model(candidate: dict, items: list[dict], fixture_lookup, simulate:
         expected = item["expected_label"]
         ok = _label_ok(expected, predicted)
         fp = predicted == "PASS" and expected != "PASS"
-        evidence = getattr(analysis, EVIDENCE_FIELD[vt])
+        fn = predicted != "PASS" and expected == "PASS"
+        evidence = list(getattr(analysis, EVIDENCE_FIELD[vt]))
         objects = [o.label for o in analysis.objects]
-        rows.append(_row(candidate, item, predicted=predicted, engine_result=result.result,
-                         ok=ok, fp=fp, latency_ms=latency_ms, evidence=list(evidence), objects=objects))
+
+        raw_output_path = ""
+        normalized_output_path = ""
+        if run_ctx and run_ctx.write_outputs:
+            # raw_text 가 있으면(future 실제 어댑터) 저장. 현재 mock/simulate에서는 없음 → 빈 값.
+            raw_text = analysis_dict.get("_raw_text") if isinstance(analysis_dict, dict) else None
+            if raw_text:
+                rp = run_ctx.raw_dir / f"{adapter_key}__{stem}.txt"
+                rp.write_text(str(raw_text), encoding="utf-8")
+                raw_output_path = _rel(rp)
+            np_ = run_ctx.normalized_dir / f"{adapter_key}__{stem}.json"
+            np_.write_text(json.dumps(analysis_dict, ensure_ascii=False, indent=2), encoding="utf-8")
+            normalized_output_path = _rel(np_)
+
+        rows.append(_row(candidate, item, run_id=run_id, timestamp=timestamp,
+                         predicted=predicted, engine_result=result.result, ok=ok, fp=fp, fn=fn,
+                         latency_ms=latency_ms, model_load_time_ms=model_load_time_ms,
+                         evidence=evidence, objects=objects, raw_output_path=raw_output_path,
+                         normalized_output_path=normalized_output_path, error=error))
     return rows
 
 
-def _context_dict(item: dict) -> dict:
-    return {"verification_type": item["verification_type"],
-            "exercise_activity_type": item.get("exercise_activity_type")}
-
-
-def _row(candidate, item, *, predicted, engine_result, ok, fp, latency_ms, evidence, objects) -> dict:
+def _row(candidate, item, *, run_id, timestamp, predicted, engine_result, ok, fp, fn,
+         latency_ms, model_load_time_ms, evidence, objects, raw_output_path,
+         normalized_output_path, error, peak_gpu_memory_mb="") -> dict:
     return {
+        "run_id": run_id,
+        "timestamp": timestamp,
         "model_name": candidate["model_name"],
+        "model_path": candidate.get("model_path", ""),
         "verification_type": item["verification_type"],
         "filename": item["filename"],
         "expected_label": item["expected_label"],
@@ -196,34 +263,276 @@ def _row(candidate, item, *, predicted, engine_result, ok, fp, latency_ms, evide
         "engine_result": engine_result,
         "ok": ok,
         "false_positive": fp,
+        "false_negative": fn,
         "latency_ms": latency_ms,
+        "model_load_time_ms": model_load_time_ms,
+        "peak_gpu_memory_mb": peak_gpu_memory_mb,  # simulate/stub 에서는 미측정("")
         "model_size_mb": candidate.get("model_size_mb", ""),
         "runtime_target": candidate.get("runtime_target", ""),
         "visual_evidence": ";".join(evidence),
         "objects": ";".join(objects),
+        "raw_output_path": raw_output_path,
+        "normalized_output_path": normalized_output_path,
+        "error": error,
     }
 
 
 def _rel(path: Path) -> str:
     try:
-        return str(path.relative_to(ROOT))
+        return str(Path(path).relative_to(ROOT))
     except ValueError:
         return str(path)
 
 
-def write_report(rows: list[dict], output: Path) -> None:
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS, extrasaction="ignore")
+# ---------------------------------------------------------------------------
+# 지표 계산
+# ---------------------------------------------------------------------------
+
+def _classified(rows: list[dict]) -> list[dict]:
+    return [r for r in rows if r["predicted_label"] not in NON_CLASSIFIED]
+
+
+def _percentile(values: list[float], q: float) -> float:
+    if not values:
+        return 0.0
+    s = sorted(values)
+    if len(s) == 1:
+        return round(float(s[0]), 3)
+    idx = min(len(s) - 1, max(0, math.ceil(q / 100.0 * len(s)) - 1))
+    return round(float(s[idx]), 3)
+
+
+def _confusion(rows: list[dict]) -> dict[str, int]:
+    tp = tn = fp = fn = 0
+    for r in rows:
+        ep = r["expected_label"] == "PASS"
+        pp = r["predicted_label"] == "PASS"
+        if ep and pp:
+            tp += 1
+        elif not ep and not pp:
+            tn += 1
+        elif not ep and pp:
+            fp += 1
+        else:
+            fn += 1
+    return {"tp": tp, "tn": tn, "fp": fp, "fn": fn}
+
+
+def _latency_stats(rows: list[dict]) -> dict[str, float]:
+    vals = [float(r["latency_ms"]) for r in rows if isinstance(r["latency_ms"], (int, float))]
+    return {
+        "avg_latency_ms": round(sum(vals) / len(vals), 3) if vals else 0.0,
+        "p50_latency_ms": _percentile(vals, 50),
+        "p95_latency_ms": _percentile(vals, 95),
+        "min_latency_ms": round(min(vals), 3) if vals else 0.0,
+        "max_latency_ms": round(max(vals), 3) if vals else 0.0,
+    }
+
+
+def _metrics_for(rows: list[dict], model_name: str, vtype: str, meta: dict) -> dict:
+    cm = _confusion(rows)
+    tp, tn, fp, fn = cm["tp"], cm["tn"], cm["fp"], cm["fn"]
+    n = tp + tn + fp + fn
+    acc = (tp + tn) / n if n else 0.0
+    prec = tp / (tp + fp) if (tp + fp) else 0.0
+    rec = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = 2 * prec * rec / (prec + rec) if (prec + rec) else 0.0
+    fpr = fp / (fp + tn) if (fp + tn) else 0.0
+    fnr = fn / (fn + tp) if (fn + tp) else 0.0
+    lat = _latency_stats(rows)
+    return {
+        "model_name": model_name,
+        "verification_type": vtype,
+        "num_samples": n,
+        "tp": tp, "tn": tn, "fp": fp, "fn": fn,
+        "accuracy": round(acc, 4),
+        "precision": round(prec, 4),
+        "recall": round(rec, 4),
+        "f1": round(f1, 4),
+        "false_positive_rate": round(fpr, 4),
+        "false_negative_rate": round(fnr, 4),
+        "avg_latency_ms": lat["avg_latency_ms"],
+        "p50_latency_ms": lat["p50_latency_ms"],
+        "p95_latency_ms": lat["p95_latency_ms"],
+        "max_latency_ms": lat["max_latency_ms"],
+        "model_size_mb": meta.get("model_size_mb", ""),
+        "runtime_target": meta.get("runtime_target", ""),
+        "android_feasibility": meta.get("android_feasibility", ""),
+    }
+
+
+def compute_metrics(rows: list[dict], model_meta: dict[str, dict]) -> list[dict]:
+    """모델별 × (인증타입별 + ALL) 집계 지표."""
+    classified = _classified(rows)
+    models = [r["model_name"] for r in rows]
+    seen_models = list(dict.fromkeys(models))
+    out = []
+    for model in seen_models:
+        meta = model_meta.get(model, {})
+        model_rows = [r for r in classified if r["model_name"] == model]
+        for vt in VERIFICATION_TYPES:
+            vt_rows = [r for r in model_rows if r["verification_type"] == vt]
+            if vt_rows:
+                out.append(_metrics_for(vt_rows, model, vt, meta))
+        # 모델 전체 롤업
+        if model_rows:
+            out.append(_metrics_for(model_rows, model, "ALL", meta))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 파일 저장
+# ---------------------------------------------------------------------------
+
+def _write_csv(rows: list[dict], fields: list[str], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def write_report(rows: list[dict], output: Path) -> None:
+    """per_image_report.csv (하위호환: 기존 테스트가 이 함수를 사용)."""
+    _write_csv(rows, CSV_FIELDS, output)
     print(f"[report] wrote {_rel(output)} ({len(rows)} rows)")
+
+
+def write_predictions_jsonl(rows: list[dict], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+def write_error_cases(rows: list[dict], path: Path) -> None:
+    """ok=False 또는 error 가 있는 row (false_positive 포함) 만 저장."""
+    err = [r for r in rows if (not r["ok"]) or r.get("error")]
+    _write_csv(err, CSV_FIELDS, path)
+    return err
+
+
+def _fmt(v) -> str:
+    return "" if v == "" or v is None else str(v)
+
+
+def write_experiment_report(rows: list[dict], metrics: list[dict], run_ctx: RunContext,
+                            models: list[str], types: list[str], simulate: bool) -> None:
+    classified = _classified(rows)
+    total = len(rows)
+    fp_rows = [r for r in rows if r["false_positive"]]
+    all_rollup = {m["model_name"]: m for m in metrics if m["verification_type"] == "ALL"}
+
+    lines = []
+    lines.append(f"# On-device VLM 실험 리포트 — {run_ctx.run_id}\n")
+    lines.append(f"- 실행 시각: {run_ctx.timestamp}")
+    lines.append(f"- simulate: {simulate} (True면 픽스처 기반 = '완벽한 모델' 시뮬레이션)")
+    lines.append(f"- 모델: {', '.join(models)}")
+    lines.append(f"- 인증 타입: {', '.join(types)}  (wakeup 제외 — 세션/시간 기반이라 VLM 평가 대상 아님)")
+    lines.append(f"- 총 샘플 수(행): {total}, 분류 대상: {len(classified)}\n")
+
+    lines.append("## 모델별 요약 (전체 인증타입 합산)\n")
+    lines.append("| model | accuracy | false_positive | avg_latency_ms | size_mb | android |")
+    lines.append("|-------|----------|----------------|----------------|---------|---------|")
+    for model in dict.fromkeys(r["model_name"] for r in rows):
+        m = all_rollup.get(model)
+        if not m:
+            continue
+        lines.append(f"| {model} | {m['accuracy']} | {m['fp']} | {m['avg_latency_ms']} | "
+                     f"{_fmt(m['model_size_mb'])} | {_fmt(m['android_feasibility'])} |")
+    lines.append("")
+
+    lines.append("## False positive 사례\n")
+    if not fp_rows:
+        lines.append("- 없음 (모든 FAIL/BORDERLINE 이미지가 PASS로 잘못 판정되지 않음)\n")
+    else:
+        lines.append("| model | type | filename | expected | predicted |")
+        lines.append("|-------|------|----------|----------|-----------|")
+        for r in fp_rows:
+            lines.append(f"| {r['model_name']} | {r['verification_type']} | {r['filename']} | "
+                         f"{r['expected_label']} | {r['predicted_label']} |")
+        lines.append("")
+
+    lines.append("## 해석 메모\n")
+    lines.append("- **인증 기능에서는 false positive(빈 컵/비운동/비학습을 PASS로 오인)가 가장 위험한 지표다.**")
+    lines.append("  사용자가 실제로 하지 않은 활동을 '인증됨'으로 처리하면 습관 추적 신뢰가 무너지기 때문이다.")
+    lines.append("- 따라서 후보 모델 선택 1순위는 **false_positive_rate 최소화**, 그 다음이 accuracy/recall,")
+    lines.append("  그리고 Z Flip3 실행 가능성(model_size_mb / latency / android_feasibility)이다.")
+    lines.append("- simulate=True 결과는 파이프라인 검증용이며, 실제 모델 정확도 비교는 --no-simulate + 실제 어댑터로 수행한다.")
+
+    path = run_ctx.run_dir / "experiment_report.md"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# 실행 오케스트레이션
+# ---------------------------------------------------------------------------
+
+def _slug(parts: list[str]) -> str:
+    return "-".join(parts) if parts else "none"
+
+
+def run_experiment(models_only: list[str] | None, types: list[str], simulate: bool,
+                   base_dir: Path | None = None, now: datetime | None = None) -> dict:
+    for t in types:
+        if t not in VERIFICATION_TYPES:
+            raise ValueError(f"지원하지 않는 verification_type: {t} (wakeup은 VLM 평가 대상이 아님)")
+
+    candidates = load_candidates(models_only)
+    items = load_eval_items(types)
+    fixture_lookup = {it["filename"]: it["fixture"] for it in items}.get
+    model_meta = {c["model_name"]: c for c in candidates}
+
+    stamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
+    models_slug = _slug([c.get("adapter", "m") for c in candidates])
+    if len(models_slug) > 40:
+        models_slug = f"{len(candidates)}models"
+    run_id = f"{stamp}_{models_slug}_{_slug(types)}"
+
+    base = base_dir or RUNS_DIR
+    run_dir = base / run_id
+    raw_dir = run_dir / "raw_outputs"
+    normalized_dir = run_dir / "normalized_outputs"
+    for d in (run_dir, raw_dir, normalized_dir):
+        d.mkdir(parents=True, exist_ok=True)
+    run_ctx = RunContext(run_id=run_id, timestamp=stamp, run_dir=run_dir,
+                         raw_dir=raw_dir, normalized_dir=normalized_dir, write_outputs=True)
+
+    rows: list[dict] = []
+    for candidate in candidates:
+        rows += evaluate_model(candidate, items, fixture_lookup, simulate, run_ctx=run_ctx)
+
+    metrics = compute_metrics(rows, model_meta)
+    confusion = [{k: m[k] for k in CONFUSION_FIELDS}
+                 for m in metrics if m["verification_type"] != "ALL"]
+    latency = []
+    classified = _classified(rows)
+    for m in metrics:
+        if m["verification_type"] == "ALL":
+            continue
+        vt_rows = [r for r in classified
+                   if r["model_name"] == m["model_name"] and r["verification_type"] == m["verification_type"]]
+        lat = _latency_stats(vt_rows)
+        latency.append({"model_name": m["model_name"], "verification_type": m["verification_type"], **lat})
+
+    # 파일 저장
+    write_report(rows, run_dir / "per_image_report.csv")
+    write_predictions_jsonl(rows, run_dir / "predictions.jsonl")
+    _write_csv(metrics, METRICS_FIELDS, run_dir / "metrics_summary.csv")
+    (run_dir / "metrics_summary.json").write_text(
+        json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
+    _write_csv(confusion, CONFUSION_FIELDS, run_dir / "confusion_matrix.csv")
+    _write_csv(latency, LATENCY_FIELDS, run_dir / "latency_summary.csv")
+    write_error_cases(rows, run_dir / "error_cases.csv")
+    write_experiment_report(rows, metrics, run_ctx, [c["model_name"] for c in candidates], types, simulate)
+
+    return {"run_id": run_id, "run_dir": run_dir, "rows": rows, "metrics": metrics}
 
 
 def summarize(rows: list[dict]) -> None:
     by_model: dict[str, list[dict]] = {}
     for r in rows:
-        if r["predicted_label"] in {"SKIPPED", "ERROR"}:
+        if r["predicted_label"] in NON_CLASSIFIED:
             continue
         by_model.setdefault(r["model_name"], []).append(r)
     print("\n[SUMMARY]")
@@ -242,30 +551,21 @@ def main() -> None:
                         help="실제 모델이 없으면 매니페스트 픽스처로 대체 (기본 on)")
     parser.add_argument("--no-simulate", dest="simulate", action="store_false",
                         help="시뮬레이션 끄기 (실제 어댑터만 사용, 없으면 SKIPPED)")
-    parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--output-dir", default=None, help="run 폴더의 base 경로 (기본: outputs/runs)")
     args = parser.parse_args()
 
     types = [t.strip() for t in args.verification_types.split(",") if t.strip()]
-    for t in types:
-        if t not in VERIFICATION_TYPES:
-            raise SystemExit(f"지원하지 않는 verification_type: {t} (wakeup은 VLM 평가 대상이 아님)")
-
     only = [m.strip() for m in args.models.split(",")] if args.models else None
-    candidates = load_candidates(only)
-    items = load_eval_items(types)
-    fixture_map = {item["filename"]: item["fixture"] for item in items}
-    fixture_lookup = fixture_map.get
 
-    print(f"[INFO] models={[c['model_name'] for c in candidates]} types={types} "
-          f"items={len(items)} simulate={args.simulate}")
+    try:
+        result = run_experiment(only, types, args.simulate,
+                                base_dir=Path(args.output_dir) if args.output_dir else None)
+    except ValueError as exc:
+        raise SystemExit(str(exc))
 
-    all_rows: list[dict] = []
-    for candidate in candidates:
-        rows = evaluate_model(candidate, items, fixture_lookup, args.simulate)
-        all_rows += rows
-
-    write_report(all_rows, Path(args.output))
-    summarize(all_rows)
+    print(f"[INFO] run_id={result['run_id']} items rows={len(result['rows'])}")
+    print(f"[INFO] outputs → {_rel(result['run_dir'])}")
+    summarize(result["rows"])
 
 
 if __name__ == "__main__":

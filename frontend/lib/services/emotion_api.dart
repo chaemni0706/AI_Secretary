@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/voice_chat_message.dart';
 import 'api_client.dart';
-import 'local_emotion.dart';
+import 'local_emotion_classifier.dart';
 
 /// 감정 코칭 API 클라이언트 (`POST /api/v1/emotion/analyze`).
 ///
@@ -15,7 +15,7 @@ import 'local_emotion.dart';
 ///   schedule_suggestions 는 빈 리스트가 된다(화면은 비었을 때 카드를 숨김).
 ///
 /// 안전: 이 메서드는 예외를 던지지 않는다. 어떤 실패든 온디바이스 공감
-/// fallback([LocalEmotion])으로 대체해 앱이 죽지 않게 한다.
+/// fallback([LocalEmotionClassifier])으로 대체해 앱이 죽지 않게 한다.
 class EmotionApi {
   Future<EmotionAnalysis> analyze(
     String text, {
@@ -41,14 +41,14 @@ class EmotionApi {
       if (data is Map<String, dynamic>) {
         return _adapt(data, fallbackText: text);
       }
-      return LocalEmotion.analyze(text);
+      return LocalEmotionClassifier.classify(text);
     } on ApiException catch (e) {
       // 오프라인이든 서버 오류든, 감정 흐름은 크래시 없이 공감 fallback 으로.
       debugPrint('EmotionApi.analyze fallback (${e.isNetworkError ? "network" : "server ${e.statusCode}"}): ${e.message}');
-      return LocalEmotion.analyze(text);
+      return LocalEmotionClassifier.classify(text);
     } catch (e) {
       debugPrint('EmotionApi.analyze unexpected fallback: $e');
-      return LocalEmotion.analyze(text);
+      return LocalEmotionClassifier.classify(text);
     }
   }
 

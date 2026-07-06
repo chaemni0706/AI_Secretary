@@ -37,6 +37,9 @@ class EmotionAnalysis {
   final String ttsText;
   final String safetyNote;
 
+  /// 분석 출처: "server"(기본) 또는 "on_device_rule"(온디바이스 분류기 fallback).
+  final String source;
+
   const EmotionAnalysis({
     required this.emotion,
     required this.burden,
@@ -45,6 +48,7 @@ class EmotionAnalysis {
     required this.scheduleSuggestions,
     required this.ttsText,
     required this.safetyNote,
+    this.source = 'server',
   });
 
   factory EmotionAnalysis.fromJson(Map<String, dynamic> json) {
@@ -65,6 +69,7 @@ class EmotionAnalysis {
           .toList(),
       ttsText: (json['tts_text'] ?? '').toString(),
       safetyNote: (json['safety_note'] ?? '').toString(),
+      source: (json['source'] ?? 'server').toString(),
     );
   }
 }

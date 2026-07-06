@@ -431,6 +431,12 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         start_time=start_time,
     )
     tts_text = _apply_tone_style(tts_text, req.tone)
+    # AI voice-style override (only when the caller sent assistant-style prefs;
+    # otherwise tts_text stays byte-identical to the legacy output -> locked tests safe).
+    tts_text = _maybe_apply_assistant_style(
+        req, tts_text, intent=intent, missing=missing, title=final_title,
+        date_value=date_value, start_time=start_time, is_todo=is_todo,
+    )
 
     return ScheduleParseData(
         intent=intent,
@@ -440,6 +446,71 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         missing_fields=missing,
         tts_text=tts_text,
     )
+
+
+import logging as _logging
+
+_style_log = _logging.getLogger("assistant_style")
+
+# canonical (assistant_style_service) -> tts_response_builder vocabulary
+_BUILDER_TONE = {"formal": "polite", "friendly": "friendly", "caring": "caring", "concise": "concise"}
+_BUILDER_LENGTH = {"short": "short", "medium": "normal", "long": "detailed"}
+
+
+def _maybe_apply_assistant_style(
+    req: ScheduleParseRequest,
+    tts_text: str,
+    *,
+    intent: str,
+    missing: List[str],
+    title: str,
+    date_value: Optional[str],
+    start_time: Optional[str],
+    is_todo: bool,
+) -> str:
+    """Regenerate tts_text in the user's persona style — ONLY when the request
+    carries assistant-style prefs. No prefs -> returns the input unchanged so the
+    legacy /ai/schedule/parse contract (and its locked tests) is untouched."""
+    prefs = {
+        "assistant_tone": getattr(req, "assistant_tone", None),
+        "response_length": getattr(req, "response_length", None),
+        "reminder_strength": getattr(req, "reminder_strength", None),
+    }
+    if not any(prefs.values()):
+        return tts_text
+    try:
+        from backend.services import assistant_style_service as style
+        from backend.services import tts_response_builder
+
+        profile = style.build_style_profile(prefs)
+        _style_log.info("[STYLE DEBUG] parse_schedule preferences=%s", prefs)
+        _style_log.info("[STYLE DEBUG] profile=%s", profile)
+        _style_log.info("[STYLE DEBUG] before_tts=%s", tts_text)
+
+        success = bool(date_value and start_time and title) and intent != "unknown"
+        if success:
+            builder_prefs = {
+                "assistant_tone": _BUILDER_TONE.get(profile["tone"], "friendly"),
+                "response_length": _BUILDER_LENGTH.get(profile["length"], "normal"),
+                "nudge_strength": style.STRENGTH_TO_NUDGE.get(profile["strength"], "medium"),
+            }
+            intent_key = "todo_create_success" if is_todo else "schedule_create_success"
+            styled = tts_response_builder.build_tts_response(
+                intent=intent_key,
+                slots={"title": title, "date": date_value, "time": start_time},
+                preferences=builder_prefs,
+            )
+        else:
+            norm_missing = [m for m in ("title", "date", "time") if m in missing]
+            clar_title = None if "title" in missing else title
+            styled = style.build_clarification_text(
+                clar_title, norm_missing or ["date", "time"], profile
+            )
+        _style_log.info("[STYLE DEBUG] after_tts=%s", styled)
+        return styled or tts_text
+    except Exception as exc:  # never break parsing over a styling error
+        _style_log.warning("[STYLE DEBUG] style application failed: %s", exc)
+        return tts_text
 
 
 def _build_tts_text(

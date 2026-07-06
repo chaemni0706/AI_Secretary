@@ -4,9 +4,11 @@ import 'screens/add_item_choice_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/todo_screen.dart';
 import 'screens/calendar_screen.dart';
-import 'screens/widget_screen.dart';
+import 'screens/widget_dashboard_screen.dart';
 import 'screens/ledger_screen.dart';
 import 'screens/my_page_screen.dart';
+import 'data/dashboard_navigation.dart';
+import 'services/preference_store.dart';
 import 'theme/app_theme.dart';
 import 'widgets/draggable_assistant_fab.dart';
 
@@ -18,6 +20,8 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+  // AI 음성 스타일 설정을 미리 불러와 캐시(비차단; 실패해도 기본값으로 동작).
+  preferenceStore.ensureLoaded();
   runApp(const MyApp());
 }
 
@@ -51,7 +55,7 @@ class _MainNavigatorState extends State<MainNavigator> {
   final List<Widget> _screens = const [
     CalendarScreen(),
     TodoScreen(),
-    WidgetScreen(),
+    WidgetDashboardScreen(),
     LedgerScreen(),
     MyPageScreen(),
   ];
@@ -62,6 +66,25 @@ class _MainNavigatorState extends State<MainNavigator> {
     final lastIndex = _screens.length - 1;
     _currentIndex = widget.initialIndex.clamp(0, lastIndex);
     _visitedIndexes = {_currentIndex};
+    // 위젯 대시보드에서 위젯을 누르면 해당 하단 탭으로 전환.
+    requestedTabIndex.addListener(_handleTabRequest);
+  }
+
+  @override
+  void dispose() {
+    requestedTabIndex.removeListener(_handleTabRequest);
+    super.dispose();
+  }
+
+  void _handleTabRequest() {
+    final index = requestedTabIndex.value;
+    if (index < 0) return;
+    final clamped = index.clamp(0, _screens.length - 1);
+    setState(() {
+      _currentIndex = clamped;
+      _visitedIndexes.add(clamped);
+    });
+    clearTabRequest();
   }
 
   @override

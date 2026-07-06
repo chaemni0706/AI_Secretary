@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 ///
 /// 환경에 맞게 아래 값 하나만 바꾸면 됩니다.
 // const String baseUrl = 'http://127.0.0.1:8000';
-const String baseUrl = 'http://141.223.140.85:8000';
+const String baseUrl = 'http://141.223.140.84:8000';
 
 // Android Emulator용:
 // const String baseUrl = 'http://10.0.2.2:8000';

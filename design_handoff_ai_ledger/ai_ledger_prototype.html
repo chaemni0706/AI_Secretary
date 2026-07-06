@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fastly.jsdelivr.net">
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: #E9ECF0; font-family: 'Pretendard', -apple-system, system-ui, sans-serif; }
+  .phone-scroll::-webkit-scrollbar { width: 0; display: none; }
+  .phone-scroll { scrollbar-width: none; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</helmet>
+
+<div style="display:flex; flex-wrap:wrap; gap:56px; padding:56px 64px 80px; align-items:flex-start; justify-content:center;">
+
+  <!-- ============ 화면 1 : 소비 달력 ============ -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="display:flex; align-items:baseline; gap:10px; padding-left:4px;">
+      <span style="font:700 12px/1 'Pretendard'; letter-spacing:.04em; color:#fff; background:#3B6EF6; padding:5px 9px; border-radius:6px;">화면 1</span>
+      <span style="font:600 15px/1 'Pretendard'; color:#191F28;">소비 달력 · 12월 내 소비</span>
+    </div>
+
+    <div style="position:relative; width:390px; height:844px; background:#fff; border-radius:46px; box-shadow:0 2px 4px rgba(0,0,0,.04), 0 40px 80px -20px rgba(20,30,55,.28); border:1px solid rgba(0,0,0,.06); overflow:hidden;">
+      <!-- status bar -->
+      <div style="position:absolute; top:0; left:0; right:0; height:52px; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:0 30px 0 34px; background:#fff;">
+        <span style="font:600 15px/1 'Pretendard'; color:#191F28; letter-spacing:.02em;">9:41</span>
+        <div style="display:flex; align-items:center; gap:7px;">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="#191F28"><rect x="0" y="7" width="3" height="5" rx="1"></rect><rect x="5" y="4" width="3" height="8" rx="1"></rect><rect x="10" y="2" width="3" height="10" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="1" width="20" height="10" rx="3" fill="none" stroke="#191F28" stroke-opacity=".35"></rect><rect x="3" y="3" width="15" height="6" rx="1.5" fill="#191F28"></rect><rect x="22" y="4" width="1.5" height="4" rx="1" fill="#191F28" fill-opacity=".4"></rect></svg>
+        </div>
+      </div>
+
+      <!-- scroll area -->
+      <div class="phone-scroll" style="position:absolute; inset:52px 0 84px 0; overflow-y:auto; overflow-x:hidden;">
+        <div style="padding:8px 20px 28px;">
+
+          <!-- header -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 4px 14px;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="font:700 23px/1 'Pretendard'; color:#191F28; letter-spacing:-.02em;">12월 내 소비</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#191F28" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+            </div>
+            <div style="position:relative; width:40px; height:40px; border-radius:50%; background:#F2F4F6; display:flex; align-items:center; justify-content:center;">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#4E5968" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+              <span style="position:absolute; top:7px; right:8px; width:8px; height:8px; border-radius:50%; background:#F04452; border:2px solid #F2F4F6;"></span>
+            </div>
+          </div>
+
+          <!-- tabs -->
+          <div style="position:relative; background:linear-gradient(135deg,#1E2A54 0%,#2E3E7E 55%,#3A4FA0 100%); border-radius:20px; padding:17px 18px 16px; margin-bottom:14px; overflow:hidden;">
+            <div style="position:absolute; top:-40px; right:-30px; width:140px; height:140px; border-radius:50%; background:radial-gradient(circle,rgba(120,150,255,.32),transparent 70%);"></div>
+            <div style="position:relative; display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+              <div style="width:22px; height:22px; border-radius:7px; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#BFD0FF"><path d="M12 2l1.9 5.5L19.5 9l-4.6 3.4L16.4 18 12 14.7 7.6 18l1.5-5.6L4.5 9l5.6-1.5z"></path></svg>
+              </div>
+              <span style="font:700 12.5px/1 'Pretendard'; color:#EAF0FF;">AI 소비 브리핑</span>
+              <span style="margin-left:auto; font:600 11px/1 'Pretendard'; color:rgba(255,255,255,.55);">{{ selectedShort }}</span>
+            </div>
+            <p style="position:relative; margin:0; font:500 14.5px/1.55 'Pretendard'; color:#F4F7FF; letter-spacing:-.01em; word-break:keep-all;">{{ briefing }}</p>
+          </div><div style="display:flex; gap:0; border-bottom:1px solid #EEF1F4; margin-bottom:18px;">
+            <div style="flex:1; text-align:center; padding:12px 0 13px; position:relative;">
+              <span style="font:700 14.5px/1 'Pretendard'; color:#191F28;">달력</span>
+              <span style="position:absolute; left:20%; right:20%; bottom:-1px; height:2.5px; border-radius:2px; background:#3B6EF6;"></span>
+            </div>
+            <div style="flex:1; text-align:center; padding:12px 0 13px;">
+              <span style="font:600 14.5px/1 'Pretendard'; color:#B0B8C1;">거래 내역</span>
+            </div>
+            <div style="flex:1; text-align:center; padding:12px 0 13px;">
+              <span style="font:600 14.5px/1 'Pretendard'; color:#B0B8C1;">소비 분석</span>
+            </div>
+          </div>
+
+          <!-- month summary -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 6px 18px;">
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <div style="display:flex; align-items:baseline; gap:12px;">
+                <span style="font:600 13.5px/1 'Pretendard'; color:#6B7684; width:30px;">지출</span>
+                <span style="font:700 17px/1 'Pretendard'; color:#191F28; letter-spacing:-.02em;">1,625,560 <span style="font-weight:600; font-size:14px;">원</span></span>
+              </div>
+              <div style="display:flex; align-items:baseline; gap:12px;">
+                <span style="font:600 13.5px/1 'Pretendard'; color:#6B7684; width:30px;">수입</span>
+                <span style="font:700 17px/1 'Pretendard'; color:#3B6EF6; letter-spacing:-.02em;">2,746,059 <span style="font-weight:600; font-size:14px;">원</span></span>
+              </div>
+            </div>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C6CDD5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+          <!-- calendar (hero) -->
+          <div style="margin-bottom:16px;">
+            <div style="display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:8px;">
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#E5686F;">일</span>
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#B0B8C1;">월</span>
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#B0B8C1;">화</span>
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#B0B8C1;">수</span>
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#B0B8C1;">목</span>
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#B0B8C1;">금</span>
+              <span style="text-align:center; font:500 12px/1 'Pretendard'; color:#7BA0E8;">토</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(7,1fr); row-gap:4px;">
+              <sc-for list="{{ cells }}" as="c" hint-placeholder-count="35">
+                <div onClick="{{ c.onClick }}" style="display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 0 4px; cursor:{{ c.cursor }};">
+                  <span style="width:27px; height:27px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:{{ c.circleBg }}; font:600 13.5px/1 'Pretendard'; color:{{ c.numColor }};">{{ c.num }}</span>
+                  <span style="font:600 8px/1.15 'Pretendard'; color:#8B95A1; height:9px;">{{ c.spend }}</span>
+                  <span style="font:600 8px/1.15 'Pretendard'; color:#3B6EF6; height:9px;">{{ c.income }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- selected-day AI briefing -->
+          
+
+          <!-- selected-day transactions -->
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:2px 4px 10px;">
+              <span style="font:700 15px/1 'Pretendard'; color:#191F28;">{{ selectedLabel }}</span>
+              <span style="font:600 13px/1 'Pretendard'; color:{{ dayTotalColor }};">{{ dayTotal }}</span>
+            </div>
+            <sc-if value="{{ hasTx }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#fff; border:1px solid #EDF0F3; border-radius:18px; padding:6px 16px;">
+                <sc-for list="{{ selectedTx }}" as="tx" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:{{ tx.border }};">
+                    <span style="width:38px; height:38px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center; font:700 13px/1 'Pretendard'; color:#fff; background:{{ tx.color }};">{{ tx.initial }}</span>
+                    <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
+                      <span style="font:600 14.5px/1.2 'Pretendard'; color:#191F28; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ tx.merchant }}</span>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font:500 11.5px/1 'Pretendard'; color:#8B95A1;">{{ tx.time }}</span>
+                        <span style="width:2px; height:2px; border-radius:50%; background:#C6CDD5;"></span>
+                        <span style="font:600 11px/1 'Pretendard'; color:{{ tx.color }}; background:{{ tx.tagBg }}; padding:3px 7px; border-radius:5px;">{{ tx.category }}</span>
+                        <span style="font:500 10.5px/1 'Pretendard'; color:#B0B8C1;">{{ tx.method }}</span>
+                      </div>
+                    </div>
+                    <span style="font:700 15.5px/1 'Pretendard'; color:{{ tx.amtColor }}; letter-spacing:-.02em; flex:none;">{{ tx.amountFmt }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noTx }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#F8FAFB; border:1px solid #EDF0F3; border-radius:18px; padding:24px 16px; text-align:center;">
+                <span style="font:500 13px/1.4 'Pretendard'; color:#8B95A1;">이 날은 기록된 소비가 없어요</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- compact auto-detect -->
+          <div style="background:#F7F9FF; border:1px solid #E3EAFB; border-radius:16px; padding:12px 14px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="position:relative; display:flex; width:8px; height:8px;">
+                <span style="position:absolute; inset:0; border-radius:50%; background:#3B6EF6; opacity:.35;"></span>
+                <span style="position:relative; width:8px; height:8px; border-radius:50%; background:#3B6EF6;"></span>
+              </span>
+              <span style="font:700 13px/1 'Pretendard'; color:#191F28;">결제 알림 자동 감지</span>
+              <span style="font:600 11.5px/1 'Pretendard'; color:#3B6EF6; background:#EAF0FF; padding:3px 8px; border-radius:20px;">{{ pendingCount }}건</span>
+              <button onClick="{{ onSimulate }}" style="margin-left:auto; border:none; background:none; padding:2px; cursor:pointer; font:600 12px/1 'Pretendard'; color:#8B95A1; display:flex; align-items:center; gap:3px;">
+                시뮬레이션
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B0B8C1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+              </button>
+            </div>
+            <sc-for list="{{ pending }}" as="tx" hint-placeholder-count="1">
+              <div style="display:flex; align-items:center; gap:10px; margin-top:11px; padding-top:11px; border-top:1px solid #E7EDFA; animation:cardIn .3s ease;">
+                <span style="width:30px; height:30px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center; font:700 12px/1 'Pretendard'; color:#fff; background:{{ tx.color }};">{{ tx.initial }}</span>
+                <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
+                  <span style="font:600 13.5px/1.15 'Pretendard'; color:#191F28; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ tx.merchant }}</span>
+                  <div style="display:flex; align-items:center; gap:5px;">
+                    <span style="font:600 10.5px/1 'Pretendard'; color:{{ tx.color }}; background:{{ tx.tagBg }}; padding:3px 6px; border-radius:5px;">{{ tx.category }}</span>
+                    <span style="font:600 10.5px/1 'Pretendard'; color:{{ tx.badgeColor }}; background:{{ tx.badgeBg }}; padding:3px 6px; border-radius:5px;">{{ tx.badge }}</span>
+                  </div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex:none;">
+                  <span style="font:700 14px/1 'Pretendard'; color:#191F28;">{{ tx.amountFmt }}</span>
+                  <div style="display:flex; gap:5px;">
+                    <button onClick="{{ tx.onConfirm }}" style="border:none; border-radius:8px; padding:5px 11px; font:700 11.5px/1 'Pretendard'; color:#fff; background:#3B6EF6; cursor:pointer;">확정</button>
+                    <button onClick="{{ tx.onEdit }}" style="border:1px solid #DCE3EC; border-radius:8px; padding:5px 9px; font:600 11.5px/1 'Pretendard'; color:#4E5968; background:#fff; cursor:pointer;">수정</button>
+                    <button onClick="{{ tx.onRemove }}" style="border:1px solid #DCE3EC; border-radius:8px; padding:5px 9px; font:600 11.5px/1 'Pretendard'; color:#8B95A1; background:#fff; cursor:pointer;">삭제</button>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- compact budget alert -->
+          <div style="display:flex; align-items:center; gap:11px; background:#FFF6F0; border:1px solid #FCE2D2; border-radius:14px; padding:12px 14px;">
+            <div style="width:32px; height:32px; border-radius:9px; flex:none; background:#FFEADD; display:flex; align-items:center; justify-content:center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F2711C" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+            </div>
+            <span style="font:600 12.5px/1.35 'Pretendard'; color:#191F28; flex:1;">이번 달 <b>카페</b> 예산의 <b style="color:#F2711C;">84%</b>를 사용했어요</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0B79A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- bottom nav -->
+      <div style="position:absolute; bottom:0; left:0; right:0; height:84px; background:rgba(255,255,255,.94); backdrop-filter:blur(12px); border-top:1px solid #EEF1F4; display:flex; padding:8px 8px 22px; z-index:20;">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0B8C1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"></path></svg>
+          <span style="font:500 10.5px/1 'Pretendard'; color:#B0B8C1;">홈</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0B8C1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"></rect><path d="M3 9h18M8 2.5v4M16 2.5v4"></path></svg>
+          <span style="font:500 10.5px/1 'Pretendard'; color:#B0B8C1;">일정</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B6EF6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="14" rx="3"></rect><path d="M3 10h18"></path><circle cx="16.5" cy="14.5" r="1.3" fill="#3B6EF6" stroke="none"></circle></svg>
+          <span style="font:700 10.5px/1 'Pretendard'; color:#3B6EF6;">AI 가계부</span>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B0B8C1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+          <span style="font:500 10.5px/1 'Pretendard'; color:#B0B8C1;">마이</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 화면 2 : 소비 리포트 ============ -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="display:flex; align-items:baseline; gap:10px; padding-left:4px;">
+      <span style="font:700 12px/1 'Pretendard'; letter-spacing:.04em; color:#fff; background:#191F28; padding:5px 9px; border-radius:6px;">화면 2</span>
+      <span style="font:600 15px/1 'Pretendard'; color:#191F28;">소비 리포트 · 월간 분석</span>
+    </div>
+
+    <div style="position:relative; width:390px; height:844px; background:#fff; border-radius:46px; box-shadow:0 2px 4px rgba(0,0,0,.04), 0 40px 80px -20px rgba(20,30,55,.28); border:1px solid rgba(0,0,0,.06); overflow:hidden;">
+      <div style="position:absolute; top:0; left:0; right:0; height:52px; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:0 30px 0 34px; background:#fff;">
+        <span style="font:600 15px/1 'Pretendard'; color:#191F28; letter-spacing:.02em;">9:41</span>
+        <div style="display:flex; align-items:center; gap:7px;">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="#191F28"><rect x="0" y="7" width="3" height="5" rx="1"></rect><rect x="5" y="4" width="3" height="8" rx="1"></rect><rect x="10" y="2" width="3" height="10" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="1" width="20" height="10" rx="3" fill="none" stroke="#191F28" stroke-opacity=".35"></rect><rect x="3" y="3" width="15" height="6" rx="1.5" fill="#191F28"></rect><rect x="22" y="4" width="1.5" height="4" rx="1" fill="#191F28" fill-opacity=".4"></rect></svg>
+        </div>
+      </div>
+
+      <div class="phone-scroll" style="position:absolute; inset:52px 0 0 0; overflow-y:auto; overflow-x:hidden;">
+        <div style="padding:8px 20px 40px;">
+
+          <!-- header -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 4px 16px;">
+            <div style="display:flex; flex-direction:column; gap:3px;">
+              <span style="font:600 13px/1 'Pretendard'; color:#8B95A1;">소비 리포트</span>
+              <div style="display:flex; align-items:center; gap:5px;">
+                <span style="font:700 24px/1 'Pretendard'; color:#191F28; letter-spacing:-.02em;">2025년 12월</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#191F28" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- period segmented -->
+          <div style="display:flex; gap:6px; background:#F2F4F6; border-radius:13px; padding:4px; margin-bottom:16px;">
+            <span style="flex:1; text-align:center; font:600 13px/1 'Pretendard'; color:#8B95A1; padding:9px 0; border-radius:10px;">주간</span>
+            <span style="flex:1; text-align:center; font:700 13px/1 'Pretendard'; color:#191F28; padding:9px 0; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.08);">월간</span>
+            <span style="flex:1; text-align:center; font:600 13px/1 'Pretendard'; color:#8B95A1; padding:9px 0; border-radius:10px;">연간</span>
+          </div>
+
+          <!-- balance summary -->
+          <div style="background:#F5F7FA; border-radius:22px; padding:20px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+              <span style="font:600 13px/1 'Pretendard'; color:#6B7684;">이번 달 잔액</span>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:18px;">
+              <span style="font:700 32px/1 'Pretendard'; color:#191F28; letter-spacing:-.03em;">261,500</span>
+              <span style="font:600 19px/1 'Pretendard'; color:#191F28;">원</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <div style="flex:1; background:#fff; border-radius:14px; padding:13px 14px; display:flex; flex-direction:column; gap:6px;">
+                <span style="font:500 12px/1 'Pretendard'; color:#8B95A1;">지출</span>
+                <span style="font:700 16px/1 'Pretendard'; color:#191F28; letter-spacing:-.02em;">238,500</span>
+              </div>
+              <div style="flex:1; background:#fff; border-radius:14px; padding:13px 14px; display:flex; flex-direction:column; gap:6px;">
+                <span style="font:500 12px/1 'Pretendard'; color:#8B95A1;">수입</span>
+                <span style="font:700 16px/1 'Pretendard'; color:#3B6EF6; letter-spacing:-.02em;">500,000</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- category analysis -->
+          <div style="position:relative; background:linear-gradient(135deg,#1E2A54 0%,#2E3E7E 55%,#3A4FA0 100%); border-radius:22px; padding:22px 20px 20px; overflow:hidden;">
+            <div style="position:absolute; bottom:-50px; left:-30px; width:170px; height:170px; border-radius:50%; background:radial-gradient(circle,rgba(120,150,255,.3),transparent 70%);"></div>
+            <div style="position:relative; display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+              <div style="width:24px; height:24px; border-radius:8px; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#BFD0FF"><path d="M12 2l1.9 5.5L19.5 9l-4.6 3.4L16.4 18 12 14.7 7.6 18l1.5-5.6L4.5 9l5.6-1.5z"></path></svg>
+              </div>
+              <span style="font:700 13.5px/1 'Pretendard'; color:#EAF0FF;">12월 AI 소비 브리핑</span>
+            </div>
+            <p style="position:relative; margin:0 0 16px; font:500 15px/1.6 'Pretendard'; color:#F4F7FF; letter-spacing:-.01em; word-break:keep-all;">이번 달은 <b style="font-weight:700;">식비</b>와 <b style="font-weight:700;">카페</b> 소비가 가장 많았어요. 특히 일정이 많은 날 <b style="font-weight:700;">교통비</b>와 카페 지출이 함께 늘어나는 패턴이 보여요. 바쁜 주에는 미리 커피 쿠폰을 챙겨두면 도움이 될 거예요.</p>
+            <div style="position:relative; display:flex; gap:8px;">
+              <div style="flex:1; background:rgba(255,255,255,.08); border-radius:13px; padding:12px 13px;">
+                <span style="display:block; font:500 11px/1 'Pretendard'; color:rgba(255,255,255,.6); margin-bottom:6px;">전월 대비</span>
+                <span style="font:700 15px/1 'Pretendard'; color:#8FE3B0;">-12,400원 ↓</span>
+              </div>
+              <div style="flex:1; background:rgba(255,255,255,.08); border-radius:13px; padding:12px 13px;">
+                <span style="display:block; font:500 11px/1 'Pretendard'; color:rgba(255,255,255,.6); margin-bottom:6px;">최다 소비일</span>
+                <span style="font:700 15px/1 'Pretendard'; color:#EAF0FF;">12월 17일</span>
+              </div>
+            </div>
+          </div><div style="background:#fff; border:1px solid #EDF0F3; border-radius:22px; padding:20px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+              <span style="font:700 15px/1 'Pretendard'; color:#191F28;">카테고리별 소비</span>
+              <span style="font:600 12.5px/1 'Pretendard'; color:#8B95A1;">총 220,000원</span>
+            </div>
+            <div style="display:flex; height:12px; border-radius:7px; overflow:hidden; margin-bottom:20px;">
+              <sc-for list="{{ categories }}" as="c" hint-placeholder-count="5">
+                <span style="width:{{ c.pctW }}; background:{{ c.color }};"></span>
+              </sc-for>
+            </div>
+            <sc-for list="{{ categories }}" as="c" hint-placeholder-count="5">
+              <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:{{ c.border }};">
+                <span style="width:10px; height:10px; border-radius:3px; flex:none; background:{{ c.color }};"></span>
+                <span style="font:600 14px/1 'Pretendard'; color:#333D4B; flex:1;">{{ c.name }}</span>
+                <span style="font:600 13px/1 'Pretendard'; color:#8B95A1;">{{ c.pct }}%</span>
+                <span style="font:700 14.5px/1 'Pretendard'; color:#191F28; letter-spacing:-.02em; min-width:64px; text-align:right;">{{ c.amountFmt }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- budget usage -->
+          <div style="background:#fff; border:1px solid #EDF0F3; border-radius:22px; padding:20px; margin-bottom:14px;">
+            <span style="font:700 15px/1 'Pretendard'; color:#191F28;">예산 사용률</span>
+            <div style="height:16px;"></div>
+            <sc-for list="{{ budgets }}" as="b" hint-placeholder-count="3">
+              <div style="margin-bottom:18px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+                  <span style="font:600 13.5px/1 'Pretendard'; color:#333D4B;">{{ b.name }}</span>
+                  <div style="display:flex; align-items:baseline; gap:6px;">
+                    <span style="font:700 14px/1 'Pretendard'; color:{{ b.pctColor }};">{{ b.pct }}%</span>
+                    <span style="font:500 11.5px/1 'Pretendard'; color:#B0B8C1;">{{ b.detail }}</span>
+                  </div>
+                </div>
+                <div style="height:8px; border-radius:5px; background:#F2F4F6; overflow:hidden;">
+                  <div style="height:100%; width:{{ b.pctW }}; border-radius:5px; background:{{ b.barColor }};"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- recurring detail -->
+          <div style="background:#fff; border:1px solid #EDF0F3; border-radius:22px; padding:20px 20px 8px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <span style="font:700 15px/1 'Pretendard'; color:#191F28;">반복 결제 · 고정지출</span>
+              <span style="font:700 14px/1 'Pretendard'; color:#191F28;">월 86,000원</span>
+            </div>
+            <sc-for list="{{ recurringDetail }}" as="r" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:{{ r.border }};">
+                <span style="width:38px; height:38px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center; font:700 12px/1 'Pretendard'; color:#fff; background:{{ r.color }};">{{ r.initial }}</span>
+                <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
+                  <span style="font:600 14.5px/1.2 'Pretendard'; color:#191F28;">{{ r.name }}</span>
+                  <span style="font:500 11.5px/1 'Pretendard'; color:#8B95A1;">{{ r.cycle }} · {{ r.cat }}</span>
+                </div>
+                <span style="font:700 15px/1 'Pretendard'; color:#191F28; letter-spacing:-.02em;">{{ r.amountFmt }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- monthly AI briefing -->
+          
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    selectedDay: 20,
+    pending: [
+      { id: 1, merchant: '무신사', initial: '무', amount: -42000, category: '쇼핑', catKey: 'shop', method: 'AI 판단', review: true, confidence: 71 },
+    ],
+    simIdx: 0,
+    nextId: 100,
+  };
+
+  cat(key) {
+    const m = {
+      cafe:  { color: '#E8850C', bg: 'rgba(232,133,12,.12)' },
+      food:  { color: '#1FA463', bg: 'rgba(31,164,99,.12)' },
+      trans: { color: '#3B6EF6', bg: 'rgba(59,110,246,.12)' },
+      sub:   { color: '#8B5CF6', bg: 'rgba(139,92,246,.12)' },
+      shop:  { color: '#E5457E', bg: 'rgba(229,69,126,.12)' },
+      cvs:   { color: '#0EA5A5', bg: 'rgba(14,165,165,.12)' },
+      income:{ color: '#3B6EF6', bg: 'rgba(59,110,246,.12)' },
+      tel:   { color: '#5B6472', bg: 'rgba(91,100,114,.12)' },
+    };
+    return m[key] || m.food;
+  }
+
+  fmt(n) { return Math.abs(n).toLocaleString('ko-KR'); }
+
+  // per-day calendar totals (our own mock data)
+  dayData = {
+    1:  { spend: 3200 },
+    2:  { spend: 18500 },
+    4:  { spend: 9800 },
+    5:  { spend: 52000, income: 500000 },
+    6:  { spend: 4500 },
+    8:  { spend: 12300 },
+    9:  { income: 32000 },
+    11: { spend: 33900 },
+    13: { spend: 8400 },
+    14: { spend: 22400 },
+    15: { spend: 15600 },
+    17: { spend: 98400 },
+    18: { spend: 2800 },
+    19: { spend: 54800, income: 12000 },
+    20: { spend: 27300 },
+    22: { spend: 14000 },
+    23: { spend: 9500 },
+    24: { spend: 48000 },
+    26: { spend: 110000 },
+    27: { spend: 49390 },
+    28: { income: 9500 },
+    29: { spend: 2900 },
+    31: { spend: 5300 },
+  };
+
+  // detailed transactions per day
+  txByDay = {
+    5:  [
+      { time: '08:00', merchant: '급여 입금', initial: '급', amount: 500000, category: '수입', catKey: 'income', method: '입금 알림' },
+      { time: '20:10', merchant: '롯데마트 서초점', initial: '롯', amount: -52000, category: '식비', catKey: 'food', method: '장소 검색' },
+    ],
+    17: [
+      { time: '21:30', merchant: '쿠팡', initial: '쿠', amount: -63000, category: '쇼핑', catKey: 'shop', method: '룰베이스' },
+      { time: '19:10', merchant: '배달의민족', initial: '배', amount: -35400, category: '식비', catKey: 'food', method: 'AI 판단' },
+    ],
+    20: [
+      { time: '14:20', merchant: '스타벅스 강남역점', initial: '스', amount: -5800, category: '카페', catKey: 'cafe', method: '룰베이스' },
+      { time: '12:30', merchant: '홍콩반점0410 강남역점', initial: '홍', amount: -9500, category: '식비', catKey: 'food', method: '장소 검색' },
+      { time: '09:10', merchant: '카카오T', initial: 'K', amount: -12000, category: '교통', catKey: 'trans', method: '룰베이스' },
+    ],
+    26: [
+      { time: '18:00', merchant: '이마트 트레이더스', initial: '이', amount: -110000, category: '쇼핑', catKey: 'shop', method: '장소 검색' },
+    ],
+  };
+
+  briefingByDay = {
+    5:  '12월 5일에 급여 500,000원이 입금됐어요. 같은 날 마트 지출이 있었으니 이번 주 예산을 미리 나눠두면 좋아요 💡',
+    17: '12월 17일은 이번 달 지출이 가장 많은 날이에요. 쇼핑과 배달로 98,400원을 사용했어요. 큰 지출이 몰린 날이니 다음 주는 조금 여유를 둬볼까요?',
+    20: '12월 20일에는 총 27,300원을 사용했어요. 카페와 교통비 지출이 평소보다 조금 많아요. 커피 한 잔만 줄여도 목표에 가까워져요 ☕',
+    26: '12월 26일에는 이마트에서 110,000원을 사용했어요. 대형 지출이 있던 날이라 이번 달 식비·쇼핑 예산을 다시 확인해볼게요.',
+  };
+
+  simPool = [
+    { merchant: '이디야커피 역삼점', initial: '이', amount: -4500, category: '카페', catKey: 'cafe', method: '룰베이스', review: false, confidence: 96 },
+    { merchant: 'CU 강남중앙점', initial: 'C', amount: -2800, category: '편의점', catKey: 'cvs', method: '룰베이스', review: false, confidence: 94 },
+    { merchant: '배달의민족', initial: '배', amount: -18500, category: '식비', catKey: 'food', method: 'AI 판단', review: true, confidence: 68 },
+    { merchant: '쿠팡', initial: '쿠', amount: -33900, category: '쇼핑', catKey: 'shop', method: '장소 검색', review: false, confidence: 88 },
+    { merchant: '지하철 (교통카드)', initial: '지', amount: -1400, category: '교통', catKey: 'trans', method: '룰베이스', review: false, confidence: 97 },
+  ];
+
+  selectDay = (d) => { this.setState({ selectedDay: d }); };
+
+  simulate = () => {
+    const tpl = this.simPool[this.state.simIdx % this.simPool.length];
+    this.setState(s => ({
+      simIdx: s.simIdx + 1,
+      nextId: s.nextId + 1,
+      pending: [{ ...tpl, id: s.nextId }, ...s.pending],
+    }));
+  };
+
+  confirmTx = (id) => { this.setState(s => ({ pending: s.pending.filter(p => p.id !== id) })); };
+  removeTx = (id) => { this.setState(s => ({ pending: s.pending.filter(p => p.id !== id) })); };
+  editTx = (id) => {
+    this.setState(s => ({ pending: s.pending.map(p => p.id === id ? { ...p, review: false, method: '직접 수정', confidence: 100 } : p) }));
+  };
+
+  renderVals() {
+    const S = this.state;
+    const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+    const year = 2025, month = 11;
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysIn = new Date(year, month + 1, 0).getDate();
+
+    const cells = [];
+    for (let i = 0; i < firstDow; i++) {
+      cells.push({ key: 'b' + i, num: '', spend: '', income: '', circleBg: 'transparent', numColor: 'transparent', cursor: 'default', onClick: undefined });
+    }
+    for (let d = 1; d <= daysIn; d++) {
+      const info = this.dayData[d] || {};
+      const sel = d === S.selectedDay;
+      const wd = (firstDow + d - 1) % 7;
+      let numColor = '#333D4B';
+      if (wd === 0) numColor = '#E5686F';
+      if (sel) numColor = '#3B6EF6';
+      cells.push({
+        key: 'd' + d, num: d,
+        spend: info.spend ? '-' + this.fmt(info.spend) : '',
+        income: info.income ? '+' + this.fmt(info.income) : '',
+        circleBg: sel ? '#EAF0FF' : 'transparent',
+        numColor,
+        cursor: 'pointer',
+        onClick: () => this.selectDay(d),
+      });
+    }
+
+    const rawTx = this.txByDay[S.selectedDay] || [];
+    const selectedTx = rawTx.map((t, i) => {
+      const c = this.cat(t.catKey);
+      return {
+        ...t, color: c.color, tagBg: c.bg,
+        amountFmt: (t.amount < 0 ? '-' : '+') + this.fmt(t.amount) + '원',
+        amtColor: t.amount < 0 ? '#191F28' : '#3B6EF6',
+        border: i === rawTx.length - 1 ? 'none' : '1px solid #F2F4F6',
+      };
+    });
+
+    const info = this.dayData[S.selectedDay] || {};
+    const net = (info.income || 0) - (info.spend || 0);
+    let dayTotal = '소비 없음', dayTotalColor = '#B0B8C1';
+    if (info.spend) { dayTotal = '지출 ' + this.fmt(info.spend) + '원'; dayTotalColor = '#4E5968'; }
+    if (info.income && !info.spend) { dayTotal = '수입 ' + this.fmt(info.income) + '원'; dayTotalColor = '#3B6EF6'; }
+
+    const wdSel = (firstDow + S.selectedDay - 1) % 7;
+    const selectedLabel = '12월 ' + S.selectedDay + '일 · ' + DOW[wdSel] + '요일';
+    const selectedShort = '12월 ' + S.selectedDay + '일';
+    const briefing = this.briefingByDay[S.selectedDay] ||
+      (info.spend ? ('12월 ' + S.selectedDay + '일에는 총 ' + this.fmt(info.spend) + '원을 사용했어요. 소비가 크지 않은 하루였어요 👍')
+                  : ('12월 ' + S.selectedDay + '일에는 기록된 소비가 없어요. 여유로운 하루였네요 :)'));
+
+    const pending = S.pending.map(p => {
+      const c = this.cat(p.catKey);
+      const badge = p.review ? '확인 필요' : (p.confidence >= 95 ? '자동 분류' : 'AI ' + p.confidence + '%');
+      return {
+        ...p, color: c.color, tagBg: c.bg,
+        amountFmt: (p.amount < 0 ? '-' : '+') + this.fmt(p.amount) + '원',
+        badge,
+        badgeColor: p.review ? '#F2711C' : '#1FA463',
+        badgeBg: p.review ? '#FFF1E8' : 'rgba(31,164,99,.10)',
+        onConfirm: () => this.confirmTx(p.id),
+        onEdit: () => this.editTx(p.id),
+        onRemove: () => this.removeTx(p.id),
+      };
+    });
+
+    // ---- report screen (unchanged) ----
+    const rawCats = [
+      { name: '식비', amount: 81000, pct: 34, catKey: 'food' },
+      { name: '쇼핑', amount: 50000, pct: 21, catKey: 'shop' },
+      { name: '카페', amount: 43000, pct: 18, catKey: 'cafe' },
+      { name: '교통', amount: 29000, pct: 12, catKey: 'trans' },
+      { name: '구독', amount: 17000, pct: 7, catKey: 'sub' },
+    ];
+    const categories = rawCats.map((c, i) => {
+      const col = this.cat(c.catKey);
+      return { ...c, color: col.color, pctW: c.pct + '%', amountFmt: this.fmt(c.amount) + '원',
+        border: i === rawCats.length - 1 ? 'none' : '1px solid #F5F7FA' };
+    });
+    const rawBudgets = [
+      { name: '카페', pct: 84, detail: '42,000 / 50,000', over: true },
+      { name: '식비', pct: 62, detail: '81,000 / 130,000', over: false },
+      { name: '쇼핑', pct: 48, detail: '50,000 / 105,000', over: false },
+    ];
+    const budgets = rawBudgets.map(b => ({
+      ...b, pctW: b.pct + '%',
+      pctColor: b.over ? '#F2711C' : '#191F28',
+      barColor: b.over ? '#F2711C' : '#3B6EF6',
+    }));
+    const rawRecDetail = [
+      { name: 'NETFLIX', initial: 'N', amount: -17000, cycle: '매월 1일', cat: '구독', catKey: 'sub' },
+      { name: 'KT 통신비', initial: 'KT', amount: -69000, cycle: '매월 15일', cat: '통신', catKey: 'tel' },
+    ];
+    const recurringDetail = rawRecDetail.map((r, i) => {
+      const c = this.cat(r.catKey);
+      return { ...r, color: c.color, amountFmt: this.fmt(r.amount) + '원',
+        border: i === rawRecDetail.length - 1 ? 'none' : '1px solid #F5F7FA' };
+    });
+
+    return {
+      cells,
+      selectedTx, hasTx: selectedTx.length > 0, noTx: selectedTx.length === 0,
+      selectedLabel, selectedShort, briefing, dayTotal, dayTotalColor,
+      pending, pendingCount: pending.length,
+      onSimulate: this.simulate,
+      categories, budgets, recurringDetail,
+    };
+  }
+}
+</script>
+</body>
+</html>

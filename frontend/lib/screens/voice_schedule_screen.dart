@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/api_client.dart';
 import '../services/schedule_api.dart';
+import '../services/preference_store.dart';
 import '../services/voice_api.dart';
 import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
@@ -139,10 +140,14 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
       _errorMessage = null;
     });
     try {
+      await preferenceStore.ensureLoaded();
       final result = await scheduleApi.parse(
         text,
         inputType: 'voice',
         currentDatetime: _nowIso(),
+        assistantTone: preferenceStore.assistantTone,
+        responseLength: preferenceStore.responseLength,
+        reminderStrength: preferenceStore.reminderStrength,
       );
       setState(() {
         _parseResult = result;

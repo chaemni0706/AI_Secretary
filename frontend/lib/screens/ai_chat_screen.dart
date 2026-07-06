@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
 import '../services/schedule_api.dart';
+import '../services/preference_store.dart';
 import '../services/todo_api.dart';
 import '../services/dashboard_api.dart';
 import '../services/voice_stt_service.dart';
@@ -176,10 +177,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
 
     try {
+      await preferenceStore.ensureLoaded();
       final result = await scheduleApi.parse(
         text,
         currentDatetime: DateTime.now().toIso8601String(),
         inputType: fromVoice ? 'voice' : 'text',
+        assistantTone: preferenceStore.assistantTone,
+        responseLength: preferenceStore.responseLength,
+        reminderStrength: preferenceStore.reminderStrength,
       );
       if (!mounted) return;
       setState(() {

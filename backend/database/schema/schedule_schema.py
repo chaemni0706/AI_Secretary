@@ -25,6 +25,19 @@ class ScheduleParseRequest(BaseModel):
             "(identical to the previous, un-styled tts_text)."
         ),
     )
+    # --- AI voice-style preferences (additive; omitted -> legacy tts_text) ---
+    # When `assistant_tone` (or response_length/reminder_strength) is provided,
+    # tts_text is regenerated in that persona style via assistant_style_service.
+    # Callers that don't send these keep the exact legacy behaviour.
+    assistant_tone: Optional[str] = Field(
+        None, description="formal | friendly | caring | concise (or legacy polite/professional)"
+    )
+    response_length: Optional[str] = Field(
+        None, description="short | medium | long (or legacy normal/detailed)"
+    )
+    reminder_strength: Optional[str] = Field(
+        None, description="gentle | normal | strong (or legacy low/medium/high)"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

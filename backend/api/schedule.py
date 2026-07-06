@@ -73,7 +73,9 @@ def confirm_schedule_endpoint(req: ScheduleConfirmRequest, db: Session = Depends
         item_type = resolve_item_type(req)
         if item_type == "TODO":
             todo = confirm_todo(db, req)
-            plan = notification_plan_builder.build_todo_plan(db, todo, user_id=req.user_id)
+            plan = notification_plan_builder.build_todo_plan(
+                db, todo, user_id=req.user_id, reminder_strength=req.reminder_strength
+            )
             preferences = user_preference_service.get_user_preferences(req.user_id)
             tts_text = tts_response_builder.build_tts_response(
                 intent="todo_create_success",
@@ -95,7 +97,8 @@ def confirm_schedule_endpoint(req: ScheduleConfirmRequest, db: Session = Depends
         db.rollback()
         raise HTTPException(status_code=422, detail="유효하지 않은 일정 데이터입니다.")
     plan = notification_plan_builder.build_event_plan(
-        db, schedule, user_id=req.user_id, is_all_day=req.parsed.is_all_day
+        db, schedule, user_id=req.user_id, is_all_day=req.parsed.is_all_day,
+        reminder_strength=req.reminder_strength,
     )
     preferences = user_preference_service.get_user_preferences(req.user_id)
     tts_text = tts_response_builder.build_tts_response(

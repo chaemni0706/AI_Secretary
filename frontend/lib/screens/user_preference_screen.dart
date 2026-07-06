@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
 import '../services/user_preferences_api.dart';
+import '../services/preference_store.dart';
 import '../services/voice_tts_service.dart';
 
 /// statusCode/요청 URI/응답 body 까지 포함한 상세 오류 문자열.
@@ -80,6 +81,11 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         );
         _loading = false;
       });
+      preferenceStore.updateLocal(
+        assistantTone: _selected['assistant_tone'],
+        responseLength: _selected['response_length'],
+        nudgeStrength: _selected['nudge_strength'],
+      );
     } on ApiException catch (e) {
       debugPrint('[UserPreferenceScreen] load failed: ${_describeApiError(e)}');
       if (!mounted) return;
@@ -101,6 +107,12 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
     setState(() => _saving = true);
     try {
       final result = await UserPreferencesApi.update(
+        assistantTone: _selected['assistant_tone'],
+        responseLength: _selected['response_length'],
+        nudgeStrength: _selected['nudge_strength'],
+      );
+      // 저장 즉시 전역 캐시 갱신 → 이후 채팅/음성 요청이 새 말투를 사용.
+      preferenceStore.updateLocal(
         assistantTone: _selected['assistant_tone'],
         responseLength: _selected['response_length'],
         nudgeStrength: _selected['nudge_strength'],
@@ -147,6 +159,11 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
     setState(() => _saving = true);
     try {
       final result = await UserPreferencesApi.update(
+        assistantTone: _selected['assistant_tone'],
+        responseLength: _selected['response_length'],
+        nudgeStrength: _selected['nudge_strength'],
+      );
+      preferenceStore.updateLocal(
         assistantTone: _selected['assistant_tone'],
         responseLength: _selected['response_length'],
         nudgeStrength: _selected['nudge_strength'],

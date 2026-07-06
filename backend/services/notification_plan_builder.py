@@ -95,11 +95,16 @@ def _strength_reminders(
     source of truth in assistant_style_service."""
     if not reminder_strength:
         return []
+    import logging
     from backend.services import assistant_style_service as style
     profile = style.build_style_profile({"reminder_strength": reminder_strength})
+    offsets = style.reminder_offsets(profile)
     message = style.build_reminder_text(title, profile)
+    _log = logging.getLogger("assistant_style")
+    _log.info("[STYLE DEBUG] reminder_strength=%s offsets=%s message=%s",
+              reminder_strength, offsets, message)
     out: List[ReminderEntry] = []
-    for mb in style.reminder_offsets(profile):
+    for mb in offsets:
         out.append(ReminderEntry(
             type="reminder", minutes_before=mb,
             trigger_time=_trigger(date, hhmm, mb),

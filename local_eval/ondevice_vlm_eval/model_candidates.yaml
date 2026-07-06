@@ -1,0 +1,60 @@
+# 온디바이스 소형 VLM 후보 모델 메타데이터
+#
+# 목표 기기: Samsung Galaxy Z Flip3 5G (Snapdragon 888, 8GB RAM, Adreno 660)
+# 목표: water/exercise/study 이미지 인증을 온디바이스로. 정확도 + Z Flip3 실행 가능성 우선.
+#
+# 아래 수치(model_size_mb/expected_runtime 등)는 온디바이스 계획용 추정치이며, 실제 벤치마크로 갱신한다.
+# runtime_target: 온디바이스 실행 런타임 계획. android_feasibility: Z Flip3 기준 대략 평가.
+
+candidates:
+  - model_name: MiniCPM-V-4.6
+    adapter: minicpm_v
+    family: MiniCPM-V
+    parameter_size: "~8B"
+    quantization_plan: "int4 GGUF (llama.cpp) / MLC"
+    model_size_mb: 4800
+    expected_runtime: "high-end / server; on-device는 공격적 양자화 필요"
+    runtime_target: "llama.cpp-int4"
+    android_feasibility: "low-medium"
+    notes: >
+      정확도는 후보 중 최상위권으로 기대되나 파라미터가 커 Z Flip3(8GB)에서는
+      메모리/지연이 부담. 정확도 상한선(레퍼런스) 용도로 우선 평가.
+
+  - model_name: MobileVLM-V2-1.7B
+    adapter: mobilevlm
+    family: MobileVLM
+    parameter_size: "1.7B"
+    quantization_plan: "int4/int8 (llama.cpp / MLC / NNAPI)"
+    model_size_mb: 1100
+    expected_runtime: "mobile 최적화 설계"
+    runtime_target: "mlc-int4 / nnapi"
+    android_feasibility: "high"
+    notes: >
+      모바일 추론을 목표로 설계된 경량 VLM. Z Flip3에서 지연/메모리 측면 가장 현실적인 후보.
+      정확도가 인증 기준을 충족하는지가 관건.
+
+  - model_name: SmolVLM-500M
+    adapter: smolvlm
+    family: SmolVLM
+    parameter_size: "0.5B (대안: 2.2B)"
+    quantization_plan: "int8/int4 (ONNX Runtime / llama.cpp / MLC)"
+    model_size_mb: 600
+    expected_runtime: "mobile / edge"
+    runtime_target: "onnx-int8 / mlc"
+    android_feasibility: "high (500M) / medium (2.2B)"
+    notes: >
+      초경량. 500M은 크기/속도에서 매우 유리하나 세밀한 시각 근거(빈 컵 vs 물, 학습 콘텐츠 등)
+      정확도가 낮을 위험. 필요 시 SmolVLM-2.2B로 정확도-크기 트레이드오프 비교.
+
+  - model_name: Qwen2.5-VL-3B-AWQ
+    adapter: qwen_awq
+    family: Qwen2.5-VL
+    parameter_size: "3B"
+    quantization_plan: "AWQ 4bit"
+    model_size_mb: 2300
+    expected_runtime: "medium; on-device via MLC, server via vLLM"
+    runtime_target: "mlc-awq"
+    android_feasibility: "medium"
+    notes: >
+      기존 파이프라인이 Qwen2.5-VL-3B(비양자화) 기준으로 검증됨. AWQ 4bit로 크기/지연을 낮춰
+      온디바이스 가능성을 본다. 기존 결과와의 정확도 비교 기준(anchor)으로 유용.

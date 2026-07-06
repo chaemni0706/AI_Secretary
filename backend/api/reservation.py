@@ -13,7 +13,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.core.response import success_response
+from backend.core.response import error_response, success_response
+from backend.database.schema.reservation_message_schema import (
+    FromCandidateRequest,
+    FromCandidateResponse,
+)
+from backend.services.reservation_message_service import (
+    MissingFieldsError,
+    build_message_card,
+)
 from backend.database.schema.reservation_business_schema import (
     BusinessCandidateRequest,
     BusinessCandidateResponse,
@@ -30,6 +38,7 @@ from backend.services import reservation_candidate_service as biz_reco
 from backend.services import virtual_business_service as biz_service
 from backend.services.reservation_from_store_service import recommend_from_store
 from backend.services.reservation_recommender import recommend_candidates
+from backend.services import tts_response_builder, user_preference_service
 
 router = APIRouter(tags=["reservation"])
 
@@ -42,6 +51,20 @@ def _message(data) -> str:
     )
 
 
+def _attach_recommend_tts(data, *, user_id=None, target_date: str) -> None:
+    """Fill data.tts_text from the top-ranked candidate (additive; no-op when
+    there are no candidates). Mutates `data` in place before .model_dump()."""
+    if not data.recommended_candidates:
+        return
+    top = data.recommended_candidates[0]
+    preferences = user_preference_service.get_user_preferences(user_id)
+    data.tts_text = tts_response_builder.build_tts_response(
+        intent="reservation_recommend",
+        slots={"date": target_date, "time": top.start_time},
+        preferences=preferences,
+    )
+
+
 @router.post(
     "/reservations/candidates",
     response_model=ReservationCandidateResponse,
@@ -49,6 +72,7 @@ def _message(data) -> str:
 )
 async def reservation_candidates(req: ReservationCandidateRequest):
     data = recommend_candidates(req)
+    _attach_recommend_tts(data, target_date=req.constraints.target_date)
     return success_response(message=_message(data), data=data.model_dump())
 
 
@@ -61,6 +85,7 @@ def reservation_candidates_from_store(
     req: ReservationFromStoreRequest, db: Session = Depends(get_db)
 ):
     data = recommend_from_store(db, req)
+    _attach_recommend_tts(data, user_id=req.user_id, target_date=req.target_date)
     return success_response(message=_message(data), data=data.model_dump())
 
 
@@ -119,3 +144,22 @@ def book_reservation(req: ReservationBookingRequest, db: Session = Depends(get_d
         message="예약 후보를 로컬 일정으로 저장했습니다.",
         data={"schedule": schedule.model_dump()},
     )
+
+
+@router.post(
+    "/reservations/message/from-candidate",
+    response_model=FromCandidateResponse,
+    summary="선택한 예약 후보로 예약 문의 메시지 생성 (draft-only)",
+)
+def reservation_message_from_candidate(req: FromCandidateRequest):
+    try:
+        data = build_message_card(req)
+    except MissingFieldsError as exc:
+        return error_response(
+            message="예약 메시지 생성에 필요한 정보가 부족합니다.",
+            status_code=422,
+            data={"missing_fields": exc.missing},
+        )
+    label = {"inquiry": "예약 문의", "confirm": "예약 확정 요청", "change": "예약 변경 문의",
+             "cancel": "예약 취소 요청", "check": "예약 확인 요청"}.get(req.action_type, "예약 문의")
+    return success_response(message=f"{label} 메시지를 생성했습니다.", data=data.model_dump())

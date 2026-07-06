@@ -1,0 +1,48 @@
+{
+  "_comment": "assistant_tone별 후처리 규칙. tts_response_builder가 (base 템플릿 + nudge문장 + detailed suffix) 조립 후, 문장 수를 length 기준으로 자른 다음 이 규칙을 적용한다. nudge/suffix 문장은 personalization_rules.json에 '친근한 기본 어조'로 정의돼 있으므로, concise/professional/caring 처럼 어조가 다른 톤은 여기서 그 문장들을 다듬는다. polite/friendly는 기본 템플릿이 이미 해당 어조라 규칙이 비어 있다(no-op).",
+  "tones": {
+    "polite": {
+      "max_sentences_cap": null,
+      "remove_phrases": [],
+      "replace": []
+    },
+    "friendly": {
+      "max_sentences_cap": null,
+      "remove_phrases": [],
+      "replace": []
+    },
+    "concise": {
+      "max_sentences_cap": 1,
+      "remove_phrases": ["좋아요. ", "그리고 ", "혹시 ", "괜찮으시면 "],
+      "replace": []
+    },
+    "caring": {
+      "max_sentences_cap": null,
+      "remove_phrases": [],
+      "replace": [
+        {"find": "당장", "replace": "천천히"},
+        {"find": "무조건", "replace": "가능하면"},
+        {"find": "반드시", "replace": "가능하면"}
+      ]
+    },
+    "professional": {
+      "max_sentences_cap": null,
+      "remove_phrases": [],
+      "replace": [
+        {"find": "늦지 않게 한 번 확인해두면 좋겠어요.", "replace": "늦지 않게 한 번 확인해 두시기 바랍니다."},
+        {"find": "여유를 두려면 지금부터 조금씩 준비해두는 걸 추천드려요.", "replace": "여유 확보를 위해 사전 준비를 권장합니다."},
+        {"find": "마감 전에 여유를 두려면 지금부터 조금씩 진행해볼까요?", "replace": "마감 전 여유 확보를 위해 사전 진행을 권장합니다."},
+        {"find": "이동 준비를 여유 있게 시작해볼까요?", "replace": "이동 준비를 여유 있게 시작하시기 바랍니다."},
+        {"find": "교통 상황을 고려해서 조금 더 일찍 준비를 시작해볼까요?", "replace": "교통 상황을 고려하여 조금 더 이른 준비를 권장합니다."},
+        {"find": "중요한 일정부터 챙겨보면 좋겠어요.", "replace": "중요한 일정부터 확인하시기 바랍니다."},
+        {"find": "우선순위가 높은 일정과 준비물을 꼼꼼히 확인해볼까요?", "replace": "우선순위가 높은 일정과 준비물을 확인하시기 바랍니다."},
+        {"find": "필요하면 일정 전 알림도 함께 설정할 수 있어요.", "replace": "필요 시 일정 전 알림도 설정 가능합니다."},
+        {"find": "필요하면 마감 전 알림도 함께 챙겨드릴 수 있어요.", "replace": "필요 시 마감 전 알림도 함께 반영 가능합니다."},
+        {"find": "원하시면 다른 시간대도 더 찾아드릴 수 있어요.", "replace": "요청 시 다른 시간대도 추가로 확인 가능합니다."},
+        {"find": "필요하면 우선순위별로 더 자세히 안내해드릴 수 있어요.", "replace": "필요 시 우선순위별 상세 안내가 가능합니다."},
+        {"find": "필요하면 잠깐 쉬어가는 방법도 같이 찾아볼 수 있어요.", "replace": "필요 시 휴식 방법을 함께 안내해 드릴 수 있습니다."},
+        {"find": "다른 표현으로 다시 말씀해주셔도 좋아요.", "replace": "다른 표현으로 다시 요청해 주시기 바랍니다."}
+      ]
+    }
+  }
+}

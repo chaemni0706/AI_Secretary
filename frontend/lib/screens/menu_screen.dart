@@ -4,41 +4,82 @@ import '../widgets/glass_card.dart';
 import 'briefing_screen.dart';
 import 'booking_recommend_screen.dart';
 import 'booking_message_screen.dart';
+import 'daily_briefing_screen.dart';
+import 'voice_chat_screen.dart';
+import 'voice_schedule_screen.dart';
+import 'mock_call_alert_screen.dart';
+import 'user_preference_screen.dart';
 
 class MenuScreen extends StatelessWidget {
-  const MenuScreen({super.key});
+  final bool isDrawer;
+
+  const MenuScreen({super.key, this.isDrawer = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: AppTheme.screenBackground,
-      child: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildSearchBar()),
-            SliverToBoxAdapter(child: _buildMvpSection(context)),
-            SliverToBoxAdapter(child: _buildExtendedSection()),
-            SliverToBoxAdapter(child: _buildSettingsSection()),
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: isDrawer
+            ? const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(24),
+                ),
+              )
+            : AppTheme.screenBackground,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader(context)),
+                SliverToBoxAdapter(child: _buildSearchBar()),
+                SliverToBoxAdapter(child: _buildMvpSection(context)),
+                SliverToBoxAdapter(child: _buildVoiceSection(context)),
+                SliverToBoxAdapter(child: _buildExtendedSection()),
+                SliverToBoxAdapter(child: _buildSettingsSection(context)),
+                const SliverToBoxAdapter(child: SizedBox(height: 80)),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Text(
-        '전체',
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w700,
-          color: AppTheme.textPrimary,
-          letterSpacing: -0.5,
-        ),
+  void _openService(BuildContext context, Widget screen) {
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    if (isDrawer) {
+      Navigator.of(context).pop();
+    }
+    rootNavigator.push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 16, 4),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              '전체',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          if (isDrawer)
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close, color: AppTheme.textPrimary),
+              tooltip: '닫기',
+            ),
+        ],
       ),
     );
   }
@@ -48,7 +89,7 @@ class MenuScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.75),
+          color: const Color(0xFFEEEFF5),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.separator),
           boxShadow: [
@@ -63,13 +104,14 @@ class MenuScreen extends StatelessWidget {
           style: TextStyle(fontSize: 14, color: AppTheme.textPrimary),
           decoration: InputDecoration(
             hintText: '기능 검색',
-            hintStyle:
-                TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-            prefixIcon:
-                Icon(Icons.search, color: AppTheme.textSecondary, size: 20),
+            hintStyle: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            prefixIcon: Icon(
+              Icons.search,
+              color: AppTheme.textSecondary,
+              size: 20,
+            ),
             border: InputBorder.none,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           ),
         ),
       ),
@@ -83,30 +125,21 @@ class MenuScreen extends StatelessWidget {
         color: AppTheme.blue,
         title: '브리핑 상세',
         subtitle: '오늘 요약·주의사항',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BriefingScreen()),
-        ),
+        onTap: () => _openService(context, const BriefingScreen()),
       ),
       _MenuItem(
         icon: Icons.event_available_outlined,
         color: AppTheme.green,
         title: '예약 후보 추천',
         subtitle: '빈 시간 찾기',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BookingRecommendScreen()),
-        ),
+        onTap: () => _openService(context, const BookingRecommendScreen()),
       ),
       _MenuItem(
         icon: Icons.forum_outlined,
         color: AppTheme.teal,
         title: '예약 메시지',
         subtitle: '정중한 문의 생성',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BookingMessageScreen()),
-        ),
+        onTap: () => _openService(context, const BookingMessageScreen()),
       ),
       _MenuItem(
         icon: Icons.backpack_outlined,
@@ -123,17 +156,51 @@ class MenuScreen extends StatelessWidget {
         const SectionHeader(title: 'MVP 기능'),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.5,
-            children: items
-                .map((item) => _MenuCard(item: item))
-                .toList(),
-          ),
+          child: _MenuList(items: items),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVoiceSection(BuildContext context) {
+    final items = [
+      _MenuItem(
+        icon: Icons.mic_external_on_outlined,
+        color: AppTheme.blue,
+        title: '음성으로 일정 만들기',
+        subtitle: '말하면 일정 등록',
+        onTap: () => _openService(context, const VoiceScheduleScreen()),
+      ),
+      _MenuItem(
+        icon: Icons.wb_sunny_outlined,
+        color: AppTheme.blue,
+        title: '오늘의 브리핑',
+        subtitle: '하루 요약·듣기',
+        onTap: () => _openService(context, const DailyBriefingScreen()),
+      ),
+      _MenuItem(
+        icon: Icons.mic_none_outlined,
+        color: AppTheme.purple,
+        title: 'AI 음성 챗봇',
+        subtitle: '감정 기반 코칭',
+        onTap: () => _openService(context, const VoiceChatScreen()),
+      ),
+      _MenuItem(
+        icon: Icons.phone_in_talk_outlined,
+        color: AppTheme.teal,
+        title: '챔니 전화 알림',
+        subtitle: '일정 전 음성 알림',
+        onTap: () => _openService(context, const MockCallAlertScreen()),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'AI 음성 비서'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: _MenuList(items: items),
         ),
       ],
     );
@@ -163,7 +230,9 @@ class MenuScreen extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -188,7 +257,9 @@ class MenuScreen extends StatelessWidget {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.textSecondary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -223,12 +294,21 @@ class MenuScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsSection() {
+  Widget _buildSettingsSection(BuildContext context) {
     final settings = [
-      (Icons.notifications_outlined, '알림 설정', AppTheme.blue),
-      (Icons.security_outlined, '개인정보 보호', AppTheme.textSecondary),
-      (Icons.help_outline, '도움말', AppTheme.textSecondary),
-      (Icons.info_outline, '앱 정보', AppTheme.textSecondary),
+      (
+        Icons.record_voice_over_outlined,
+        'AI 음성 스타일',
+        AppTheme.blue,
+        () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UserPreferenceScreen()),
+            ),
+      ),
+      (Icons.notifications_outlined, '알림 설정', AppTheme.blue, null),
+      (Icons.security_outlined, '개인정보 보호', AppTheme.textSecondary, null),
+      (Icons.help_outline, '도움말', AppTheme.textSecondary, null),
+      (Icons.info_outline, '앱 정보', AppTheme.textSecondary, null),
     ];
 
     return Column(
@@ -241,29 +321,38 @@ class MenuScreen extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: List.generate(settings.length, (i) {
-                final (icon, title, color) = settings[i];
+                final (icon, title, color, onTap) = settings[i];
                 return Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      child: Row(
-                        children: [
-                          Icon(icon, color: color, size: 22),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textPrimary,
+                    InkWell(
+                      onTap: onTap,
+                      borderRadius: BorderRadius.circular(18),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(icon, color: color, size: 22),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textPrimary,
+                                ),
                               ),
                             ),
-                          ),
-                          const Icon(Icons.chevron_right,
-                              color: AppTheme.textSecondary, size: 20),
-                        ],
+                            const Icon(
+                              Icons.chevron_right,
+                              color: AppTheme.textSecondary,
+                              size: 20,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     if (i < settings.length - 1)
@@ -300,53 +389,82 @@ class _MenuItem {
   });
 }
 
-class _MenuCard extends StatelessWidget {
-  final _MenuItem item;
+class _MenuList extends StatelessWidget {
+  final List<_MenuItem> items;
 
-  const _MenuCard({required this.item});
+  const _MenuList({required this.items});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: item.onTap,
-      child: GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: item.color.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(10),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: List.generate(items.length, (i) {
+          final item = items[i];
+          return Column(
+            children: [
+              InkWell(
+                onTap: item.onTap,
+                borderRadius: BorderRadius.circular(18),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 13,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: item.color.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(item.icon, color: item.color, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.subtitle,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.textSecondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Icon(item.icon, color: item.color, size: 20),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
+              if (i < items.length - 1)
+                const Divider(
+                  height: 1,
+                  indent: 66,
+                  endIndent: 0,
+                  color: AppTheme.separator,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          );
+        }),
       ),
     );
   }

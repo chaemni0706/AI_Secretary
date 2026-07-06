@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "daypart_rules": [
+    { "label": "오전", "start_hour": 5,  "end_hour": 11 },
+    { "label": "오후", "start_hour": 12, "end_hour": 17 },
+    { "label": "저녁", "start_hour": 18, "end_hour": 20 }
+  ],
+  "daypart_default": "밤",
+  "important_tip_categories": ["hospital", "meeting", "exam", "deadline"],
+  "todo_stem_suffixes": ["챙기기", "준비하기", "하기"],
+  "default_prep_word": "준비물",
+  "summary_templates": {
+    "has_schedules": "오늘은 {listing}{subject_particle} 있습니다.",
+    "no_schedules": "오늘은 등록된 일정이 없습니다. 할 일에 집중하기 좋은 날입니다.",
+    "prep_tip": " {top_title} 전에는 {prep}{object_particle} 챙기고 이동 시간을 여유 있게 확보하는 것이 좋습니다."
+  },
+  "key_point_templates": {
+    "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요한 일정입니다.",
+    "todo_checklist": "{stem}{object_particle} 챙겨야 합니다.",
+    "todo_reminder": "'{title}'{object_particle} 잊지 마세요.",
+    "other_schedule": "{daypart_prefix}{title}{subject_particle} 있습니다."
+  },
+  "todo_checklist_suffix": "챙기기",
+  "other_schedule_daypart_suffix": "에는 ",
+  "limits": { "max_key_points": 5 }
+}

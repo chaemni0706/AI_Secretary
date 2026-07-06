@@ -25,6 +25,7 @@ class Priority(str, Enum):
 class Source(str, Enum):
     ai = "ai"
     user = "user"
+    voice = "voice"  # 음성 입력으로 생성된 초안 (input_type="voice")
 
 
 class InputType(str, Enum):

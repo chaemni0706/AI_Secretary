@@ -33,7 +33,7 @@ dependencies:
   # 권한
   permission_handler: ^12.0.1
 
-  # 음성
+  # 음성 (STT / TTS)
   speech_to_text: ^7.3.0
   flutter_tts: ^4.2.3
 

@@ -95,6 +95,14 @@ class BusinessAlternative(BaseModel):
     reason: str
 
 
+class NextAction(BaseModel):
+    """Flutter follow-up hint (e.g. generate a reservation message)."""
+
+    type: str
+    label: str
+    endpoint: Optional[str] = None
+
+
 class BusinessCandidateData(BaseModel):
     """``data`` payload for the business-candidate endpoint."""
 
@@ -102,6 +110,7 @@ class BusinessCandidateData(BaseModel):
     candidates: List[BusinessCandidate] = Field(default_factory=list)
     alternatives: List[BusinessAlternative] = Field(default_factory=list)
     personalization: Optional[Personalization] = None
+    next_actions: List[NextAction] = Field(default_factory=list)
 
 
 class BusinessCandidateResponse(BaseModel):

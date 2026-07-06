@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
+import '../theme/schedule_styles.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/app_top_actions.dart';
+import '../widgets/calendar_event_bar.dart';
+import '../widgets/category_schedule_section.dart';
+import '../widgets/schedule_card.dart';
 import '../models/schedule_model.dart';
 import '../services/schedule_api.dart';
 import '../services/dashboard_api.dart';
 import '../services/api_client.dart';
+import 'schedule_detail_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -17,7 +24,7 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-  int _viewIndex = 0; // 0=월간, 1=주간, 2=타임라인
+  int _viewIndex = 0; // 0=월간, 1=주간
 
   bool _loading = true;
   String? _error;
@@ -83,48 +90,115 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   bool _hasEvent(DateTime day) => _schedulesFor(day).isNotEmpty;
 
-  int _hourOf(String? hhmm) {
-    if (hhmm == null || !hhmm.contains(':')) return -1;
-    return int.tryParse(hhmm.split(':')[0]) ?? -1;
-  }
-
-  Color _colorFor(String? category) {
-    switch (category) {
-      case 'hospital':
-        return AppTheme.teal;
-      case 'meeting':
-      case 'work':
-        return AppTheme.blue;
-      case 'study':
-        return AppTheme.purple;
-      case 'meal':
-      case 'beauty':
-        return AppTheme.orange;
-      case 'exercise':
-        return AppTheme.green;
-      default:
-        return AppTheme.blue;
+  DateTime? _dateFromSchedule(ScheduleModel schedule) {
+    final raw = schedule.date;
+    if (raw == null) return null;
+    try {
+      final parsed = DateTime.parse(raw);
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    } catch (_) {
+      return null;
     }
   }
 
-  IconData _iconFor(String? category) {
-    switch (category) {
-      case 'hospital':
-        return Icons.local_hospital_outlined;
-      case 'study':
-        return Icons.book_outlined;
-      case 'meeting':
-      case 'work':
-        return Icons.work_outline;
-      case 'meal':
-        return Icons.restaurant_outlined;
-      case 'beauty':
-        return Icons.content_cut_outlined;
-      case 'exercise':
-        return Icons.fitness_center_outlined;
-      default:
-        return Icons.event_outlined;
+  DateTime _endDateFor(ScheduleModel schedule, DateTime startDate) {
+    final memo = schedule.memo ?? '';
+    final match = RegExp(
+      r'(?:end_date|endDate|종료일)\s*[:=]\s*(\d{4}-\d{2}-\d{2})',
+    ).firstMatch(memo);
+    if (match == null) return startDate;
+    try {
+      final parsed = DateTime.parse(match.group(1)!);
+      final end = DateTime(parsed.year, parsed.month, parsed.day);
+      return end.isBefore(startDate) ? startDate : end;
+    } catch (_) {
+      return startDate;
     }
+  }
+
+  List<_MonthEventSegment> _monthEventSegmentsFor(DateTime day) {
+    final date = DateTime(day.year, day.month, day.day);
+    final segments = <_MonthEventSegment>[];
+    for (final schedule in _all) {
+      final start = _dateFromSchedule(schedule);
+      if (start == null) continue;
+      final end = _endDateFor(schedule, start);
+      if (date.isBefore(start) || date.isAfter(end)) continue;
+      segments.add(
+        _MonthEventSegment(
+          schedule: schedule,
+          start: start,
+          end: end,
+          date: date,
+        ),
+      );
+    }
+    segments.sort((a, b) {
+      final lengthCompare = b.daySpan.compareTo(a.daySpan);
+      if (lengthCompare != 0) return lengthCompare;
+      return (a.schedule.startTime ?? '').compareTo(b.schedule.startTime ?? '');
+    });
+    return segments;
+  }
+
+  Color _monthEventColor(ScheduleModel schedule) {
+    final category = schedule.category?.trim();
+    if (category == null || category.isEmpty) return AppTheme.blue;
+    final color = ScheduleStyles.categoryColor(category);
+    return color == AppTheme.textSecondary ? AppTheme.blue : color;
+  }
+
+  DateTime _weekStart(DateTime day) {
+    return DateTime(
+      day.year,
+      day.month,
+      day.day,
+    ).subtract(Duration(days: day.weekday % 7));
+  }
+
+  List<ScheduleModel> _schedulesForSelectedWeek() {
+    final start = _weekStart(_selectedDay);
+    final end = start.add(const Duration(days: 7));
+    final list = _all.where((schedule) {
+      if (schedule.date == null) return false;
+      try {
+        final parsed = DateTime.parse(schedule.date!);
+        final date = DateTime(parsed.year, parsed.month, parsed.day);
+        return !date.isBefore(start) && date.isBefore(end);
+      } catch (_) {
+        return false;
+      }
+    }).toList();
+
+    list.sort((a, b) {
+      final dateCompare = (a.date ?? '').compareTo(b.date ?? '');
+      if (dateCompare != 0) return dateCompare;
+      return (a.startTime ?? '').compareTo(b.startTime ?? '');
+    });
+    return list;
+  }
+
+  Map<String, List<ScheduleModel>> _weekSchedulesByCategory() {
+    final grouped = {
+      for (final label in ScheduleStyles.categoryOrder)
+        label: <ScheduleModel>[],
+    };
+
+    for (final schedule in _schedulesForSelectedWeek()) {
+      final label = ScheduleStyles.categoryLabel(schedule.category);
+      final key = grouped.containsKey(label) ? label : '기타';
+      grouped[key]!.add(schedule);
+    }
+    return grouped;
+  }
+
+  void _openScheduleDetail(ScheduleModel schedule) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleDetailScreen(schedule: schedule),
+      ),
+    );
   }
 
   // ---- build ---------------------------------------------------------------
@@ -148,9 +222,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   child: Column(
                     children: [
                       if (_viewIndex == 0) _buildMonthCalendar(),
-                      if (_viewIndex == 1) _buildWeekView(),
-                      if (_viewIndex == 2) _buildTimelineView(),
-                      _buildDaySchedule(),
+                      if (_viewIndex == 0) _buildDaySchedule(),
+                      if (_viewIndex == 1) ...[
+                        _buildWeekView(),
+                        _buildWeeklyCategoryList(),
+                      ],
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -171,12 +247,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           GestureDetector(
             onTap: () {
               setState(() {
-                _focusedDay =
-                    DateTime(_focusedDay.year, _focusedDay.month - 1);
+                _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1);
               });
             },
-            child: const Icon(Icons.chevron_left,
-                color: AppTheme.textPrimary, size: 26),
+            child: const Icon(
+              Icons.chevron_left,
+              color: AppTheme.textPrimary,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 4),
           Expanded(
@@ -194,8 +272,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.expand_more,
-                      color: AppTheme.textSecondary, size: 20),
+                  const Icon(
+                    Icons.expand_more,
+                    color: AppTheme.textSecondary,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
@@ -203,33 +284,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
           GestureDetector(
             onTap: () {
               setState(() {
-                _focusedDay =
-                    DateTime(_focusedDay.year, _focusedDay.month + 1);
+                _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1);
               });
             },
-            child: const Icon(Icons.chevron_right,
-                color: AppTheme.textPrimary, size: 26),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _loading ? null : _loadSchedules,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppTheme.blue.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.refresh, color: AppTheme.blue, size: 20),
+            child: const Icon(
+              Icons.chevron_right,
+              color: AppTheme.textPrimary,
+              size: 26,
             ),
           ),
+          const SizedBox(width: 10),
+          const AppTopActions(),
         ],
       ),
     );
   }
 
   Widget _buildViewSwitcher() {
-    final labels = ['월간', '주간', '타임라인'];
+    final labels = ['월간', '주간'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
@@ -256,7 +328,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               color: Colors.black.withOpacity(0.06),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
-                            )
+                            ),
                           ]
                         : null,
                   ),
@@ -265,8 +337,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight:
-                          isActive ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                       color: isActive
                           ? AppTheme.textPrimary
                           : AppTheme.textSecondary,
@@ -300,10 +371,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
             });
           },
           // 실제 API 일정이 있는 날짜에 marker 표시.
-          eventLoader: (day) => _hasEvent(day) ? [true] : [],
+          eventLoader: (_) => const [],
           headerVisible: false,
           daysOfWeekHeight: 28,
-          rowHeight: 44,
+          rowHeight: 68,
+          calendarBuilders: CalendarBuilders(
+            defaultBuilder: (context, day, focusedDay) =>
+                _buildMonthDayCell(day),
+            todayBuilder: (context, day, focusedDay) =>
+                _buildMonthDayCell(day, isToday: true),
+            selectedBuilder: (context, day, focusedDay) =>
+                _buildMonthDayCell(day, isSelected: true),
+            outsideBuilder: (context, day, focusedDay) =>
+                _buildMonthDayCell(day, isOutside: true),
+          ),
           calendarStyle: CalendarStyle(
             todayDecoration: BoxDecoration(
               color: AppTheme.blue.withOpacity(0.2),
@@ -360,9 +441,63 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  Widget _buildMonthDayCell(
+    DateTime day, {
+    bool isToday = false,
+    bool isSelected = false,
+    bool isOutside = false,
+  }) {
+    final segments = _monthEventSegmentsFor(day).take(2).toList();
+    final textColor = isOutside
+        ? AppTheme.textSecondary.withValues(alpha: 0.5)
+        : isSelected
+        ? Colors.white
+        : isToday
+        ? AppTheme.blue
+        : AppTheme.textPrimary;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(2, 2, 2, 1),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.blue : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: isToday && !isSelected
+            ? Border.all(color: AppTheme.blue.withValues(alpha: 0.6))
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.topCenter,
+            child: Text(
+              '${day.day}',
+              style: TextStyle(
+                color: textColor,
+                fontSize: 12,
+                fontWeight: isSelected || isToday
+                    ? FontWeight.w800
+                    : FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 1),
+          ...segments.map(
+            (segment) => CalendarEventBar(
+              title: segment.schedule.title,
+              color: _monthEventColor(segment.schedule),
+              startsOnThisDay: isSameDay(segment.start, segment.date),
+              endsOnThisDay: isSameDay(segment.end, segment.date),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildWeekView() {
-    final weekStart =
-        _selectedDay.subtract(Duration(days: _selectedDay.weekday % 7));
+    final weekStart = _weekStart(_selectedDay);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: GlassCard(
@@ -431,77 +566,65 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildTimelineView() {
-    final daySchedules = _schedulesFor(_selectedDay);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      child: GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('타임라인',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
-            const SizedBox(height: 12),
-            ...List.generate(12, (i) {
-              final hour = 8 + i;
-              ScheduleModel? ev;
-              for (final s in daySchedules) {
-                if (_hourOf(s.startTime) == hour) {
-                  ev = s;
-                  break;
-                }
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 40,
-                    child: Text(
-                      '$hour:00',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(height: 1, color: AppTheme.separator),
-                        if (ev != null)
-                          Container(
-                            margin: const EdgeInsets.only(top: 2, bottom: 2),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _colorFor(ev.category).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              ev.title,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _colorFor(ev.category),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          )
-                        else
-                          const SizedBox(height: 28),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }),
-          ],
+  Widget _buildWeeklyCategoryList() {
+    final grouped = _weekSchedulesByCategory();
+    final total = grouped.values.fold<int>(0, (sum, list) => sum + list.length);
+    final start = _weekStart(_selectedDay);
+    final end = start.add(const Duration(days: 6));
+    final rangeText = '${start.month}.${start.day} - ${end.month}.${end.day}';
+
+    if (_loading && _all.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) return _buildError();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '이번 주 일정 $total',
+                style: AppTextStyles.sectionTitle.copyWith(
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                rangeText,
+                style: AppTextStyles.meta.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+        if (total == 0)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: GlassCard(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              child: Text(
+                '이번 주에 등록된 일정이 없습니다.',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              ),
+            ),
+          )
+        else
+          ...ScheduleStyles.categoryOrder.map(
+            (category) => CategoryScheduleSection(
+              title: category,
+              schedules: grouped[category] ?? const [],
+              onScheduleTap: _openScheduleDetail,
+            ),
+          ),
+      ],
     );
   }
 
@@ -554,7 +677,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           )
         else
-          ...daySchedules.map(_scheduleCard),
+          ...daySchedules.map(
+            (schedule) => ScheduleCard(
+              schedule: schedule,
+              onTap: () => _openScheduleDetail(schedule),
+            ),
+          ),
       ],
     );
   }
@@ -566,14 +694,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const Icon(Icons.cloud_off,
-                color: AppTheme.textSecondary, size: 32),
+            const Icon(
+              Icons.cloud_off,
+              color: AppTheme.textSecondary,
+              size: 32,
+            ),
             const SizedBox(height: 10),
             Text(
               _error ?? '일정을 불러오지 못했습니다.',
               textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+              style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -593,79 +723,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _scheduleCard(ScheduleModel s) {
-    final color = _colorFor(s.category);
-    final timeText = s.startTime == null
-        ? '시간 미정'
-        : (s.endTime != null ? '${s.startTime} – ${s.endTime}' : s.startTime!);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(s.title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      )),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Text(timeText,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          )),
-                      if (s.category != null) ...[
-                        const Text(' · ',
-                            style: TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 12)),
-                        PillBadge(label: s.category!, color: color),
-                      ],
-                    ],
-                  ),
-                  if (s.location != null && s.location!.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        const Icon(Icons.place_outlined,
-                            size: 12, color: AppTheme.textSecondary),
-                        const SizedBox(width: 3),
-                        Text(s.location!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                            )),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(_iconFor(s.category), color: color.withOpacity(0.6), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _weekdayStr(int weekday) {
     const days = ['', '월', '화', '수', '목', '금', '토', '일'];
     return '${days[weekday]}요일';
   }
+}
+
+class _MonthEventSegment {
+  final ScheduleModel schedule;
+  final DateTime start;
+  final DateTime end;
+  final DateTime date;
+
+  const _MonthEventSegment({
+    required this.schedule,
+    required this.start,
+    required this.end,
+    required this.date,
+  });
+
+  int get daySpan => end.difference(start).inDays + 1;
 }

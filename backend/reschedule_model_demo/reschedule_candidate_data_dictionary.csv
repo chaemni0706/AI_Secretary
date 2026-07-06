@@ -1,0 +1,37 @@
+﻿column_name,data_type,description,example_value
+user_id,string,Mock user identifier from U001 to U040.,U001
+request_id,string,Mock reschedule request identifier from R0001 to R0400.,R0001
+candidate_id,string,Candidate identifier within each request; C1 to C4.,C1
+event_category,categorical,"Event category: study, exercise, chore, shopping, personal_task, hospital, meeting.",study
+event_flexibility_type,categorical,"How adjustable the event is: fixed, semi_flexible, flexible.",flexible
+event_duration_min,integer,"Event duration in minutes: 30, 45, 60, 90, or 120.",60
+has_deadline,binary,Whether the event has a deadline.,1
+hours_until_deadline,integer,Positive hours until deadline if has_deadline=1; otherwise -1.,48
+is_after_deadline,binary,Whether the candidate time is after the deadline.,0
+candidate_hour,integer,Candidate start hour from 7 to 23.,14
+candidate_dayofweek,categorical,"Candidate day of week: Mon, Tue, Wed, Thu, Fri, Sat, Sun.",Thu
+is_weekend,binary,1 if candidate_dayofweek is Sat or Sun.,0
+days_delayed,integer,"Number of days the event is delayed, from 0 to 5.",2
+candidate_slot_length_min,integer,"Available candidate slot length in minutes, from 30 to 180.",90
+extra_time_margin_min,integer,candidate_slot_length_min minus event_duration_min.,30
+gap_before_min,integer,"Free time gap before this candidate, from 0 to 240 minutes.",75
+gap_after_min,integer,"Free time gap after this candidate, from 0 to 240 minutes.",90
+min_adjacent_gap_min,integer,Minimum of gap_before_min and gap_after_min.,75
+is_back_to_back,binary,1 if either adjacent gap is 15 minutes or less.,0
+num_events_same_day,integer,"Number of other events on the same day, from 0 to 8.",3
+schedule_load_score,float,Schedule density score from 0 to 1; higher when many events and small gaps exist.,0.42
+tired,binary,Detected tired/sleepy expression from user utterance.,1
+stressed,binary,Detected stress/pressure expression from user utterance.,0
+overwhelmed,binary,Detected overload/too-many-schedules expression from user utterance.,0
+anxious,binary,Detected anxiety/worry expression from user utterance.,0
+sad,binary,Detected sadness/low mood expression from user utterance.,0
+intensity_word,binary,"Detected intensifier such as too, really, completely, cannot do it.",1
+wants_reschedule,binary,Detected reschedule intent; mostly 1 in this mock selection log.,1
+preferred_time_block,categorical,"Mock user preferred time block: morning, afternoon, evening, night.",afternoon
+candidate_time_block,categorical,Candidate time block derived from candidate_hour.,afternoon
+preferred_hour_match,binary,1 if candidate_time_block equals preferred_time_block.,1
+has_location,binary,Whether this candidate involves a location/travel consideration.,1
+travel_time_from_prev_min,integer,"Travel time from previous schedule, from 0 to 90 minutes.",20
+travel_time_to_next_min,integer,"Travel time to next schedule, from 0 to 90 minutes.",15
+has_travel_buffer,binary,1 if adjacent gaps are sufficient for travel buffers.,1
+selected,binary,"Target variable: 1 if user selected this candidate, otherwise 0.",1

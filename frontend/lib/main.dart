@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/home_screen.dart';
+import 'screens/add_item_choice_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/todo_screen.dart';
 import 'screens/calendar_screen.dart';
-import 'screens/menu_screen.dart';
+import 'screens/widget_dashboard_screen.dart';
+import 'screens/ledger_screen.dart';
+import 'screens/my_page_screen.dart';
+import 'data/dashboard_navigation.dart';
+import 'services/preference_store.dart';
 import 'theme/app_theme.dart';
+import 'widgets/draggable_assistant_fab.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +20,8 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+  // AI 음성 스타일 설정을 미리 불러와 캐시(비차단; 실패해도 기본값으로 동작).
+  preferenceStore.ensureLoaded();
   runApp(const MyApp());
 }
 
@@ -33,34 +40,112 @@ class MyApp extends StatelessWidget {
 }
 
 class MainNavigator extends StatefulWidget {
-  const MainNavigator({super.key});
+  final int initialIndex;
+
+  const MainNavigator({super.key, this.initialIndex = 0});
 
   @override
   State<MainNavigator> createState() => _MainNavigatorState();
 }
 
 class _MainNavigatorState extends State<MainNavigator> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+  late Set<int> _visitedIndexes;
 
   final List<Widget> _screens = const [
-    HomeScreen(),
-    AiChatScreen(),
     CalendarScreen(),
     TodoScreen(),
-    MenuScreen(),
+    WidgetDashboardScreen(),
+    LedgerScreen(),
+    MyPageScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final lastIndex = _screens.length - 1;
+    _currentIndex = widget.initialIndex.clamp(0, lastIndex);
+    _visitedIndexes = {_currentIndex};
+    // 위젯 대시보드에서 위젯을 누르면 해당 하단 탭으로 전환.
+    requestedTabIndex.addListener(_handleTabRequest);
+  }
+
+  @override
+  void dispose() {
+    requestedTabIndex.removeListener(_handleTabRequest);
+    super.dispose();
+  }
+
+  void _handleTabRequest() {
+    final index = requestedTabIndex.value;
+    if (index < 0) return;
+    final clamped = index.clamp(0, _screens.length - 1);
+    setState(() {
+      _currentIndex = clamped;
+      _visitedIndexes.add(clamped);
+    });
+    clearTabRequest();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _currentIndex,
+            children: List.generate(
+              _screens.length,
+              (i) => _visitedIndexes.contains(i)
+                  ? _screens[i]
+                  : const SizedBox.shrink(),
+            ),
+          ),
+          DraggableAssistantFab(
+            actions: [
+              AssistantMenuAction(
+                icon: Icons.photo_camera_outlined,
+                tooltip: '카메라',
+                color: AppTheme.teal,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('이미지 인식 기능은 준비 중입니다.')),
+                  );
+                },
+              ),
+              AssistantMenuAction(
+                icon: Icons.auto_awesome,
+                tooltip: 'AI',
+                color: AppTheme.purple,
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(builder: (_) => const AiChatScreen()),
+                  );
+                },
+              ),
+              AssistantMenuAction(
+                icon: Icons.add,
+                tooltip: '일정/할 일 추가',
+                color: AppTheme.blue,
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AddItemChoiceScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       bottomNavigationBar: _BottomNav(
         currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        onTap: (i) => setState(() {
+          _currentIndex = i;
+          _visitedIndexes.add(i);
+        }),
       ),
     );
   }
@@ -73,11 +158,15 @@ class _BottomNav extends StatelessWidget {
   const _BottomNav({required this.currentIndex, required this.onTap});
 
   static const _items = [
-    (Icons.wb_sunny_outlined, Icons.wb_sunny, '오늘'),
-    (Icons.auto_awesome_outlined, Icons.auto_awesome, 'AI'),
     (Icons.calendar_month_outlined, Icons.calendar_month, '캘린더'),
     (Icons.checklist_outlined, Icons.checklist, '할 일'),
-    (Icons.grid_view_outlined, Icons.grid_view, '전체'),
+    (Icons.widgets_outlined, Icons.widgets, '위젯'),
+    (
+      Icons.account_balance_wallet_outlined,
+      Icons.account_balance_wallet,
+      '가계부',
+    ),
+    (Icons.person_outline, Icons.person, '마이페이지'),
   ];
 
   @override
@@ -85,9 +174,7 @@ class _BottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
-        border: Border(
-          top: BorderSide(color: AppTheme.separator, width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: AppTheme.separator, width: 0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),

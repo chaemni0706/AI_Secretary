@@ -1,0 +1,78 @@
+[
+  {
+    "merchant_keyword": "홍콩반점0410",
+    "place_name": "홍콩반점0410 강남역점",
+    "external_category": "음식점 > 중식",
+    "category_group": "음식점",
+    "mapped_category": "식비",
+    "source": "mock_place_search",
+    "confidence": 0.95
+  },
+  {
+    "merchant_keyword": "더벤티",
+    "place_name": "더벤티 강남역점",
+    "external_category": "카페 > 커피전문점",
+    "category_group": "카페",
+    "mapped_category": "카페",
+    "source": "mock_place_search",
+    "confidence": 0.96
+  },
+  {
+    "merchant_keyword": "올리브영",
+    "place_name": "올리브영 강남역점",
+    "external_category": "쇼핑 > 드럭스토어",
+    "category_group": "쇼핑",
+    "mapped_category": "쇼핑",
+    "source": "mock_place_search",
+    "confidence": 0.93
+  },
+  {
+    "merchant_keyword": "무신사",
+    "place_name": "무신사 스토어",
+    "external_category": "쇼핑 > 패션",
+    "category_group": "쇼핑",
+    "mapped_category": "쇼핑",
+    "source": "mock_place_search",
+    "confidence": 0.72,
+    "needs_user_confirmation": true,
+    "alternatives": ["쇼핑", "생활", "기타"]
+  },
+  {
+    "merchant_keyword": "더현대서울",
+    "place_name": "더현대서울",
+    "external_category": "쇼핑 > 백화점",
+    "category_group": "쇼핑",
+    "mapped_category": "쇼핑",
+    "source": "mock_place_search",
+    "confidence": 0.68,
+    "needs_user_confirmation": true,
+    "alternatives": ["쇼핑", "식비", "문화_여가", "기타"]
+  },
+  {
+    "merchant_keyword": "카카오T",
+    "place_name": "카카오T 택시",
+    "external_category": "교통 > 택시",
+    "category_group": "교통",
+    "mapped_category": "교통",
+    "source": "mock_place_search",
+    "confidence": 0.98
+  },
+  {
+    "merchant_keyword": "NETFLIX",
+    "place_name": "NETFLIX",
+    "external_category": "구독 > OTT",
+    "category_group": "구독",
+    "mapped_category": "구독_콘텐츠",
+    "source": "mock_place_search",
+    "confidence": 0.98
+  },
+  {
+    "merchant_keyword": "KT 통신비",
+    "place_name": "KT 통신요금",
+    "external_category": "통신 > 휴대폰요금",
+    "category_group": "통신",
+    "mapped_category": "통신_공과금",
+    "source": "mock_place_search",
+    "confidence": 0.98
+  }
+]

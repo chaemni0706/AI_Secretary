@@ -44,6 +44,7 @@ from backend.services import virtual_business_service as biz_service
 from backend.services.reservation_recommender import recommend_candidates
 from backend.services import preference_service
 from backend.database.schema.personalization_schema import Personalization
+from backend.database.schema.reservation_business_schema import NextAction
 
 # time_preference -> (window_start, window_end) in 'HH:mm'. "any" resolves to
 # the business' full operating hours at call time.
@@ -262,6 +263,14 @@ def _personalize(candidates: List[BusinessCandidate], pref, meta: Personalizatio
         meta.reason = "선호 시간대와 지각 경향을 반영해 후보 순서를 조정했습니다."
 
 
+def _next_actions() -> List[NextAction]:
+    """Flutter follow-up hints for a selected candidate (optional, additive)."""
+    return [NextAction(
+        type="generate_message", label="예약 문의 메시지 만들기",
+        endpoint="POST /api/v1/reservations/message/from-candidate",
+    )]
+
+
 # --------------------------------------------------------------------------- #
 # public API
 # --------------------------------------------------------------------------- #
@@ -286,13 +295,15 @@ def recommend_business_candidates(
         )
         _personalize(candidates, pref, meta)
         return BusinessCandidateData(
-            requested=req, candidates=candidates, alternatives=[], personalization=meta
+            requested=req, candidates=candidates, alternatives=[], personalization=meta,
+            next_actions=_next_actions(),
         )
 
     return BusinessCandidateData(
         requested=req, candidates=[],
         alternatives=_alternatives(db, req, user_busy),
         personalization=meta,
+        next_actions=_next_actions(),
     )
 
 

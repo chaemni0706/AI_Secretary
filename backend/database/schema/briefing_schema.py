@@ -56,6 +56,10 @@ class DailyBriefingData(BaseModel):
     summary: str
     key_points: List[str] = Field(default_factory=list)
     priority_order: List[PriorityOrderItem] = Field(default_factory=list)
+    tts_text: Optional[str] = Field(
+        None,
+        description="assistant_tone/response_length/nudge_strength 반영 TTS 문장(일정 개수·최우선 일정 기반, rule-based). additive.",
+    )
 
 
 class DailyBriefingResponse(BaseModel):

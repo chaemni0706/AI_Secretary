@@ -82,7 +82,7 @@ def test_response_envelope_and_shape(client):
     assert {"success", "message", "data"}.issubset(body.keys())
     data = body["data"]
     # personalization added as an optional, additive field
-    assert set(data.keys()) == {"requested", "candidates", "alternatives", "personalization"}
+    assert set(data.keys()) == {"requested", "candidates", "alternatives", "personalization", "next_actions"}
     assert data["requested"]["category"] == "hair"
     cand = data["candidates"][0]
     assert set(cand.keys()) == {

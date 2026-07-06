@@ -27,8 +27,11 @@ def _parse(client, text):
 # --------------------------------------------------------------------------- #
 def test_response_structure_is_stable(client):
     data = _parse(client, "내일 오후 2시에 병원 예약 잡아줘")
+    # tts_text 는 음성 안내용으로 추가된 필드(additive). Flutter 는 미지의 필드를
+    # 무시하므로 프론트 계약에는 영향이 없다.
     assert set(data.keys()) == {
-        "intent", "confidence", "slots", "schedule_draft", "missing_fields"
+        "intent", "confidence", "slots", "schedule_draft", "missing_fields",
+        "tts_text",
     }
     assert set(data["slots"].keys()) == {
         "title", "date_expression", "time_expression", "date",

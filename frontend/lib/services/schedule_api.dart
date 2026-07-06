@@ -11,41 +11,70 @@ class ParseResult {
   final Map<String, dynamic> scheduleDraft;
   final List<String> missingFields;
 
+  /// 백엔드가 상태(성공/부분/실패)에 맞춰 내려주는 음성 안내 문장.
+  /// 없을 수 있으므로(구버전 호환) 화면에서 fallback 을 마련한다.
+  final String? ttsText;
+
   const ParseResult({
     required this.intent,
     required this.confidence,
     required this.scheduleDraft,
     this.missingFields = const [],
+    this.ttsText,
   });
 
   bool get isTodo => intent == 'create_todo';
+
+  /// 등록 가능한 유효 일정인지(제목 있고, 날짜·시간 누락 아님).
+  bool get isRegisterable =>
+      intent != 'unknown' &&
+      !missingFields.contains('date') &&
+      !missingFields.contains('time') &&
+      (scheduleDraft['title']?.toString().trim().isNotEmpty ?? false);
 
   factory ParseResult.fromJson(Map<String, dynamic> json) {
     final draft = (json['schedule_draft'] as Map?)?.cast<String, dynamic>() ??
         <String, dynamic>{};
     final missing = (json['missing_fields'] as List?) ?? const [];
+    final tts = json['tts_text'];
     return ParseResult(
       intent: (json['intent'] ?? 'unknown').toString(),
       confidence: ((json['confidence'] ?? 0) as num).toDouble(),
       scheduleDraft: draft,
       missingFields: missing.map((e) => e.toString()).toList(),
+      ttsText: tts == null ? null : tts.toString(),
     );
   }
 }
 
 class ScheduleApi {
   /// 1) 자연어 파싱: `POST /api/v1/ai/schedule/parse`
+  ///
+  /// [inputType] 은 `"text"` 또는 `"voice"`. 음성 비서 화면에서는 `"voice"` 로
+  /// 호출하며, 이 경우 백엔드가 draft.source 를 `"voice"` 로 표시하고
+  /// 상태에 맞는 `tts_text` 를 함께 내려준다.
   Future<ParseResult> parse(
     String input, {
     String? currentDatetime,
     String timezone = 'Asia/Seoul',
+    String inputType = 'text',
+    String userId = 'local-user',
+    String? assistantTone,
+    String? responseLength,
+    String? reminderStrength,
   }) async {
     final body = <String, dynamic>{
       'input': input,
-      'input_type': 'text',
+      'input_type': inputType,
       'timezone': timezone,
+      'user_id': userId,
     };
     if (currentDatetime != null) body['current_datetime'] = currentDatetime;
+    // 음성 스타일 preference 를 함께 보내면 백엔드가 그 말투/길이로 tts_text 를
+    // 생성한다. 값이 없으면 기존(무스타일) 응답을 그대로 받는다.
+    if (assistantTone != null) body['assistant_tone'] = assistantTone;
+    if (responseLength != null) body['response_length'] = responseLength;
+    if (reminderStrength != null) body['reminder_strength'] = reminderStrength;
 
     final data = await apiClient.postData(
       '$apiPrefix/ai/schedule/parse',

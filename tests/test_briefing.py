@@ -30,7 +30,9 @@ def test_response_structure_is_stable(client):
     data = _post(client, [
         {"title": "병원 예약", "category": "hospital", "start_time": "14:00", "priority": "high"},
     ], [])
-    assert set(data.keys()) == {"summary", "key_points", "priority_order"}
+    # tts_text 는 음성 안내용으로 추가된 필드(additive). Flutter 는 미지의 필드를
+    # 무시하므로 프론트 계약에는 영향이 없다.
+    assert set(data.keys()) == {"summary", "key_points", "priority_order", "tts_text"}
     assert isinstance(data["summary"], str) and data["summary"]
     assert set(data["priority_order"][0].keys()) == {"title", "priority", "reason"}
 

@@ -198,7 +198,8 @@ def test_legacy_endpoint_contract_unchanged(client):
     assert r.status_code == 200
     data = r.json()["data"]
     assert set(data.keys()) == {
-        "intent", "confidence", "slots", "schedule_draft", "missing_fields"
+        "intent", "confidence", "slots", "schedule_draft", "missing_fields",
+        "tts_text",  # additive: 음성 안내 문장 (Flutter 는 미지 필드 무시)
     }
 
 

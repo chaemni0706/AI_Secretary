@@ -106,6 +106,10 @@ class ScheduleConfirmRequest(BaseModel):
     user_id: str = Field("local-user", min_length=1)
     item_type: Optional[str] = Field(None, description="EVENT | TODO (없으면 parsed.item_type/기본 EVENT)")
     parsed: ConfirmParsedInput
+    reminder_strength: Optional[str] = Field(
+        None,
+        description="gentle | normal | strong. 있으면 강도에 따라 알림 개수(1/2/3)를 추가 생성. 없으면 기존 알림 계획 그대로.",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

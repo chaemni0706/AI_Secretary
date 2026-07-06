@@ -3,8 +3,11 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
 import '../services/schedule_api.dart';
+import '../services/preference_store.dart';
 import '../services/todo_api.dart';
 import '../services/dashboard_api.dart';
+import '../services/voice_stt_service.dart';
+import '../services/voice_tts_service.dart';
 
 class AiChatScreen extends StatefulWidget {
   const AiChatScreen({super.key});
@@ -16,12 +19,35 @@ class AiChatScreen extends StatefulWidget {
 class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  // 음성 입출력 서비스 (기존 서비스 재사용).
+  final VoiceSttService _stt = VoiceSttService();
+  final VoiceTtsService _tts = VoiceTtsService();
+
+  /// 음성 인식 후 바로 전송할지 여부. false 로 두면 입력창에 넣기만 한다.
+  static const bool autoSendAfterVoiceInput = true;
+
   bool _isListening = false;
   bool _parsing = false;
   bool _saving = false;
 
+  /// 마이크 상태 안내 문구 (null 이면 표시 안 함).
+  String? _voiceStatus;
+
+  /// 이번 전송이 음성 입력에서 시작됐는지(응답 TTS 재생 여부 판단).
+  bool _fromVoice = false;
+
+  /// 음성 인식 누적 텍스트.
+  String _recognized = '';
+
   /// 마지막 parse 결과 (저장 대상).
   ParseResult? _lastParse;
+
+  @override
+  void initState() {
+    super.initState();
+    _tts.init();
+  }
 
   final List<_ChatMessage> _messages = [
     const _ChatMessage(
@@ -32,9 +58,91 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   void dispose() {
+    _stt.cancel();
+    _tts.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------- //
+  // 음성 입력 (STT)  —  마이크 → 인식 → 입력창 → 자동 전송
+  // ---------------------------------------------------------------------- //
+  Future<void> _handleMicPressed() async {
+    // 이미 듣는 중이면 정지(수동 종료).
+    if (_isListening) {
+      await _stt.stop();
+      await _finishListening();
+      return;
+    }
+    if (_parsing || _saving) return;
+
+    final granted = await _stt.ensureMicPermission();
+    if (!mounted) return;
+    if (!granted) {
+      setState(() => _voiceStatus = '마이크 권한이 필요해요.');
+      return;
+    }
+
+    final ready = await _stt.init(
+      onStatus: (s) {
+        // 인식이 끝나면(done/notListening) 자동으로 마무리.
+        if ((s == 'done' || s == 'notListening') && _isListening) {
+          _finishListening();
+        }
+      },
+      onError: (_) {
+        if (mounted && _isListening) {
+          setState(() {
+            _isListening = false;
+            _voiceStatus = '음성 인식 중 오류가 발생했어요.';
+          });
+        }
+      },
+    );
+    if (!mounted) return;
+    if (!ready) {
+      setState(() => _voiceStatus = '기기에서 음성 인식을 사용할 수 없어요.');
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+      _recognized = '';
+      _voiceStatus = '듣는 중...';
+    });
+
+    await _stt.listen(
+      onResult: (r) {
+        _recognized = r.text;
+        if (mounted) {
+          setState(() => _inputController.text = r.text);
+        }
+      },
+      localeId: 'ko_KR',
+    );
+  }
+
+  /// 인식 종료 처리: 결과가 있으면 입력창 반영 + (옵션) 자동 전송.
+  Future<void> _finishListening() async {
+    if (!_isListening) return;
+    if (!mounted) return;
+    setState(() => _isListening = false);
+
+    final text = _recognized.trim();
+    if (text.isEmpty) {
+      setState(() => _voiceStatus = '음성을 인식하지 못했어요. 다시 말해주세요.');
+      return;
+    }
+
+    setState(() {
+      _inputController.text = text;
+      _voiceStatus = '인식 완료';
+    });
+
+    if (autoSendAfterVoiceInput) {
+      await _send(fromVoice: true);
+    }
   }
 
   void _addMessage(String text, {required bool isUser}) {
@@ -51,34 +159,80 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   /// 1) 자연어 → parse
-  Future<void> _send() async {
+  ///
+  /// TTS 정책(의도된 동작):
+  /// - 마이크로 말한 경우([fromVoice]==true): input_type="voice" 로 보내고
+  ///   AI 응답을 TTS 로 자동 재생한다.
+  /// - 키보드로 입력한 경우([fromVoice]==false): 화면에만 표시하고 소리는 내지 않는다.
+  ///   (조용한 상황에서 타이핑했는데 갑자기 말이 나오는 것을 막기 위함)
+  Future<void> _send({bool fromVoice = false}) async {
     final text = _inputController.text.trim();
     if (text.isEmpty || _parsing) return;
+    _fromVoice = fromVoice;
     _inputController.clear();
     _addMessage(text, isUser: true);
-    setState(() => _parsing = true);
+    setState(() {
+      _parsing = true;
+      _voiceStatus = fromVoice ? '답변 생성 중...' : null;
+    });
 
     try {
+      await preferenceStore.ensureLoaded();
       final result = await scheduleApi.parse(
         text,
         currentDatetime: DateTime.now().toIso8601String(),
+        inputType: fromVoice ? 'voice' : 'text',
+        assistantTone: preferenceStore.assistantTone,
+        responseLength: preferenceStore.responseLength,
+        reminderStrength: preferenceStore.reminderStrength,
       );
+      if (!mounted) return;
       setState(() {
         _lastParse = result;
         _parsing = false;
+        _voiceStatus = null;
       });
       final draft = result.scheduleDraft;
       final kind = result.isTodo ? '할 일' : '일정';
-      _addMessage(
-        '"${draft['title'] ?? text}"($kind)로 인식했어요. 아래에서 확인 후 저장하세요.',
-        isUser: false,
-      );
+      final reply =
+          '"${draft['title'] ?? text}"($kind)로 인식했어요. 아래에서 확인 후 저장하세요.';
+      _addMessage(reply, isUser: false);
+
+      // 음성 입력이었으면 AI 응답을 읽어준다. tts_text 우선, 없으면 화면 문구.
+      if (_fromVoice) {
+        final speakText =
+            (result.ttsText != null && result.ttsText!.trim().isNotEmpty)
+            ? result.ttsText!
+            : reply;
+        await _speak(speakText);
+      }
     } on ApiException catch (e) {
-      setState(() => _parsing = false);
-      _addMessage('인식에 실패했어요: ${e.message}', isUser: false);
+      if (!mounted) return;
+      setState(() {
+        _parsing = false;
+        _voiceStatus = null;
+      });
+      final msg = (e.statusCode == null)
+          ? '서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해주세요.'
+          : '인식에 실패했어요: ${e.message}';
+      _addMessage(msg, isUser: false);
+      if (_fromVoice) await _speak('요청을 처리하지 못했어요. 다시 시도해주세요.');
     } catch (e) {
-      setState(() => _parsing = false);
+      if (!mounted) return;
+      setState(() {
+        _parsing = false;
+        _voiceStatus = null;
+      });
       _addMessage('오류가 발생했어요: $e', isUser: false);
+    }
+  }
+
+  /// AI 응답을 Flutter TTS 로 읽는다. (빈 문자열/오류는 서비스에서 안전 처리)
+  Future<void> _speak(String text) async {
+    try {
+      await _tts.speak(text);
+    } catch (e) {
+      debugPrint('AiChat TTS error: $e');
     }
   }
 
@@ -93,8 +247,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     // 없는 문장) 임의로 오늘로 저장하지 않고, 사용자에게 날짜를 알려달라고 안내한다.
     // (일정만 해당. To-do 는 마감일이 없어도 저장 가능.)
     final rawDate = draft['date'];
-    final dateMissing =
-        rawDate == null || rawDate.toString().trim().isEmpty;
+    final dateMissing = rawDate == null || rawDate.toString().trim().isEmpty;
     if (!parse.isTodo && dateMissing) {
       _addMessage(
         '날짜를 인식하지 못했어요. "7월 3일", "7/3", "내일"처럼 날짜를 포함해 다시 말씀해 주세요.',
@@ -129,9 +282,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
       });
       _addMessage('"$savedTitle" 저장 완료! 홈 화면에 반영됩니다.', isUser: false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('저장되었습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('저장되었습니다.')));
       }
     } on ApiException catch (e) {
       setState(() => _saving = false);
@@ -146,23 +299,27 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Widget build(BuildContext context) {
     return Container(
       decoration: AppTheme.screenBackground,
-      child: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildChatArea()),
-            if (_parsing)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(child: _buildChatArea()),
+              if (_parsing)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
-              ),
-            if (_lastParse != null) _buildResultCard(_lastParse!),
-            _buildInputArea(),
-          ],
+              if (_lastParse != null) _buildResultCard(_lastParse!),
+              if (_voiceStatus != null) _buildVoiceStatus(_voiceStatus!),
+              _buildInputArea(),
+            ],
+          ),
         ),
       ),
     );
@@ -184,8 +341,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child:
-                const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.auto_awesome,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -206,11 +366,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.6),
                 shape: BoxShape.circle,
-                border:
-                    Border.all(color: AppTheme.separator.withOpacity(0.7)),
+                border: Border.all(color: AppTheme.separator.withOpacity(0.7)),
               ),
-              child: const Icon(Icons.more_horiz,
-                  color: AppTheme.textSecondary, size: 18),
+              child: const Icon(
+                Icons.more_horiz,
+                color: AppTheme.textSecondary,
+                size: 18,
+              ),
             ),
           ),
         ],
@@ -269,17 +431,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
-                          )),
-                      Text('${isTodo ? "할 일" : "일정"} · $category',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          )),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        '${isTodo ? "할 일" : "일정"} · $category',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -319,9 +485,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('저장하기',
+                        : const Text(
+                            '저장하기',
                             style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -338,9 +508,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('취소',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      '취소',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -357,19 +531,48 @@ class _AiChatScreenState extends State<AiChatScreen> {
       children: [
         SizedBox(
           width: 48,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary)),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
         ),
         Expanded(
-          child: Text(value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              )),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildVoiceStatus(String status) {
+    final listening = _isListening;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            listening ? Icons.mic : Icons.info_outline,
+            size: 14,
+            color: listening ? AppTheme.red : AppTheme.textSecondary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: listening ? AppTheme.red : AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -379,7 +582,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.85),
         border: Border(
-            top: BorderSide(color: AppTheme.separator.withOpacity(0.5))),
+          top: BorderSide(color: AppTheme.separator.withOpacity(0.5)),
+        ),
       ),
       child: Row(
         children: [
@@ -399,33 +603,36 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       onSubmitted: (_) => _send(),
                       textInputAction: TextInputAction.send,
                       style: const TextStyle(
-                          fontSize: 14, color: AppTheme.textPrimary),
+                        fontSize: 14,
+                        color: AppTheme.textPrimary,
+                      ),
                       decoration: const InputDecoration(
                         hintText: '말하거나 입력하세요',
                         hintStyle: TextStyle(
-                            fontSize: 14, color: AppTheme.textSecondary),
+                          fontSize: 14,
+                          color: AppTheme.textSecondary,
+                        ),
                         border: InputBorder.none,
                         isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(vertical: 10),
+                        contentPadding: EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => setState(() => _isListening = !_isListening),
+                    onTap: (_parsing || _saving) ? null : _handleMicPressed,
                     child: Container(
                       width: 34,
                       height: 34,
                       margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: _isListening
-                            ? AppTheme.blue
+                            ? AppTheme.red
                             : AppTheme.blue.withOpacity(0.12),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.graphic_eq,
+                        _isListening ? Icons.stop : Icons.mic,
                         color: _isListening ? Colors.white : AppTheme.blue,
                         size: 18,
                       ),
@@ -478,8 +685,9 @@ class _ChatBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!message.isUser) ...[
@@ -492,8 +700,11 @@ class _ChatBubble extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.auto_awesome,
-                  color: Colors.white, size: 14),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: 14,
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -502,8 +713,7 @@ class _ChatBubble extends StatelessWidget {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
               ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: message.isUser
                     ? AppTheme.blue
@@ -526,8 +736,7 @@ class _ChatBubble extends StatelessWidget {
                 message.text,
                 style: TextStyle(
                   fontSize: 14,
-                  color:
-                      message.isUser ? Colors.white : AppTheme.textPrimary,
+                  color: message.isUser ? Colors.white : AppTheme.textPrimary,
                   height: 1.4,
                 ),
               ),

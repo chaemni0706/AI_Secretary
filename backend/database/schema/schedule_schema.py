@@ -7,6 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.database.schema.common_schema import InputType, Priority, Source
+from backend.database.schema.personalization_schema import TONES
 
 
 class ScheduleParseRequest(BaseModel):
@@ -16,6 +17,27 @@ class ScheduleParseRequest(BaseModel):
         None, description="Caller's current datetime, ISO 8601 (used to resolve '내일' etc.)"
     )
     timezone: str = "Asia/Seoul"
+    tone: Optional[str] = Field(
+        None,
+        description=(
+            f"Caller-supplied TTS tone, one of {TONES}. Applied as a rule-based "
+            "post-process on tts_text; omitted/invalid values fall back to 'neutral' "
+            "(identical to the previous, un-styled tts_text)."
+        ),
+    )
+    # --- AI voice-style preferences (additive; omitted -> legacy tts_text) ---
+    # When `assistant_tone` (or response_length/reminder_strength) is provided,
+    # tts_text is regenerated in that persona style via assistant_style_service.
+    # Callers that don't send these keep the exact legacy behaviour.
+    assistant_tone: Optional[str] = Field(
+        None, description="formal | friendly | caring | concise (or legacy polite/professional)"
+    )
+    response_length: Optional[str] = Field(
+        None, description="short | medium | long (or legacy normal/detailed)"
+    )
+    reminder_strength: Optional[str] = Field(
+        None, description="gentle | normal | strong (or legacy low/medium/high)"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -24,6 +46,7 @@ class ScheduleParseRequest(BaseModel):
                 "input_type": "text",
                 "current_datetime": "2026-06-29T10:00:00+09:00",
                 "timezone": "Asia/Seoul",
+                "tone": "neutral",
             }
         }
     )
@@ -58,6 +81,10 @@ class ScheduleParseData(BaseModel):
     slots: ScheduleSlots
     schedule_draft: ScheduleDraft
     missing_fields: List[str] = Field(default_factory=list)
+    tts_text: Optional[str] = Field(
+        None,
+        description="음성 안내용 문장. 성공/부분인식/실패에 따라 달라지며 Flutter TTS로 재생한다.",
+    )
 
 
 class ScheduleParseResponse(BaseModel):

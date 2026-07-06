@@ -25,6 +25,7 @@ def test_default_preferences_are_friendly_normal_medium():
         "assistant_tone": "friendly",
         "response_length": "normal",
         "nudge_strength": "medium",
+        "briefing_time": "",
     }
 
 
@@ -53,6 +54,7 @@ def test_partial_update_keeps_other_axes():
         "assistant_tone": "concise",
         "response_length": "short",
         "nudge_strength": "medium",
+        "briefing_time": "",
     }
 
 
@@ -102,3 +104,30 @@ def test_get_options_covers_all_three_axes_with_display_names():
     for opt in options["assistant_tone"]:
         assert set(opt.keys()) == {"code", "display_name"}
         assert opt["display_name"]
+
+
+# --------------------------------------------------------------------------- #
+# briefing_time (additive) — 'HH:mm' 자동 브리핑 시각, ""는 비활성화
+# --------------------------------------------------------------------------- #
+def test_briefing_time_accepts_valid_hhmm():
+    prefs = svc.update_user_preferences("u2", {"briefing_time": "08:30"})
+    assert prefs["briefing_time"] == "08:30"
+
+
+def test_briefing_time_rejects_invalid_value_keeps_previous():
+    svc.update_user_preferences("u3", {"briefing_time": "08:30"})
+    prefs = svc.update_user_preferences("u3", {"briefing_time": "not-a-time"})
+    assert prefs["briefing_time"] == "08:30"
+
+
+def test_briefing_time_empty_string_disables():
+    svc.update_user_preferences("u4", {"briefing_time": "08:30"})
+    prefs = svc.update_user_preferences("u4", {"briefing_time": ""})
+    assert prefs["briefing_time"] == ""
+
+
+def test_briefing_time_not_provided_leaves_other_axes_untouched():
+    svc.update_user_preferences("u5", {"briefing_time": "07:00"})
+    prefs = svc.update_user_preferences("u5", {"assistant_tone": "caring"})
+    assert prefs["briefing_time"] == "07:00"
+    assert prefs["assistant_tone"] == "caring"

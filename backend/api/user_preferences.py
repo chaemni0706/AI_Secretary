@@ -25,6 +25,9 @@ class UserPreferencesPatch(BaseModel):
     assistant_tone: Optional[str] = Field(None, description="polite | friendly | concise | caring | professional")
     response_length: Optional[str] = Field(None, description="short | normal | detailed")
     nudge_strength: Optional[str] = Field(None, description="low | medium | high")
+    briefing_time: Optional[str] = Field(
+        None, description="'HH:mm' 자동 브리핑 시각. 빈 문자열(\"\")이면 비활성화 (additive)"
+    )
 
 
 def _confirmation_sentence(prefs: dict) -> str:

@@ -1,21 +1,21 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/voice_intent_card.dart';
 import '../models/voice_chat_message.dart';
-import '../data/mock_voice_data.dart';
-import '../services/mock_voice_service.dart';
+import '../services/preference_store.dart';
+import '../services/voice_router_api.dart';
+import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
 
-/// AI 음성 챗봇 화면 (Mock).
+/// AI 음성 비서 화면 — 음성 입력의 공용 진입점.
 ///
-/// 실제 STT/TTS 는 연결하지 않는다.
-///  - 마이크 버튼: 미리 정해둔 사용자 발화를 입력한 것처럼 처리 → AI Mock 응답.
-///  - 전송 버튼: 입력창 문장을 사용자 메시지로 추가 → 동일한 AI Mock 응답.
-///  - "음성으로 듣기": 실제 TTS 대신 SnackBar 안내.
-///
-/// 추후 STT/TTS 연결을 위한 진입점:
-///   `_handleMockSpeechInput()`, `_sendMessage(text)`, `_playTts(text)`
+/// 이 화면은 더 이상 "일정 등록 전용" 이 아니다. 마이크로 말하거나 텍스트를
+/// 입력하면 `POST /api/v1/voice/route` 가 발화를 의도별로 분류해:
+///   예약/장소 추천 · 감정 기반 일정 코칭 · 오늘 브리핑 · 일정 조회/등록 ·
+///   알림 설정 · 일반 대화
+/// 중 알맞은 곳으로 위임하고, 그 결과(tts_text/screen_action/data)를 돌려준다.
+/// 화면은 intent 에 맞는 카드를 붙이고, 응답은 항상 flutter_tts 로 읽어준다.
 class VoiceChatScreen extends StatefulWidget {
   const VoiceChatScreen({super.key});
 
@@ -24,13 +24,19 @@ class VoiceChatScreen extends StatefulWidget {
 }
 
 class _VoiceChatScreenState extends State<VoiceChatScreen> {
-  final _service = mockVoiceService;
+  final VoiceSttService _stt = VoiceSttService();
   final VoiceTtsService _ttsService = VoiceTtsService();
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
 
   final List<VoiceChatMessage> _messages = [];
   bool _sending = false;
+  bool _isListening = false;
+  String? _voiceStatus;
+
+  /// 직전 turn 에서 서버가 돌려준 pending context(예: 방금 등록한 일정).
+  /// 다음 발화 한 번에만 유효하며, 사용 여부와 무관하게 매 턴 종료 시 비운다.
+  Map<String, dynamic>? _pendingContext;
 
   @override
   void initState() {
@@ -40,23 +46,103 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
 
   @override
   void dispose() {
+    _stt.cancel();
     _ttsService.stop();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  /// 마이크 버튼: 미리 정해둔 사용자 발화가 인식된 것처럼 처리.
-  /// (추후 speech_to_text 연동 시 인식 결과를 [_sendMessage] 로 전달)
-  void _handleMockSpeechInput() {
-    _sendMessage(mockUserSpeechText);
+  String _nowIso() {
+    final now = DateTime.now();
+    final o = now.timeZoneOffset;
+    final sign = o.isNegative ? '-' : '+';
+    final hh = o.inHours.abs().toString().padLeft(2, '0');
+    final mm = (o.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final base = now.toIso8601String().split('.').first;
+    return '$base$sign$hh:$mm';
   }
 
-  /// 사용자 메시지를 추가하고, 로딩 후 AI Mock 응답을 붙인다.
-  /// [text] 가 비어있으면 무시. 추후 실제 API 연결 시 이 메서드만 수정.
+  // --------------------------------------------------------------------- //
+  // 음성 입력 (STT) — 마이크 → 인식 → 자동 전송
+  // --------------------------------------------------------------------- //
+  Future<void> _handleMicPressed() async {
+    if (_isListening) {
+      await _stt.stop();
+      return;
+    }
+    if (_sending) return;
+
+    final granted = await _stt.ensureMicPermission();
+    if (!mounted) return;
+    if (!granted) {
+      setState(() => _voiceStatus = '마이크 권한이 필요해요.');
+      return;
+    }
+
+    final ready = await _stt.init(
+      onStatus: (s) {
+        if ((s == 'done' || s == 'notListening') && _isListening) {
+          _finishListening();
+        }
+      },
+      onError: (_) {
+        if (mounted && _isListening) {
+          setState(() {
+            _isListening = false;
+            _voiceStatus = '음성 인식 중 오류가 발생했어요.';
+          });
+        }
+      },
+    );
+    if (!mounted) return;
+    if (!ready) {
+      setState(() => _voiceStatus = '기기에서 음성 인식을 사용할 수 없어요.');
+      return;
+    }
+
+    String recognized = '';
+    setState(() {
+      _isListening = true;
+      _voiceStatus = '듣는 중...';
+    });
+
+    await _stt.listen(
+      onResult: (r) => recognized = r.text,
+      localeId: 'ko_KR',
+    );
+    // 인식 텍스트는 종료 시점에 다시 읽어야 하므로 콜백 스코프 밖의 변수에 보관.
+    _lastRecognized = recognized;
+  }
+
+  String _lastRecognized = '';
+
+  Future<void> _finishListening() async {
+    if (!_isListening) return;
+    if (!mounted) return;
+    setState(() {
+      _isListening = false;
+      _voiceStatus = null;
+    });
+
+    final text = _lastRecognized.trim();
+    if (text.isEmpty) {
+      setState(() => _voiceStatus = '음성을 인식하지 못했어요. 다시 말해주세요.');
+      return;
+    }
+    await _sendMessage(text);
+  }
+
+  // --------------------------------------------------------------------- //
+  // 발화 전송 → 통합 라우팅 → 응답 표시 + TTS
+  // --------------------------------------------------------------------- //
   Future<void> _sendMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _sending) return;
+
+    // 직전 턴의 pending context 는 "바로 다음 발화 한 번"에만 유효하다.
+    final contextToSend = _pendingContext;
+    _pendingContext = null;
 
     setState(() {
       _messages.add(VoiceChatMessage(role: ChatRole.user, text: trimmed));
@@ -65,26 +151,44 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     _inputController.clear();
     _scrollToBottom();
 
-    // Mock: 감정 코칭 응답을 받아 envelope 중 data 만 파싱.
-    final res = await _service.getEmotionCoaching(trimmed);
-    if (!mounted) return;
-    final analysis =
-        EmotionAnalysis.fromJson(res['data'] as Map<String, dynamic>);
-
-    setState(() {
-      _messages.add(VoiceChatMessage(
-        role: ChatRole.assistant,
-        text: analysis.coachingReply,
-        analysis: analysis,
-        ttsText: analysis.ttsText,
-      ));
-      _sending = false;
-    });
-    _scrollToBottom();
+    try {
+      await preferenceStore.ensureLoaded();
+      final result = await voiceRouterApi.route(
+        trimmed,
+        currentDatetime: _nowIso(),
+        context: contextToSend,
+        assistantTone: preferenceStore.assistantTone,
+        responseLength: preferenceStore.responseLength,
+        reminderStrength: preferenceStore.reminderStrength,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages.add(VoiceChatMessage(
+          role: ChatRole.assistant,
+          text: result.ttsText.isNotEmpty ? result.ttsText : '확인했어요.',
+          route: result,
+        ));
+        _pendingContext = result.context;
+        _sending = false;
+      });
+      _scrollToBottom();
+      handleVoiceSideEffects(result);
+      if (mounted) handleVoiceScreenAction(context, result);
+      await _ttsService.speak(result.ttsText);
+    } catch (e) {
+      debugPrint('VoiceChatScreen route failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _messages.add(const VoiceChatMessage(
+          role: ChatRole.assistant,
+          text: '지금은 응답을 받지 못했어요. 잠시 후 다시 시도해주세요.',
+        ));
+        _sending = false;
+      });
+      _scrollToBottom();
+    }
   }
 
-  /// "음성으로 듣기" — flutter_tts 로 실제 음성을 재생한다.
-  /// AI 메시지의 tts_text 우선, 없으면 coaching_reply(=말풍선 text) 사용.
   Future<void> _playTts(String text) async {
     debugPrint('Voice chat TTS text: $text');
     await _ttsService.speak(text);
@@ -122,7 +226,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                   color: AppTheme.textPrimary, size: 26),
             ),
           ),
-          title: const Text('AI 음성 챗봇'),
+          title: const Text('AI 음성 비서'),
         ),
         body: SafeArea(
           top: false,
@@ -145,10 +249,21 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                         },
                       ),
               ),
+              if (_voiceStatus != null) _buildVoiceStatus(),
               _buildInputBar(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceStatus() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      child: Text(
+        _voiceStatus!,
+        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
       ),
     );
   }
@@ -165,7 +280,8 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                '마이크를 누르면 챔니가 일정과 감정을 함께 고려해 답변해요.',
+                '무엇이든 말씀해보세요. 일정 등록/조회, 가게 추천, 오늘 브리핑, '
+                '힘들 때 마음 챙김까지 하나의 마이크로 처리해요.',
                 style: TextStyle(fontSize: 13, color: AppTheme.textTertiary),
               ),
             ),
@@ -234,7 +350,6 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
       );
     }
 
-    // AI 메시지: 말풍선 + 음성으로 듣기 + 감정/일정 카드.
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -262,7 +377,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             ),
             const SizedBox(height: 6),
             GestureDetector(
-              onTap: () => _playTts(m.ttsText ?? m.text),
+              onTap: () => _playTts(m.text),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -288,11 +403,9 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                 ),
               ),
             ),
-            if (m.analysis != null) ...[
+            if (m.route != null) ...[
               const SizedBox(height: 10),
-              _buildEmotionCard(m.analysis!),
-              const SizedBox(height: 10),
-              _buildSuggestionsCard(m.analysis!),
+              buildVoiceIntentCard(context, m.route!),
             ],
           ],
         ),
@@ -326,131 +439,6 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     );
   }
 
-  Widget _buildEmotionCard(EmotionAnalysis a) {
-    return GlassCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.favorite_outline, color: AppTheme.red, size: 18),
-              SizedBox(width: 8),
-              Text(
-                '감정 분석 결과',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              PillBadge(label: '감정: ${a.emotion.label}', color: AppTheme.red),
-              PillBadge(
-                  label: '강도: ${a.emotion.intensity}', color: AppTheme.orange),
-              PillBadge(
-                  label: '부담도: ${a.burden.level}', color: AppTheme.purple),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            a.burden.reason,
-            style: const TextStyle(
-                fontSize: 13, color: AppTheme.textTertiary, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuggestionsCard(EmotionAnalysis a) {
-    return GlassCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.event_note_outlined, color: AppTheme.blue, size: 18),
-              SizedBox(width: 8),
-              Text(
-                '일정 조정 추천',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...a.scheduleSuggestions.map((s) {
-            final (icon, color, label) = _suggestionStyle(s.type);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Icon(icon, color: color, size: 17),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${s.startHhmm} ~ ${s.endHhmm}  $label',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          s.reason,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textTertiary,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  (IconData, Color, String) _suggestionStyle(String type) {
-    switch (type) {
-      case 'reschedule_todo':
-        return (Icons.menu_book_outlined, AppTheme.blue, '과제 집중 시간 추천');
-      case 'rest':
-        return (Icons.self_improvement_outlined, AppTheme.green, '휴식 추천');
-      default:
-        return (Icons.schedule_outlined, AppTheme.teal, '일정 추천');
-    }
-  }
-
   Widget _buildInputBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
@@ -462,18 +450,23 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
       ),
       child: Row(
         children: [
-          // 마이크 버튼
+          // 마이크 버튼 — 실제 기기 STT
           GestureDetector(
-            onTap: _sending ? null : _handleMockSpeechInput,
+            onTap: _sending ? null : _handleMicPressed,
             child: Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppTheme.purple.withOpacity(0.14),
+                color: _isListening
+                    ? AppTheme.red.withOpacity(0.16)
+                    : AppTheme.purple.withOpacity(0.14),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mic_none_rounded,
-                  color: AppTheme.purple, size: 22),
+              child: Icon(
+                _isListening ? Icons.stop_rounded : Icons.mic_none_rounded,
+                color: _isListening ? AppTheme.red : AppTheme.purple,
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(width: 8),

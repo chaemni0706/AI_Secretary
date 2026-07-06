@@ -18,16 +18,21 @@ class UserPreferencesApi {
 
   /// 일부 값만 보내도 나머지 값은 서버에 저장된 값을 유지한다.
   /// 반환 형태: { "user_id", "preferences": {...}, "tts_text": "..." }
+  ///
+  /// [briefingTime] 은 'HH:mm' 자동 브리핑 시각(additive). 빈 문자열("")을
+  /// 보내면 비활성화된다 — null 이면(미지정) 기존 값이 그대로 유지된다.
   static Future<Map<String, dynamic>> update({
     String userId = 'local-user',
     String? assistantTone,
     String? responseLength,
     String? nudgeStrength,
+    String? briefingTime,
   }) async {
     final body = <String, dynamic>{'user_id': userId};
     if (assistantTone != null) body['assistant_tone'] = assistantTone;
     if (responseLength != null) body['response_length'] = responseLength;
     if (nudgeStrength != null) body['nudge_strength'] = nudgeStrength;
+    if (briefingTime != null) body['briefing_time'] = briefingTime;
 
     final data = await apiClient.putData(_path, body: body);
     return Map<String, dynamic>.from(data as Map);

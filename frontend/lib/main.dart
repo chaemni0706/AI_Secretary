@@ -8,9 +8,13 @@ import 'screens/widget_dashboard_screen.dart';
 import 'screens/ledger_screen.dart';
 import 'screens/my_page_screen.dart';
 import 'data/dashboard_navigation.dart';
+import 'services/briefing_scheduler_service.dart';
 import 'services/preference_store.dart';
 import 'theme/app_theme.dart';
 import 'widgets/draggable_assistant_fab.dart';
+
+/// 알림 탭 시 화면 이동에 쓰는 루트 네비게이터 키(전화형 알림 화면으로 이동).
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +25,13 @@ void main() {
     ),
   );
   // AI 음성 스타일 설정을 미리 불러와 캐시(비차단; 실패해도 기본값으로 동작).
-  preferenceStore.ensureLoaded();
+  // 로드가 끝나면 자동 브리핑 시각이 설정돼 있는 경우 로컬 알림을 예약한다.
+  preferenceStore.ensureLoaded().then((_) async {
+    await briefingSchedulerService.init(rootNavigatorKey);
+    if (preferenceStore.briefingTime.isNotEmpty) {
+      await briefingSchedulerService.scheduleDailyBriefing(preferenceStore.briefingTime);
+    }
+  });
   runApp(const MyApp());
 }
 
@@ -31,6 +41,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       title: '나의 AI 비서',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

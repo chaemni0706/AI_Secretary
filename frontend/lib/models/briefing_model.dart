@@ -29,10 +29,15 @@ class BriefingModel {
   final List<String> keyPoints;
   final List<PriorityOrderItem> priorityOrder;
 
+  /// additive: 백엔드가 함께 내려주는 음성 안내 문장(assistant_style 반영).
+  /// 없을 수 있으므로(구버전 호환) 화면에서 summary 로 fallback한다.
+  final String? ttsText;
+
   const BriefingModel({
     required this.summary,
     this.keyPoints = const [],
     this.priorityOrder = const [],
+    this.ttsText,
   });
 
   factory BriefingModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +49,7 @@ class BriefingModel {
       priorityOrder: po
           .map((e) => PriorityOrderItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+      ttsText: json['tts_text']?.toString(),
     );
   }
 }

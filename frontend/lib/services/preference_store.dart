@@ -15,6 +15,9 @@ class PreferenceStore extends ChangeNotifier {
   String responseLength = 'normal';
   String nudgeStrength = 'medium';
 
+  /// 'HH:mm' 자동 브리핑 시각. 빈 문자열이면 비활성화(additive).
+  String briefingTime = '';
+
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
@@ -35,9 +38,11 @@ class PreferenceStore extends ChangeNotifier {
       assistantTone = (prefs['assistant_tone'] as String?) ?? assistantTone;
       responseLength = (prefs['response_length'] as String?) ?? responseLength;
       nudgeStrength = (prefs['nudge_strength'] as String?) ?? nudgeStrength;
+      briefingTime = (prefs['briefing_time'] as String?) ?? briefingTime;
       _loaded = true;
       debugPrint('[STYLE] PreferenceStore loaded: '
-          'tone=$assistantTone length=$responseLength nudge=$nudgeStrength');
+          'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
+          'briefingTime=$briefingTime');
       notifyListeners();
     } catch (e) {
       debugPrint('[STYLE] PreferenceStore load failed (using defaults): $e');
@@ -45,13 +50,20 @@ class PreferenceStore extends ChangeNotifier {
   }
 
   /// 설정 화면 저장 직후 호출 — 서버 재조회 없이 즉시 반영.
-  void updateLocal({String? assistantTone, String? responseLength, String? nudgeStrength}) {
+  void updateLocal({
+    String? assistantTone,
+    String? responseLength,
+    String? nudgeStrength,
+    String? briefingTime,
+  }) {
     if (assistantTone != null) this.assistantTone = assistantTone;
     if (responseLength != null) this.responseLength = responseLength;
     if (nudgeStrength != null) this.nudgeStrength = nudgeStrength;
+    if (briefingTime != null) this.briefingTime = briefingTime;
     _loaded = true;
     debugPrint('[STYLE] PreferenceStore updated: '
-        'tone=${this.assistantTone} length=${this.responseLength} nudge=${this.nudgeStrength}');
+        'tone=${this.assistantTone} length=${this.responseLength} '
+        'nudge=${this.nudgeStrength} briefingTime=${this.briefingTime}');
     notifyListeners();
   }
 }

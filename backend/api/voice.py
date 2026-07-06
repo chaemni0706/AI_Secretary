@@ -13,10 +13,14 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
 
 from backend.core.response import success_response
+from backend.database.schema.voice_route_schema import VoiceRouteRequest, VoiceRouteResponse
+from backend.database.session import get_db
+from backend.services import voice_route_orchestrator
 
 router = APIRouter(tags=["voice"])
 
@@ -62,3 +66,18 @@ async def voice_tts_endpoint(req: TtsRequest):
         message="Flutter TTS로 재생할 문장을 반환했습니다.",
         data=data.model_dump(),
     )
+
+
+@router.post(
+    "/voice/route",
+    response_model=VoiceRouteResponse,
+    summary="음성 입력 통합 라우팅 (의도 분류 후 기존 기능으로 위임)",
+)
+def voice_route_endpoint(req: VoiceRouteRequest, db: Session = Depends(get_db)):
+    """단일 음성 입력 진입점. STT 텍스트를 rule-based로 분류해 예약/장소 추천,
+    감정 기반 일정 코칭, 오늘 브리핑, 일정 조회, 일정 등록, 알림 설정,
+    fallback 대화 중 하나로 위임한다. 기존 개별 엔드포인트(/ai/schedule/parse,
+    /chat/respond, /places/recommend, /briefings/daily 등)는 그대로 두고
+    호출만 한다 — 이 엔드포인트가 없어져도 기존 기능은 영향받지 않는다."""
+    data = voice_route_orchestrator.route(db, req)
+    return success_response(message="음성 입력을 처리했습니다.", data=data.model_dump())

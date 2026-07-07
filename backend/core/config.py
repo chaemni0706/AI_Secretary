@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     # 시간 계산·후보·점수는 항상 규칙. LLM은 최상위 후보의 '설명 문장'만 생성.
     ENABLE_LLM_RESCHEDULE: bool = False
 
+    # --- Preference memory (발화 → 지속 선호 추출) ---
+    # 발화에서 지속적 선호(집중시간/알림/말투/습관)를 LLM으로 추출·저장. 개인/민감/
+    # 건강 정보는 저장 금지(허용목록 + 블록리스트로 이중 차단). Default OFF.
+    ENABLE_LLM_MEMORY: bool = False
+
     # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error

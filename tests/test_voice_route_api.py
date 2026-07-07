@@ -88,7 +88,8 @@ def _route(client, text, **kwargs):
 def test_store_recommendation_never_becomes_schedule_create(client, mock_naver_ok):
     data = _route(client, "가게 추천해줘")
     assert data["intent"] == "reservation_recommendation"
-    assert data["screen_action"]["type"] == "navigate"
+    # 챗 안 카드로 표시(show_card). 이전 navigate → 인-챗 캐러셀로 변경.
+    assert data["screen_action"]["type"] == "show_card"
     assert data["screen_action"]["target"] == "reservation_recommendation"
     assert "recommended_places" in data["data"]
     assert data["data"]["recommended_places"], "mocked Naver result should produce a candidate"
@@ -101,12 +102,13 @@ def test_nearby_cafe_recommendation(client, mock_naver_ok):
 
 def test_recommendation_degrades_gracefully_without_naver_keys(client):
     """No mock_naver_ok fixture here -> settings.naver_configured is False.
-    Must still classify correctly and never crash / never fall through to
-    schedule_create."""
+    네이버 키가 없으면 Mock 업체 목록으로 대체(빈 목록 대신). 절대 crash/schedule_create
+    로 새지 않는다."""
     data = _route(client, "가게 추천해줘")
     assert data["intent"] == "reservation_recommendation"
-    assert data["data"]["recommended_places"] == []
-    assert "연결할 수 없" in data["tts_text"]
+    places = data["data"]["recommended_places"]
+    assert places, "키 없을 때 Mock 업체 목록을 반환해야 함"
+    assert all(p["source"] == "mock" for p in places)
 
 
 # --------------------------------------------------------------------------- #

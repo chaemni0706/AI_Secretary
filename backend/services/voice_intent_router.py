@@ -63,6 +63,27 @@ def _matched(text: str, keywords: Optional[List[str]]) -> List[str]:
     return [kw for kw in (keywords or []) if kw in text]
 
 
+@lru_cache(maxsize=1)
+def _place_category_aliases() -> Dict[str, List[str]]:
+    """장소 카테고리 별칭(미용실→beauty, 치과/병원→hospital 등). 예약 추천 업종 감지용.
+    place_recommendation_rules.json 을 재사용해 규칙 중복을 피한다."""
+    path = Path(__file__).resolve().parents[1] / "rules" / "place_recommendation_rules.json"
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("category_aliases", {}) or {}
+    except Exception:
+        return {}
+
+
+def detect_place_category(text: str) -> Optional[str]:
+    """발화에서 장소 업종(category)을 감지. 없으면 None."""
+    text = text or ""
+    for category, words in _place_category_aliases().items():
+        if any(w in text for w in (words or [])):
+            return category
+    return None
+
+
 def parse_reminder_minutes(text: str) -> Optional[int]:
     """Extract a spoken '1시간 전' / '30분 전' offset as minutes. None if absent."""
     text = text or ""
@@ -192,9 +213,16 @@ def select_voice_intent(text: str, context: Optional[dict] = None) -> dict:
         # 1. reservation_recommendation — place/store discovery, checked FIRST.
         cfg = rules["reservation_recommendation"]
         hits = _matched(text, cfg["strong"]) + _matched(text, cfg["weak"])
-        if hits:
-            matched_keywords["reservation_recommendation"] = hits
-            return _result("reservation_recommendation", matched_keywords)
+        # 업종만 말하고 예약을 원하는 경우도 추천으로: 예약 동사 + 장소 카테고리.
+        # (예: "미용실 예약해줘", "치과 가야 하는데 잡아줘") — 특정 업체명 없이.
+        verb_hits = _matched(text, cfg.get("reservation_verbs", []))
+        place_category = detect_place_category(text)
+        if hits or (verb_hits and place_category):
+            matched_keywords["reservation_recommendation"] = hits + verb_hits
+            return _result(
+                "reservation_recommendation", matched_keywords,
+                category=place_category, location_required=True,
+            )
 
         # 2. emotion_schedule_coaching — requires BOTH groups.
         cfg = rules["emotion_schedule_coaching"]

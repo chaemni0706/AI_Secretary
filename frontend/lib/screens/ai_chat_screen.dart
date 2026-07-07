@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../theme/app_theme.dart';
+import '../models/recommended_place_model.dart';
+import '../models/reservation_model.dart';
 import '../services/api_client.dart';
 import '../services/assistant_text_sanitizer.dart';
+import '../services/dashboard_api.dart';
 import '../services/preference_store.dart';
+import '../services/reservation_api.dart';
+import '../services/schedule_api.dart';
 import '../services/voice_router_api.dart';
 import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
+import '../widgets/reservation_time_card.dart';
 import '../widgets/voice_intent_card.dart';
 
 /// 메인 화면 우측 하단 "AI" 버튼으로 열리는 텍스트/음성 겸용 챗봇 화면.
@@ -148,6 +155,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   void _addMessage(String text, {required bool isUser, VoiceRouteResult? route}) {
     setState(() => _messages.add(_ChatMessage(text: text, isUser: isUser, route: route)));
+    _scrollToEnd();
+  }
+
+  void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -157,6 +168,103 @@ class _AiChatScreenState extends State<AiChatScreen> {
         );
       }
     });
+  }
+
+  /// 현재 GPS 위치(권한/획득 실패 시 null → 서버가 기본 위치 사용).
+  Future<Map<String, dynamic>?> _currentLocation() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        return null;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+      );
+      return {'latitude': pos.latitude, 'longitude': pos.longitude};
+    } catch (e) {
+      debugPrint('AiChat GPS 실패: $e');
+      return null;
+    }
+  }
+
+  String _todayYmd() {
+    final d = DateTime.now();
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  // ---------------------------------------------------------------------- //
+  // 업체 추천 → 선택 → 예약 후보 시간 → 예약(채팅 안에서 이어서)
+  // ---------------------------------------------------------------------- //
+  Future<void> _onPlaceSelected(RecommendedPlace place) async {
+    if (_sending) return;
+    _addMessage('${place.name}(으)로 예약할게요.', isUser: true);
+    setState(() => _sending = true);
+    final date = _todayYmd();
+    try {
+      final result = await reservationApi.candidatesFromStore(
+        targetDate: date,
+        category: place.category,
+      );
+      if (!mounted) return;
+      setState(() => _sending = false);
+      final open = result.recommendedCandidates.where((c) => !c.conflict).toList();
+      if (open.isEmpty) {
+        _addMessage('오늘은 예약 가능한 시간을 찾지 못했어요. 다른 날짜로 다시 시도해볼까요?',
+            isUser: false);
+        return;
+      }
+      setState(() => _messages.add(_ChatMessage(
+            text: '${place.name} 예약 가능한 시간을 골라주세요.',
+            isUser: false,
+            place: place,
+            candidates: result.recommendedCandidates,
+            dateLabel: date,
+          )));
+      _scrollToEnd();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _addMessage('예약 후보를 불러오지 못했어요: ${e.message}', isUser: false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _addMessage('예약 후보를 불러오지 못했어요.', isUser: false);
+    }
+  }
+
+  Future<void> _onTimeSelected(
+      RecommendedPlace place, ReservationCandidate c, String date) async {
+    if (_sending) return;
+    _addMessage('${c.startTime}으로 할게요.', isUser: true);
+    setState(() => _sending = true);
+    try {
+      final draft = ReservationApi.candidateToDraft(
+        c,
+        title: '${place.name} 예약',
+        date: date,
+        category: place.category,
+        location: place.name,
+      );
+      await scheduleApi.createFromDraft(draft, intent: 'create_schedule');
+      triggerDashboardRefresh();
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _addMessage('${place.name} $date ${c.startTime} 예약 일정을 등록했어요. 캘린더에서 확인할 수 있어요.',
+          isUser: false);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _addMessage('예약 등록에 실패했어요: ${e.message}', isUser: false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _addMessage('예약 등록에 실패했어요.', isUser: false);
+    }
   }
 
   /// 발화 전송 → 통합 라우팅(`/voice/route`) → 응답 표시 (+음성 입력이면 TTS)
@@ -184,6 +292,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         text,
         currentDatetime: DateTime.now().toIso8601String(),
         context: contextToSend,
+        location: await _currentLocation(), // 업체 추천 등 위치 기반 기능용
         assistantTone: preferenceStore.assistantTone,
         responseLength: preferenceStore.responseLength,
         reminderStrength: preferenceStore.reminderStrength,
@@ -327,7 +436,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
       itemCount: _messages.length,
       itemBuilder: (context, i) {
         final msg = _messages[i];
-        return _ChatBubble(message: msg);
+        return _ChatBubble(
+          message: msg,
+          onSelectPlace: _onPlaceSelected,
+          onSelectTime: _onTimeSelected,
+        );
       },
     );
   }
@@ -457,13 +570,32 @@ class _ChatMessage {
   /// AI 메시지에 한해 `/voice/route` 결과 전체를 담는다(사용자 메시지는 null).
   final VoiceRouteResult? route;
 
-  const _ChatMessage({required this.text, required this.isUser, this.route});
+  /// 예약 후보 시간 카드용(업체 선택 후 챗 안에서 이어지는 흐름).
+  final RecommendedPlace? place;
+  final List<ReservationCandidate>? candidates;
+  final String? dateLabel;
+
+  const _ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.route,
+    this.place,
+    this.candidates,
+    this.dateLabel,
+  });
 }
 
 class _ChatBubble extends StatelessWidget {
   final _ChatMessage message;
+  final void Function(RecommendedPlace place)? onSelectPlace;
+  final void Function(RecommendedPlace place, ReservationCandidate c, String date)?
+      onSelectTime;
 
-  const _ChatBubble({required this.message});
+  const _ChatBubble({
+    required this.message,
+    this.onSelectPlace,
+    this.onSelectTime,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -538,8 +670,25 @@ class _ChatBubble extends StatelessWidget {
           if (!message.isUser && message.route != null) ...[
             const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.only(left: 36, right: 32),
-              child: buildVoiceIntentCard(context, message.route!),
+              padding: const EdgeInsets.only(left: 36, right: 8),
+              child: buildVoiceIntentCard(
+                context,
+                message.route!,
+                onSelectPlace: onSelectPlace,
+              ),
+            ),
+          ],
+          if (!message.isUser && message.candidates != null && message.place != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 36, right: 8),
+              child: ReservationTimeCard(
+                placeName: message.place!.name,
+                dateLabel: message.dateLabel ?? '',
+                candidates: message.candidates!,
+                onSelect: (c) => onSelectTime?.call(
+                    message.place!, c, message.dateLabel ?? ''),
+              ),
             ),
           ],
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/recommended_place_model.dart';
 import '../screens/calendar_screen.dart';
 import '../screens/place_recommendation_screen.dart';
 import '../services/briefing_scheduler_service.dart';
@@ -6,6 +7,7 @@ import '../services/dashboard_api.dart';
 import '../services/voice_router_api.dart';
 import '../theme/app_theme.dart';
 import 'glass_card.dart';
+import 'place_carousel_card.dart';
 
 /// `POST /api/v1/voice/route` 결과를 화면에 그리는 공용 위젯 모음.
 ///
@@ -63,8 +65,19 @@ void handleVoiceSideEffects(VoiceRouteResult route) {
 /// 백엔드가 `navigate` 를 지시한 intent는 [handleVoiceScreenAction] 이 실제
 /// 화면 전환을 담당하므로, 카드는 채팅 안에서 바로 의미 있는 나머지 intent
 /// (감정 코칭/브리핑/일정 등록/알림 설정)에 대해서만 그린다.
-Widget buildVoiceIntentCard(BuildContext context, VoiceRouteResult route) {
+Widget buildVoiceIntentCard(
+  BuildContext context,
+  VoiceRouteResult route, {
+  void Function(RecommendedPlace place)? onSelectPlace,
+}) {
   switch (route.intent) {
+    case 'reservation_recommendation':
+      final places = RecommendedPlace.listFrom(route.data['recommended_places']);
+      if (places.isEmpty) return const SizedBox.shrink();
+      return PlaceCarouselCard(
+        places: places,
+        onSelect: (p) => onSelectPlace?.call(p),
+      );
     case 'emotion_schedule_coaching':
       return _buildCoachingCard(context, route.data);
     case 'daily_briefing':

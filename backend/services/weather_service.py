@@ -215,6 +215,12 @@ _CITIES = [
 ]
 
 
+def region_label(lat: Optional[float], lon: Optional[float]) -> Optional[str]:
+    """좌표 → 지역명. 네이버 역지오코딩(정밀) 우선, 실패 시 오프라인 최근접 도시.
+    날씨·업체추천 등 위치 기반 기능이 공통으로 쓴다."""
+    return _region_name(lat, lon) or _region_from_latlon(lat, lon)
+
+
 def _region_from_latlon(lat: Optional[float], lon: Optional[float]) -> Optional[str]:
     """좌표에 가장 가까운 주요 도시 이름(오프라인, 항상 동작)."""
     if lat is None or lon is None:

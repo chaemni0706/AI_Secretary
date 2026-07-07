@@ -149,45 +149,68 @@ def _handle_reservation_recommendation(req: VoiceRouteRequest) -> VoiceRouteData
         "[VOICE ROUTE] reservation_recommendation start text=%r naver_configured=%s",
         req.text, naver_ready,
     )
+    # GPS 좌표 → 지역명을 location.address 로 채워 '현재 위치 근처'로 검색되게 한다.
+    # (네이버 지역검색은 좌표가 아닌 키워드 기반이라 지역명이 있어야 근처가 잡힘)
+    loc = dict(req.location or {})
+    lat, lon = loc.get("latitude"), loc.get("longitude")
+    if lat is not None and lon is not None and not loc.get("address"):
+        region = weather_service.region_label(lat, lon)
+        if region:
+            # 가장 구체적인 시/군/구 토큰만 사용(예: "경상북도 포항시" → "포항시").
+            loc["address"] = region.split()[-1]
+            _logger.info("[VOICE ROUTE] reservation GPS region=%r", loc["address"])
     try:
         data = place_recommendation_service.recommend_places({
             "user_id": req.user_id,
             "input": req.text,
             "current_datetime": req.current_datetime,
             "timezone": req.timezone,
-            "location": req.location,
+            "location": loc,
         })
     except (NaverConfigError, NaverApiError) as exc:
+        # 네이버 키 없음/실패 → Mock 업체 목록으로 대체(데모/오프라인에서도 흐름 유지).
         _logger.warning(
-            "[VOICE ROUTE] reservation_recommendation degraded (naver_configured=%s): %s",
+            "[VOICE ROUTE] reservation_recommendation → Mock (naver_configured=%s): %s",
             naver_ready, exc,
+        )
+        from backend.data.mock_places import mock_places
+        category = voice_intent_router.detect_place_category(req.text)
+        data = mock_places(category, req.text)
+        places = data.recommended_places
+        tts_text = (
+            f"예시로 {places[0].name} 등 {len(places)}곳을 보여드릴게요. 마음에 드는 곳을 골라주세요."
+            if places else "추천할 업체를 찾지 못했어요."
         )
         return VoiceRouteData(
             intent="reservation_recommendation",
-            tts_text="지금은 추천 서비스에 연결할 수 없어요. 잠시 후 다시 시도해주세요.",
+            tts_text=tts_text,
             screen_action=ScreenAction(
-                type="navigate", target="reservation_recommendation", payload={}
+                type="show_card", target="reservation_recommendation",
+                payload={"query": data.query, "category": category or ""},
             ),
-            data={"recommended_places": [], "error": str(exc)},
+            data=data.model_dump(),
         )
 
     places = data.recommended_places
-    if places:
-        tts_text = f"추천 후보를 찾아봤어요. {places[0].name} 등 {len(places)}곳을 화면에서 확인해보세요."
+    if not places:
+        # 실검색 0건 → Mock 업체 목록으로 대체(카드가 비지 않도록).
+        from backend.data.mock_places import mock_places
+        category = voice_intent_router.detect_place_category(req.text)
+        data = mock_places(category, data.query)
+        places = data.recommended_places
         _logger.info(
-            "[VOICE ROUTE] reservation_recommendation success query=%r results=%d top=%r",
-            data.query, len(places), places[0].name,
+            "[VOICE ROUTE] reservation_recommendation 0 results → Mock(%d)", len(places),
         )
+    if places:
+        tts_text = f"추천 후보를 찾아봤어요. {places[0].name} 등 {len(places)}곳 중에서 골라주세요."
     else:
         tts_text = "조건에 맞는 추천 장소를 찾지 못했어요. 다른 지역이나 종류로 다시 말씀해주세요."
-        _logger.info(
-            "[VOICE ROUTE] reservation_recommendation success query=%r results=0", data.query,
-        )
     return VoiceRouteData(
         intent="reservation_recommendation",
         tts_text=tts_text,
         screen_action=ScreenAction(
-            type="navigate", target="reservation_recommendation", payload={"query": data.query}
+            type="show_card", target="reservation_recommendation",
+            payload={"query": data.query},
         ),
         data=data.model_dump(),
     )

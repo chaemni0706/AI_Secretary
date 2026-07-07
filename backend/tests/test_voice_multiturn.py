@@ -48,7 +48,8 @@ def _route(client, text, context=None):
 
 
 def test_slot_fill_then_register(client):
-    d1 = _route(client, "내일 병원 예약 잡아줘")
+    # 장소 업종(병원/미용실)은 이제 예약 추천으로 가므로, 슬롯필 테스트는 비-장소 일정 사용.
+    d1 = _route(client, "내일 회의 잡아줘")
     assert d1["context"]["type"] == "schedule_pending"
     assert "time" in d1["context"]["missing"]
 

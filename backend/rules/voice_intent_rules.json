@@ -15,7 +15,9 @@
       "예약할 곳", "갈 만한 곳", "저녁 먹을 곳", "점심 먹을 곳", "장소 추천",
       "추천해줘", "추천해 줘", "추천해주세요"
     ],
-    "weak": ["추천", "맛집", "놀거리"]
+    "weak": ["추천", "맛집", "놀거리"],
+    "_reservation_comment": "업종만 말하고 특정 업체명 없이 예약을 원할 때(예: '미용실 예약해줘')도 추천으로 라우팅. 아래 동사 중 하나 + 장소 카테고리(place_recommendation_rules의 category_aliases) 감지 시 발동.",
+    "reservation_verbs": ["예약해줘", "예약 해줘", "예약해", "예약하고 싶", "예약 잡아", "예약 좀", "예약 부탁", "가야 하는데", "가야하는데", "예약하려고"]
   },
   "emotion_schedule_coaching": {
     "_comment": "Fires only when BOTH an emotion word AND a schedule-reference word are present (spec 4-2) — a bare schedule query without emotion stays schedule_query.",

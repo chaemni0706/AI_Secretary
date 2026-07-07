@@ -485,7 +485,7 @@ def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
             data={},
         )
 
-    classified = voice_intent_router.select_voice_intent(text, context=req.context)
+    classified = voice_intent_router.select_voice_intent_hybrid(text, context=req.context)
     intent = classified["intent"]
     _logger.info(
         "[VOICE ROUTE] text=%r intent=%s matched=%s",

@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     # Default OFF so the parser works fully offline with rule-based extraction.
     ENABLE_LLM_SCHEDULE_PARSE: bool = False
 
+    # --- Intent classification (voice router) ---
+    # 규칙 분류가 fallback_chat(=명확한 매칭 없음)으로 떨어질 때만 LLM 보조 분류를
+    # 시도한다. Default OFF → 켜기 전까지 기존 규칙 동작과 100% 동일.
+    ENABLE_LLM_INTENT: bool = False
+
     # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error

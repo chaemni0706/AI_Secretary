@@ -253,7 +253,14 @@ def _handle_daily_briefing(db: Session, req: VoiceRouteRequest) -> VoiceRouteDat
         ],
         todos=[BriefingTodo(title=t.title, priority=t.priority, is_done=t.completed) for t in todos],
     )
-    data = briefing_generator.generate_briefing(briefing_req)
+    # 사용자 음성 스타일(말투/길이/알림강도)을 브리핑 LLM 요약에 반영.
+    prefs = {
+        "assistant_tone": req.assistant_tone,
+        "response_length": req.response_length,
+        "reminder_strength": req.reminder_strength,
+    }
+    prefs = {k: v for k, v in prefs.items() if v}
+    data = briefing_generator.generate_briefing(briefing_req, preferences=prefs or None)
 
     # 날씨 연동 지점(TODO): 실제 날씨 API 키가 연결되면 이 fallback 문구 대신
     # briefing_generator 쪽에서 날씨 문장을 만들어 tts_text에 포함시킨다.

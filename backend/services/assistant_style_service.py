@@ -80,6 +80,64 @@ def build_style_profile(preferences: Optional[dict]) -> Dict[str, str]:
 
 
 # --------------------------------------------------------------------------- #
+# LLM 프롬프트용 스타일 지시문
+# --------------------------------------------------------------------------- #
+_TONE_DESC = {
+    "formal": "정중하고 격식 있는",
+    "friendly": "친근하고 부드러운",
+    "caring": "따뜻하고 공감하는",
+    "concise": "군더더기 없이 간결한",
+}
+_LENGTH_DESC = {
+    "short": "짧게 1~2문장으로",
+    "medium": "2~3문장 정도로",
+    "long": "필요하면 충분히 자세하게",
+}
+_STRENGTH_DESC = {
+    "gentle": "재촉이나 알림은 부드럽게 권하듯",
+    "normal": "알림은 적당한 정도로",
+    "strong": "중요한 점은 분명히 강조하고 확실히 리마인드하며",
+}
+
+
+def _as_profile(preferences_or_profile: Optional[dict]) -> Dict[str, str]:
+    """이미 정규화된 profile({tone,length,strength})이면 그대로, 아니면 raw
+    prefs 를 build_style_profile 로 정규화해 반환."""
+    p = preferences_or_profile or {}
+    if set(p) <= {"tone", "length", "strength"} and p:
+        return {
+            "tone": p.get("tone", DEFAULT_TONE),
+            "length": p.get("length", DEFAULT_LENGTH),
+            "strength": p.get("strength", DEFAULT_STRENGTH),
+        }
+    return build_style_profile(preferences_or_profile)
+
+
+def style_instruction(preferences_or_profile: Optional[dict]) -> str:
+    """사용자 스타일(tone/length/strength)을 LLM 프롬프트에 넣을 한국어 지시문으로.
+
+    raw prefs(assistant_tone/response_length/reminder_strength) 또는 이미 만든
+    profile 둘 다 받는다. 예) "[응답 스타일] 사용자는 짧게 1~2문장으로 친근하고
+    부드러운 말투의 응답을 선호합니다. ..."
+    """
+    prof = _as_profile(preferences_or_profile)
+    tone = _TONE_DESC.get(prof["tone"], _TONE_DESC[DEFAULT_TONE])
+    length = _LENGTH_DESC.get(prof["length"], _LENGTH_DESC[DEFAULT_LENGTH])
+    strength = _STRENGTH_DESC.get(prof["strength"], _STRENGTH_DESC[DEFAULT_STRENGTH])
+    return (
+        f"[응답 스타일] 사용자는 {length} {tone} 말투의 응답을 선호합니다. "
+        f"{strength} 답하세요."
+    )
+
+
+def styled_system(base_system: Optional[str], preferences_or_profile: Optional[dict]) -> str:
+    """기존 system 프롬프트 끝에 스타일 지시문을 덧붙인다. base 가 비면 지시문만."""
+    base = (base_system or "").strip()
+    hint = style_instruction(preferences_or_profile)
+    return f"{base}\n{hint}" if base else hint
+
+
+# --------------------------------------------------------------------------- #
 # sentence helpers
 # --------------------------------------------------------------------------- #
 _FIELD_LABEL = {"date": "날짜", "time": "시간", "location": "장소"}

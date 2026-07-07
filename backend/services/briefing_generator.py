@@ -204,7 +204,7 @@ def _build_prompt(req: DailyBriefingRequest,
     )
 
 
-def generate_briefing(req: DailyBriefingRequest) -> DailyBriefingData:
+def generate_briefing(req: DailyBriefingRequest, preferences: Optional[dict] = None) -> DailyBriefingData:
     brules = _briefing_rules()
     s_tpl = brules["summary_templates"]
     k_tpl = brules["key_point_templates"]
@@ -255,9 +255,13 @@ def generate_briefing(req: DailyBriefingRequest) -> DailyBriefingData:
     # ----- summary (LLM, optional) -----
     llm_summary = None
     try:
+        base_system = "너는 사용자의 하루를 따뜻하고 간결하게 정리하는 한국어 비서야. 2~3문장으로만 요약해."
+        if preferences:
+            from backend.services import assistant_style_service as style
+            base_system = style.styled_system(base_system, preferences)
         llm_summary = llm_service.generate(
             _build_prompt(req, priority_order),
-            system="너는 사용자의 하루를 따뜻하고 간결하게 정리하는 한국어 비서야. 2~3문장으로만 요약해.",
+            system=base_system,
         )
     except Exception:
         llm_summary = None

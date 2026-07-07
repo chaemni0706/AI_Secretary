@@ -263,14 +263,15 @@ def generate_empathy_response(
             user_profile=user_profile,
             solution_context=solution_context,
         )
-        llm_draft = llm_service.generate(
-            prompt,
-            system=(
-                "너는 생활 밀착형 AI 일정 비서야. 의학적 진단을 하지 말고, "
-                "감정을 먼저 인정한 뒤 3~5문장으로 부드럽게 답해. "
-                "실제 경험이 있는 것처럼 말하지 말고, 실행성 제안은 사용자 확인을 받아."
-            ),
+        base_system = (
+            "너는 생활 밀착형 AI 일정 비서야. 의학적 진단을 하지 말고, "
+            "감정을 먼저 인정한 뒤 3~5문장으로 부드럽게 답해. "
+            "실제 경험이 있는 것처럼 말하지 말고, 실행성 제안은 사용자 확인을 받아."
         )
+        # 사용자 스타일(말투/길이/알림강도)이 있으면 프롬프트에 반영.
+        from backend.services import assistant_style_service as style
+        system = style.styled_system(base_system, user_profile) if user_profile else base_system
+        llm_draft = llm_service.generate(prompt, system=system)
     except Exception:
         llm_draft = None
 

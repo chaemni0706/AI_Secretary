@@ -46,11 +46,11 @@ def _llm_clarification(
         "위 빠진 정보를 물어보는 자연스러운 한국어 문장을 딱 1개, 40자 이내로 만들어줘. "
         "따옴표나 설명 없이 문장만 출력해."
     )
-    text = llm_service.generate(
-        prompt,
-        system="너는 일정 비서야. 부족한 정보를 정중히 되묻는 한 문장만 출력해.",
-        max_tokens=80,
+    from backend.services import assistant_style_service as style
+    system = style.styled_system(
+        "너는 일정 비서야. 부족한 정보를 정중히 되묻는 한 문장만 출력해.", profile
     )
+    text = llm_service.generate(prompt, system=system, max_tokens=80)
     if not text:
         return None
     text = text.strip().splitlines()[0].strip()

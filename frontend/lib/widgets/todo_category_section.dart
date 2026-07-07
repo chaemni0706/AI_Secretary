@@ -9,6 +9,7 @@ class TodoCategorySection extends StatelessWidget {
   final String title;
   final List<TodoModel> todos;
   final ValueChanged<TodoModel> onToggle;
+  final ValueChanged<TodoModel>? onTap;
   final bool compactCards;
   final int? visibleLimit;
   final bool expanded;
@@ -19,6 +20,7 @@ class TodoCategorySection extends StatelessWidget {
     required this.title,
     required this.todos,
     required this.onToggle,
+    this.onTap,
     this.compactCards = false,
     this.visibleLimit,
     this.expanded = true,
@@ -86,6 +88,7 @@ class TodoCategorySection extends StatelessWidget {
             (todo) => TodoCard(
               todo: todo,
               compact: compactCards,
+              onTap: onTap == null ? null : () => onTap!(todo),
               onToggle: () => onToggle(todo),
             ),
           ),

@@ -10,9 +10,10 @@ import '../widgets/app_top_actions.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/todo_card.dart';
 import '../widgets/todo_category_section.dart';
+import '../widgets/todo_completion_calendar.dart';
 import '../widgets/todo_progress_card.dart';
-import '../widgets/todo_ring_chart.dart';
-import 'todo_add_screen.dart';
+import '../widgets/todo_segmented_control.dart';
+import 'todo_form_screen.dart';
 
 class TodoScreen extends StatefulWidget {
   const TodoScreen({super.key});
@@ -28,12 +29,17 @@ class _TodoScreenState extends State<TodoScreen>
   bool _loading = true;
   String? _error;
   List<TodoModel> _all = [];
-  final Set<String> _expandedDoneCategories = {};
+  DateTime _completionMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
+  DateTime? _selectedCompletionDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_handleTabChange);
     _loadTodos();
     dashboardRefresh.addListener(_loadTodos);
   }
@@ -41,8 +47,13 @@ class _TodoScreenState extends State<TodoScreen>
   @override
   void dispose() {
     dashboardRefresh.removeListener(_loadTodos);
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleTabChange() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadTodos() async {
@@ -113,6 +124,13 @@ class _TodoScreenState extends State<TodoScreen>
     return list;
   }
 
+  List<TodoModel> get _todayDoneTodos {
+    final t = _today;
+    final list = _all.where((x) => x.completed && x.dueDate == t).toList();
+    list.sort(_cmp);
+    return list;
+  }
+
   List<TodoModel> get _todayAll {
     final list = _all.where((x) => x.dueDate == _today).toList();
     list.sort(_cmp);
@@ -147,61 +165,80 @@ class _TodoScreenState extends State<TodoScreen>
     return grouped;
   }
 
-  double _completionRate(List<TodoModel> todos) {
-    if (todos.isEmpty) return 0;
-    return todos.where((todo) => todo.completed).length / todos.length;
-  }
-
-  List<TodoRingCardData> _ringCardsByDate() {
+  Map<String, CompletionDayStats> _completionStatsByDate(DateTime month) {
     final byDate = <String, List<TodoModel>>{};
     for (final todo in _all) {
-      final key = todo.dueDate?.trim().isNotEmpty == true
-          ? todo.dueDate!
-          : '날짜 미정';
+      final dueDate = todo.dueDate;
+      if (dueDate == null || dueDate.length < 10) continue;
+      final parsed = DateTime.tryParse(dueDate);
+      if (parsed == null ||
+          parsed.year != month.year ||
+          parsed.month != month.month) {
+        continue;
+      }
+      final key = _dateKey(parsed);
       byDate.putIfAbsent(key, () => []).add(todo);
     }
 
-    final keys = byDate.keys.toList()
-      ..sort((a, b) {
-        if (a == _today) return -1;
-        if (b == _today) return 1;
-        if (a == '날짜 미정') return 1;
-        if (b == '날짜 미정') return -1;
-        return a.compareTo(b);
-      });
-
-    return keys.take(8).map((date) {
-      final todos = byDate[date]!;
+    return byDate.map((key, todos) {
+      final date = DateTime.parse(key);
       final grouped = _groupByCategory(todos);
+      final done = todos.where((todo) => todo.completed).length;
       final rings = TodoStyles.categoryOrder
           .where((category) => (grouped[category] ?? const []).isNotEmpty)
-          .map(
-            (category) => TodoRingData(
-              label: category,
+          .map((category) {
+            final items = grouped[category] ?? const <TodoModel>[];
+            return CompletionCategoryRingTrack(
+              category: category,
               color: TodoStyles.categoryColor(category),
-              progress: _completionRate(grouped[category] ?? const []),
-            ),
-          )
+              total: items.length,
+              completed: items.where((todo) => todo.completed).length,
+            );
+          })
           .toList();
-      final done = todos.where((todo) => todo.completed).length;
-      return TodoRingCardData(
-        title: date == _today ? '오늘' : date,
-        subtitle: '완료 $done / 전체 ${todos.length}',
-        overallProgress: _completionRate(todos),
-        rings: rings,
+      return MapEntry(
+        key,
+        CompletionDayStats(
+          date: date,
+          total: todos.length,
+          completed: done,
+          rings: rings,
+        ),
       );
-    }).toList();
+    });
   }
 
-  Future<void> _openAddTodo() async {
-    final saved = await Navigator.push<TodoModel>(
-      context,
-      MaterialPageRoute(builder: (_) => const TodoAddScreen()),
-    );
-    if (saved == null || !mounted) return;
+  List<TodoModel> _todosForDate(DateTime? date) {
+    if (date == null) return const [];
+    final key = _dateKey(date);
+    final list = _all.where((todo) => todo.dueDate == key).toList();
+    list.sort(_cmp);
+    return list;
+  }
+
+  String _dateKey(DateTime date) {
+    return '${date.year}-${_two(date.month)}-${_two(date.day)}';
+  }
+
+  void _changeCompletionMonth(DateTime month) {
     setState(() {
-      _all = [saved, ..._all.where((todo) => todo.id != saved.id)];
+      _completionMonth = DateTime(month.year, month.month);
+      _selectedCompletionDate = DateTime(month.year, month.month, 1);
     });
+  }
+
+  void _selectCompletionDate(DateTime date) {
+    setState(() {
+      _selectedCompletionDate = DateTime(date.year, date.month, date.day);
+    });
+  }
+
+  Future<void> _openEditTodo(TodoModel todo) async {
+    final result = await Navigator.push<Object>(
+      context,
+      MaterialPageRoute(builder: (_) => TodoFormScreen(initialTodo: todo)),
+    );
+    if (result == null || !mounted) return;
     triggerDashboardRefresh();
     await _loadTodos();
   }
@@ -211,42 +248,26 @@ class _TodoScreenState extends State<TodoScreen>
     return Container(
       decoration: AppTheme.screenBackground,
       child: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                _buildHeader(),
-                _buildTabBar(),
-                Expanded(
-                  child: _loading && _all.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
-                      ? _buildError()
-                      : TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildTodayTab(),
-                            _buildTodoList(
-                              _upcomingTodos,
-                              emptyText: '예정된 할 일이 없습니다.',
-                            ),
-                            _buildDoneTab(),
-                          ],
+            _buildHeader(),
+            _buildFilterControl(),
+            Expanded(
+              child: _loading && _all.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? _buildError()
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildTodayTab(),
+                        _buildTodoList(
+                          _upcomingTodos,
+                          emptyText: '예정된 할 일이 없습니다.',
                         ),
-                ),
-              ],
-            ),
-            Positioned(
-              left: 20,
-              bottom: 18,
-              child: FloatingActionButton(
-                heroTag: 'todo-add-fab',
-                shape: const CircleBorder(),
-                backgroundColor: AppTheme.blue,
-                foregroundColor: Colors.white,
-                onPressed: _openAddTodo,
-                child: const Icon(Icons.add),
-              ),
+                        _buildDoneTab(),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -287,44 +308,17 @@ class _TodoScreenState extends State<TodoScreen>
     );
   }
 
-  Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.separator.withValues(alpha: 0.6)),
-        ),
-        child: TabBar(
-          controller: _tabController,
-          indicator: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.07),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          indicatorPadding: const EdgeInsets.all(3),
-          dividerColor: Colors.transparent,
-          labelColor: AppTheme.textPrimary,
-          unselectedLabelColor: AppTheme.textSecondary,
-          labelStyle: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-          unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: [
-            Tab(text: '오늘 ${_todayTodos.length}'),
-            Tab(text: '예정 ${_upcomingTodos.length}'),
-            Tab(text: '완료 ${_doneTodos.length}'),
-          ],
-        ),
-      ),
+  Widget _buildFilterControl() {
+    return TodoSegmentedControl(
+      selectedIndex: _tabController.index,
+      segments: [
+        TodoSegment(label: '오늘', count: _todayTodos.length),
+        TodoSegment(label: '예정', count: _upcomingTodos.length),
+        TodoSegment(label: '완료', count: _doneTodos.length),
+      ],
+      onChanged: (index) {
+        setState(() => _tabController.index = index);
+      },
     );
   }
 
@@ -332,6 +326,7 @@ class _TodoScreenState extends State<TodoScreen>
     final todayAll = _todayAll;
     final done = todayAll.where((todo) => todo.completed).length;
     final grouped = _groupByCategory(_todayTodos);
+    final groupedDone = _groupByCategory(_todayDoneTodos);
 
     return RefreshIndicator(
       onRefresh: _loadTodos,
@@ -342,7 +337,7 @@ class _TodoScreenState extends State<TodoScreen>
         ),
         children: [
           TodoProgressCard(done: done, total: todayAll.length),
-          if (_todayTodos.isEmpty)
+          if (_todayTodos.isEmpty && _todayDoneTodos.isEmpty)
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: GlassCard(
@@ -353,7 +348,15 @@ class _TodoScreenState extends State<TodoScreen>
                 ),
               ),
             )
-          else
+          else ...[
+            if (_todayTodos.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: _TodoSectionTitle(
+                  title: '오늘 할 일',
+                  count: _todayTodos.length,
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
               child: Column(
@@ -363,11 +366,39 @@ class _TodoScreenState extends State<TodoScreen>
                         title: category,
                         todos: grouped[category] ?? const [],
                         onToggle: _toggle,
+                        onTap: _openEditTodo,
                       ),
                     )
                     .toList(),
               ),
             ),
+            if (_todayDoneTodos.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: _TodoSectionTitle(
+                  title: '완료한 할 일',
+                  count: _todayDoneTodos.length,
+                  muted: true,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Column(
+                  children: TodoStyles.categoryOrder
+                      .map(
+                        (category) => TodoCategorySection(
+                          title: category,
+                          todos: groupedDone[category] ?? const [],
+                          onToggle: _toggle,
+                          onTap: _openEditTodo,
+                          compactCards: true,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -404,14 +435,18 @@ class _TodoScreenState extends State<TodoScreen>
                 parent: BouncingScrollPhysics(),
               ),
               itemCount: todos.length,
-              itemBuilder: (context, i) =>
-                  TodoCard(todo: todos[i], onToggle: () => _toggle(todos[i])),
+              itemBuilder: (context, i) => TodoCard(
+                todo: todos[i],
+                onTap: () => _openEditTodo(todos[i]),
+                onToggle: () => _toggle(todos[i]),
+              ),
             ),
     );
   }
 
   Widget _buildDoneTab() {
-    final groupedDone = _groupByCategory(_doneTodos);
+    final monthlyStats = _completionStatsByDate(_completionMonth);
+    final selectedTodos = _todosForDate(_selectedCompletionDate);
 
     return RefreshIndicator(
       onRefresh: _loadTodos,
@@ -421,45 +456,16 @@ class _TodoScreenState extends State<TodoScreen>
           parent: BouncingScrollPhysics(),
         ),
         children: [
-          TodoRingChart(cards: _ringCardsByDate()),
-          if (_doneTodos.isEmpty)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: GlassCard(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                child: Text(
-                  '완료한 할 일이 없습니다.',
-                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                ),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Column(
-                children: TodoStyles.categoryOrder
-                    .map(
-                      (category) => TodoCategorySection(
-                        title: category,
-                        todos: groupedDone[category] ?? const [],
-                        onToggle: _toggle,
-                        compactCards: true,
-                        visibleLimit: 3,
-                        expanded: _expandedDoneCategories.contains(category),
-                        onToggleExpanded: () {
-                          setState(() {
-                            if (_expandedDoneCategories.contains(category)) {
-                              _expandedDoneCategories.remove(category);
-                            } else {
-                              _expandedDoneCategories.add(category);
-                            }
-                          });
-                        },
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
+          TodoCompletionMonthlyCalendar(
+            focusedMonth: _completionMonth,
+            selectedDate: _selectedCompletionDate,
+            statsByDate: monthlyStats,
+            selectedTodos: selectedTodos,
+            onMonthChanged: _changeCompletionMonth,
+            onDateSelected: _selectCompletionDate,
+            onToggleTodo: _toggle,
+            onTodoTap: _openEditTodo,
+          ),
         ],
       ),
     );
@@ -504,6 +510,40 @@ class _TodoScreenState extends State<TodoScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TodoSectionTitle extends StatelessWidget {
+  final String title;
+  final int count;
+  final bool muted;
+
+  const _TodoSectionTitle({
+    required this.title,
+    required this.count,
+    this.muted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: AppTextStyles.sectionTitle.copyWith(
+            color: muted ? AppTheme.textSecondary : AppTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$count',
+          style: AppTextStyles.meta.copyWith(
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

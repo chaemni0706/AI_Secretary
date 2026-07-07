@@ -19,17 +19,30 @@ class AssistantMenuAction {
 class DraggableAssistantFab extends StatefulWidget {
   final List<AssistantMenuAction> actions;
 
-  const DraggableAssistantFab({super.key, required this.actions});
+  /// 짧은 탭(onTap)과 별개로, 길게 누르면 호출된다.
+  final VoidCallback? onLongPress;
+
+  const DraggableAssistantFab({
+    super.key,
+    required this.actions,
+    this.onLongPress,
+  });
 
   @override
   State<DraggableAssistantFab> createState() => _DraggableAssistantFabState();
 }
 
 class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
-  static const double _buttonSize = 58;
+  static const double _buttonSize = 50;
   static const double _menuButtonSize = 46;
+
+  /// 화면 좌/우 엣지와 버튼 사이 여백(AssistiveTouch 스타일 사이드 스냅 위치).
+  static const double _edgeMargin = 10;
+  static const Duration _snapDuration = Duration(milliseconds: 220);
+
   Offset? _position;
   bool _open = false;
+  bool _isDragging = false;
 
   void _toggleOpen() => setState(() => _open = !_open);
 
@@ -37,11 +50,27 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
     if (_open) setState(() => _open = false);
   }
 
-  Offset _clamp(Offset position, Size size) {
+  Offset _clamp(Offset position, Size size, double topInset) {
     return Offset(
-      position.dx.clamp(12, size.width - _buttonSize - 12),
-      position.dy.clamp(12, size.height - _buttonSize - 88),
+      position.dx.clamp(_edgeMargin, size.width - _buttonSize - _edgeMargin),
+      position.dy.clamp(
+        topInset + 12,
+        size.height - _buttonSize - 88,
+      ),
     );
+  }
+
+  void _snapToNearestSide(Size size) {
+    final current = _position;
+    if (current == null) return;
+    final centerX = current.dx + _buttonSize / 2;
+    final targetX = centerX < size.width / 2
+        ? _edgeMargin
+        : size.width - _buttonSize - _edgeMargin;
+    setState(() {
+      _isDragging = false;
+      _position = Offset(targetX, current.dy);
+    });
   }
 
   List<Offset> _menuOffsets(Size size) {
@@ -63,12 +92,13 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.of(context).padding.top;
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final position =
             _position ?? Offset(size.width - 82, size.height - 146);
-        final safePosition = _clamp(position, size);
+        final safePosition = _clamp(position, size, topInset);
         if (_position == null || safePosition != position) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _position = safePosition);
@@ -94,17 +124,30 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
               actions: widget.actions,
               onActionSelected: _close,
             ),
-            Positioned(
+            AnimatedPositioned(
+              duration: _isDragging ? Duration.zero : _snapDuration,
+              curve: Curves.easeOut,
               left: safePosition.dx,
               top: safePosition.dy,
               child: GestureDetector(
                 onTap: _toggleOpen,
+                onLongPress: widget.onLongPress,
+                onPanStart: (_) => setState(() => _isDragging = true),
                 onPanUpdate: (details) {
                   setState(() {
-                    _position = _clamp(safePosition + details.delta, size);
+                    _position = _clamp(
+                      safePosition + details.delta,
+                      size,
+                      topInset,
+                    );
                   });
                 },
-                child: _AssistantMainButton(open: _open, size: _buttonSize),
+                onPanEnd: (_) => _snapToNearestSide(size),
+                child: AnimatedOpacity(
+                  opacity: (_isDragging || _open) ? 1 : 0.85,
+                  duration: const Duration(milliseconds: 180),
+                  child: _AssistantMainButton(open: _open, size: _buttonSize),
+                ),
               ),
             ),
           ],
@@ -212,9 +255,9 @@ class _AssistantMainButton extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.blue.withValues(alpha: open ? 0.32 : 0.22),
-            blurRadius: open ? 22 : 16,
-            offset: const Offset(0, 7),
+            color: AppTheme.blue.withValues(alpha: open ? 0.26 : 0.16),
+            blurRadius: open ? 18 : 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -224,7 +267,7 @@ class _AssistantMainButton extends StatelessWidget {
         child: Icon(
           open ? Icons.close : Icons.auto_awesome,
           color: Colors.white,
-          size: 27,
+          size: 23,
         ),
       ),
     );

@@ -5,6 +5,7 @@ import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../theme/ledger_styles.dart';
 import '../widgets/app_top_actions.dart';
+import '../widgets/budget_segmented_control.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/ledger_ai_briefing_card.dart';
 import '../widgets/ledger_auto_detect_card.dart';
@@ -25,11 +26,23 @@ class _LedgerScreenState extends State<LedgerScreen> {
   static const _dow = ['일', '월', '화', '수', '목', '금', '토'];
 
   int _selectedDay = MockLedgerData.defaultSelectedDay;
-  int _topTab = 0; // 0 달력 · 1 거래 내역 (2 소비 분석은 push)
+  int _topTab = 0;
   int _simIndex = 0;
   int _nextPendingId = 100;
-  late final List<PendingTx> _pending =
-      List.of(MockLedgerData.initialPending);
+  late final List<PendingTx> _pending = List.of(MockLedgerData.initialPending);
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _topTab);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _selectDay(int day) => setState(() => _selectedDay = day);
 
@@ -79,11 +92,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     });
   }
 
-  void _openReport() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LedgerReportScreen()),
-    );
-  }
+  void _openReport() => _onTabTap(2);
 
   void _snack(String message) {
     if (!mounted) return;
@@ -97,19 +106,34 @@ class _LedgerScreenState extends State<LedgerScreen> {
     return Container(
       decoration: AppTheme.screenBackground,
       child: SafeArea(
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        child: Column(
           children: [
-            _buildHeader(),
-            const SizedBox(height: 14),
-            _TopTabs(current: _topTab, onTap: _onTabTap),
-            const SizedBox(height: 14),
-            _buildMonthSummary(),
-            const SizedBox(height: 14),
-            if (_topTab == 0) ..._buildCalendarView() else ..._buildListView(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: _buildHeader(),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: BudgetSegmentedControl(
+                selectedIndex: _topTab,
+                labels: const ['달력', '거래내역', '소비 리포트'],
+                onChanged: _onTabTap,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) => setState(() => _topTab = index),
+                children: [
+                  _LedgerPage(children: _buildCalendarView()),
+                  _LedgerPage(children: _buildListView()),
+                  const LedgerReportContent(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -117,11 +141,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   void _onTabTap(int index) {
-    if (index == 2) {
-      _openReport();
-    } else {
-      setState(() => _topTab = index);
-    }
+    setState(() => _topTab = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Widget _buildHeader() {
@@ -185,15 +210,25 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final info = MockLedgerData.dayData[_selectedDay] ?? const DayInfo();
     final txs = MockLedgerData.txByDay[_selectedDay] ?? const <LedgerTx>[];
     final weekday =
-        DateTime(MockLedgerData.year, MockLedgerData.month, _selectedDay)
-                .weekday %
-            7;
+        DateTime(
+          MockLedgerData.year,
+          MockLedgerData.month,
+          _selectedDay,
+        ).weekday %
+        7;
     final selectedLabel =
         '${MockLedgerData.month}월 $_selectedDay일 · ${_dow[weekday]}요일';
-    final briefing = MockLedgerData.briefingByDay[_selectedDay] ??
+    final briefing =
+        MockLedgerData.briefingByDay[_selectedDay] ??
         MockLedgerData.fallbackBriefing(_selectedDay, info);
 
     return [
+      LedgerAiBriefingCard(
+        title: 'AI 소비 브리핑',
+        trailing: '${MockLedgerData.month}월 $_selectedDay일',
+        body: briefing,
+      ),
+      const SizedBox(height: 14),
       GlassCard(
         padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
         child: LedgerCalendarGrid(
@@ -202,11 +237,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         ),
       ),
       const SizedBox(height: 14),
-      LedgerAiBriefingCard(
-        title: 'AI 소비 브리핑',
-        trailing: '${MockLedgerData.month}월 $_selectedDay일',
-        body: briefing,
-      ),
+      _buildMonthSummary(),
       const SizedBox(height: 14),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -324,6 +355,23 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 }
 
+class _LedgerPage extends StatelessWidget {
+  final List<Widget> children;
+
+  const _LedgerPage({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      children: children,
+    );
+  }
+}
+
 class _SummaryLine extends StatelessWidget {
   final String label;
   final String value;
@@ -377,57 +425,6 @@ class _SummaryLine extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TopTabs extends StatelessWidget {
-  final int current;
-  final ValueChanged<int> onTap;
-
-  const _TopTabs({required this.current, required this.onTap});
-
-  static const _labels = ['달력', '거래 내역', '소비 분석'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppTheme.separator.withValues(alpha: 0.8)),
-        ),
-      ),
-      child: Row(
-        children: List.generate(3, (i) {
-          final active = i == current;
-          return Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onTap(i),
-              child: Container(
-                padding: const EdgeInsets.only(top: 10, bottom: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: active ? AppTheme.blue : Colors.transparent,
-                      width: 2.5,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  _labels[i],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    color: active ? AppTheme.textPrimary : AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
     );
   }
 }

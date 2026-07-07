@@ -8,9 +8,18 @@ import 'package:flutter/foundation.dart';
 /// - Android Emulator:                http://10.0.2.2:8000
 /// - 실제 기기(같은 Wi-Fi):            http://{PC_IP}:8000  (예: http://192.168.0.10:8000)
 ///
-/// 환경에 맞게 아래 값 하나만 바꾸면 됩니다.
-// const String baseUrl = 'http://127.0.0.1:8000';
-const String baseUrl = 'http://141.223.140.84:8000';
+/// 필요하면 실행 시 `--dart-define=API_BASE_URL=http://...:8000` 로 덮어쓴다.
+const String _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+final String baseUrl = _resolveBaseUrl();
+
+String _resolveBaseUrl() {
+  if (_configuredBaseUrl.isNotEmpty) return _configuredBaseUrl;
+  if (kIsWeb) {
+    final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
+    return 'http://$host:8000';
+  }
+  return 'http://127.0.0.1:8000';
+}
 
 // Android Emulator용:
 // const String baseUrl = 'http://10.0.2.2:8000';
@@ -29,7 +38,12 @@ class ApiException implements Exception {
   final String? requestUri;
   final dynamic responseBody;
 
-  ApiException(this.message, {this.statusCode, this.requestUri, this.responseBody});
+  ApiException(
+    this.message, {
+    this.statusCode,
+    this.requestUri,
+    this.responseBody,
+  });
 
   @override
   String toString() =>
@@ -48,7 +62,6 @@ class ApiClient {
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
-        headers: {'Content-Type': 'application/json'},
         // 4xx/5xx 도 예외 없이 받아서 envelope 를 직접 해석한다.
         validateStatus: (_) => true,
       ),
@@ -97,10 +110,7 @@ class ApiClient {
   // 깨지므로 절대 여기서 접두사를 추가하지 않는다.
 
   /// GET 후 envelope 를 풀어 `data` 를 반환.
-  Future<dynamic> getData(
-    String path, {
-    Map<String, dynamic>? query,
-  }) async {
+  Future<dynamic> getData(String path, {Map<String, dynamic>? query}) async {
     try {
       final res = await _dio.get(path, queryParameters: query);
       return _unwrap(res);
@@ -121,7 +131,12 @@ class ApiClient {
     Map<String, dynamic>? query,
   }) async {
     try {
-      final res = await _dio.post(path, data: body, queryParameters: query);
+      final res = await _dio.post(
+        path,
+        data: body,
+        queryParameters: query,
+        options: Options(contentType: Headers.jsonContentType),
+      );
       return _unwrap(res);
     } on DioException catch (e) {
       throw ApiException(
@@ -134,12 +149,13 @@ class ApiClient {
   }
 
   /// PATCH 후 envelope 를 풀어 `data` 를 반환.
-  Future<dynamic> patchData(
-    String path, {
-    Object? body,
-  }) async {
+  Future<dynamic> patchData(String path, {Object? body}) async {
     try {
-      final res = await _dio.patch(path, data: body);
+      final res = await _dio.patch(
+        path,
+        data: body,
+        options: Options(contentType: Headers.jsonContentType),
+      );
       return _unwrap(res);
     } on DioException catch (e) {
       throw ApiException(
@@ -152,12 +168,28 @@ class ApiClient {
   }
 
   /// PUT 후 envelope 를 풀어 `data` 를 반환.
-  Future<dynamic> putData(
-    String path, {
-    Object? body,
-  }) async {
+  Future<dynamic> putData(String path, {Object? body}) async {
     try {
-      final res = await _dio.put(path, data: body);
+      final res = await _dio.put(
+        path,
+        data: body,
+        options: Options(contentType: Headers.jsonContentType),
+      );
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw ApiException(
+        '네트워크 오류: ${e.message ?? e.type.name}',
+        statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
+      );
+    }
+  }
+
+  /// DELETE 후 envelope 를 풀어 `data` 를 반환.
+  Future<dynamic> deleteData(String path) async {
+    try {
+      final res = await _dio.delete(path);
       return _unwrap(res);
     } on DioException catch (e) {
       throw ApiException(

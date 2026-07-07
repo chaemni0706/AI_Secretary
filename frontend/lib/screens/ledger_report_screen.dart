@@ -21,34 +21,43 @@ class LedgerReportScreen extends StatelessWidget {
           title: const Text('소비 리포트'),
           leading: const BackButton(),
         ),
-        body: SafeArea(
-          top: false,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
-            children: const [
-              _ReportHeader(),
-              SizedBox(height: 14),
-              _PeriodSegment(),
-              SizedBox(height: 14),
-              _BalanceCard(),
-              SizedBox(height: 14),
-              _CategorySection(),
-              SizedBox(height: 14),
-              _BudgetSection(),
-              SizedBox(height: 14),
-              _RecurringSection(),
-              SizedBox(height: 14),
-              LedgerAiBriefingCard(
-                title: '${MockLedgerData.month}월 AI 소비 브리핑',
-                body: MockLedgerData.monthlyBriefing,
-              ),
-            ],
-          ),
-        ),
+        body: SafeArea(top: false, child: LedgerReportContent()),
       ),
+    );
+  }
+}
+
+class LedgerReportContent extends StatelessWidget {
+  final EdgeInsetsGeometry padding;
+
+  const LedgerReportContent({
+    super.key,
+    this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 40),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: padding,
+      children: const [
+        _ReportHeader(),
+        SizedBox(height: 14),
+        _BalanceCard(),
+        SizedBox(height: 14),
+        _CategorySection(),
+        SizedBox(height: 14),
+        _BudgetSection(),
+        SizedBox(height: 14),
+        _RecurringSection(),
+        SizedBox(height: 14),
+        LedgerAiBriefingCard(
+          title: '${MockLedgerData.month}월 AI 소비 브리핑',
+          body: MockLedgerData.monthlyBriefing,
+        ),
+      ],
     );
   }
 }
@@ -72,60 +81,12 @@ class _ReportHeader extends StatelessWidget {
             ),
           ),
           SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down, size: 22, color: AppTheme.textPrimary),
+          Icon(
+            Icons.keyboard_arrow_down,
+            size: 22,
+            color: AppTheme.textPrimary,
+          ),
         ],
-      ),
-    );
-  }
-}
-
-/// 기간 세그먼트 (주간/월간/연간) — 월간 고정 표시.
-class _PeriodSegment extends StatelessWidget {
-  const _PeriodSegment();
-
-  static const _labels = ['주간', '월간', '연간'];
-  static const _selected = 1;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppTheme.separator.withValues(alpha: 0.7)),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: List.generate(3, (i) {
-          final active = i == _selected;
-          return Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 9),
-              decoration: BoxDecoration(
-                color: active ? Colors.white : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                _labels[i],
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                  color: active ? AppTheme.textPrimary : AppTheme.textSecondary,
-                ),
-              ),
-            ),
-          );
-        }),
       ),
     );
   }
@@ -336,10 +297,7 @@ class _CategorySection extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           for (int i = 0; i < categories.length; i++)
-            _CategoryRow(
-              stat: categories[i],
-              last: i == categories.length - 1,
-            ),
+            _CategoryRow(stat: categories[i], last: i == categories.length - 1),
         ],
       ),
     );
@@ -533,10 +491,7 @@ class _RecurringSection extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           for (int i = 0; i < recurring.length; i++)
-            _RecurringRow(
-              item: recurring[i],
-              last: i == recurring.length - 1,
-            ),
+            _RecurringRow(item: recurring[i], last: i == recurring.length - 1),
         ],
       ),
     );

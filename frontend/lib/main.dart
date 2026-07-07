@@ -103,6 +103,13 @@ class _MainNavigatorState extends State<MainNavigator> {
             ),
           ),
           DraggableAssistantFab(
+            onLongPress: () {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (_) => const AiChatScreen(autoStartVoice: true),
+                ),
+              );
+            },
             actions: [
               AssistantMenuAction(
                 icon: Icons.photo_camera_outlined,

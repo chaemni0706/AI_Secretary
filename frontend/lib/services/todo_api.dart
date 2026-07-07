@@ -11,10 +11,7 @@ class TodoApi {
   }) async {
     final data = await apiClient.postData(
       '$apiPrefix/local/todos/from-draft',
-      body: {
-        'schedule_draft': scheduleDraft,
-        'intent': intent,
-      },
+      body: {'schedule_draft': scheduleDraft, 'intent': intent},
     );
     return TodoModel.fromJson(data as Map<String, dynamic>);
   }
@@ -50,6 +47,20 @@ class TodoApi {
       body: {'completed': completed},
     );
     return TodoModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// 할 일 수정: `PATCH /api/v1/local/todos/{id}`
+  Future<TodoModel> update(String id, Map<String, dynamic> payload) async {
+    final data = await apiClient.patchData(
+      '$apiPrefix/local/todos/$id',
+      body: payload,
+    );
+    return TodoModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// 할 일 삭제: `DELETE /api/v1/local/todos/{id}`
+  Future<void> delete(String id) async {
+    await apiClient.deleteData('$apiPrefix/local/todos/$id');
   }
 }
 

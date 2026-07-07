@@ -33,7 +33,8 @@ class ParseResult {
       (scheduleDraft['title']?.toString().trim().isNotEmpty ?? false);
 
   factory ParseResult.fromJson(Map<String, dynamic> json) {
-    final draft = (json['schedule_draft'] as Map?)?.cast<String, dynamic>() ??
+    final draft =
+        (json['schedule_draft'] as Map?)?.cast<String, dynamic>() ??
         <String, dynamic>{};
     final missing = (json['missing_fields'] as List?) ?? const [];
     final tts = json['tts_text'];
@@ -105,6 +106,23 @@ class ScheduleApi {
       body: payload,
     );
     return ScheduleModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// 일정 수정: `PATCH /api/v1/local/schedules/{id}`
+  Future<ScheduleModel> update(
+    String scheduleId,
+    Map<String, dynamic> payload,
+  ) async {
+    final data = await apiClient.patchData(
+      '$apiPrefix/local/schedules/$scheduleId',
+      body: payload,
+    );
+    return ScheduleModel.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// 일정 삭제: `DELETE /api/v1/local/schedules/{id}`
+  Future<void> delete(String scheduleId) async {
+    await apiClient.deleteData('$apiPrefix/local/schedules/$scheduleId');
   }
 
   /// 목록: `GET /api/v1/local/schedules`

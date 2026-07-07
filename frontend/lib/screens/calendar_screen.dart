@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../theme/app_constants.dart';
@@ -8,11 +9,15 @@ import '../widgets/app_top_actions.dart';
 import '../widgets/calendar_event_bar.dart';
 import '../widgets/category_schedule_section.dart';
 import '../widgets/schedule_card.dart';
+import '../widgets/week_day_strip.dart';
+import '../widgets/day_timeline_view.dart';
+import '../widgets/year_month_picker_sheet.dart';
 import '../models/schedule_model.dart';
 import '../services/schedule_api.dart';
 import '../services/dashboard_api.dart';
 import '../services/api_client.dart';
 import 'schedule_detail_screen.dart';
+import 'schedule_form_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -30,9 +35,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
   String? _error;
   List<ScheduleModel> _all = [];
 
+  // 주간 뷰 좌우 스와이프용 PageController. 기준 주(_weekAnchor)로부터의
+  // 상대 주차를 큰 오프셋(_weekPageOffset)에서 시작해 양방향 스와이프를 흉내낸다.
+  static const int _weekPageOffset = 6000;
+  final PageController _weekPageController = PageController(
+    initialPage: _weekPageOffset,
+  );
+  late final DateTime _weekAnchor;
+
+  // 타임라인 탭이 보이는 동안에만 1분마다 현재 시각 표시선을 갱신한다.
+  Timer? _nowTimer;
+
   @override
   void initState() {
     super.initState();
+    _weekAnchor = _weekStart(DateTime.now());
     _loadSchedules();
     // 예약/AI챗 등에서 저장 후 triggerDashboardRefresh() 가 호출되면 캘린더도 갱신.
     dashboardRefresh.addListener(_loadSchedules);
@@ -41,8 +58,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void dispose() {
     dashboardRefresh.removeListener(_loadSchedules);
+    _weekPageController.dispose();
+    _nowTimer?.cancel();
     super.dispose();
   }
+
+  void _setViewIndex(int index) {
+    setState(() => _viewIndex = index);
+    if (index == 2) {
+      _nowTimer ??= Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      _nowTimer?.cancel();
+      _nowTimer = null;
+    }
+  }
+
+  // 페이지 인덱스가 증가할수록 과거 주로 이동한다(부호 반전).
+  // 표준 PageView 규약상 왼쪽 스와이프(오른쪽→왼쪽 드래그)가 다음 페이지(인덱스 증가)를
+  // 보여주므로, 이 부호여야 "왼쪽 스와이프=저번 주, 오른쪽 스와이프=다음 주"가 된다.
+  DateTime _weekStartForPage(int page) =>
+      _weekAnchor.subtract(Duration(days: (page - _weekPageOffset) * 7));
 
   Future<void> _loadSchedules() async {
     if (mounted) {
@@ -156,6 +193,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
     ).subtract(Duration(days: day.weekday % 7));
   }
 
+  /// 주어진 주의 시작일(일요일)이 이번 주/지난 주/다음 주 중 무엇인지 라벨링.
+  /// 스와이프로 다른 주를 볼 때도 "이번 주"로 고정 표시되던 문제를 해결한다.
+  String _relativeWeekLabel(DateTime weekStart) {
+    final thisWeekStart = _weekStart(DateTime.now());
+    final diffWeeks = weekStart.difference(thisWeekStart).inDays ~/ 7;
+    switch (diffWeeks) {
+      case 0:
+        return '이번 주';
+      case -1:
+        return '지난 주';
+      case 1:
+        return '다음 주';
+      default:
+        return '${weekStart.month}월 ${weekStart.day}일 주';
+    }
+  }
+
   List<ScheduleModel> _schedulesForSelectedWeek() {
     final start = _weekStart(_selectedDay);
     final end = start.add(const Duration(days: 7));
@@ -193,12 +247,48 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _openScheduleDetail(ScheduleModel schedule) {
-    Navigator.push(
+    Navigator.push<Object>(
       context,
       MaterialPageRoute(
         builder: (_) => ScheduleDetailScreen(schedule: schedule),
       ),
+    ).then((result) {
+      if (result != null) _loadSchedules();
+    });
+  }
+
+  Future<void> _openYearMonthPicker() async {
+    final result = await showModalBottomSheet<DateTime>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+      ),
+      builder: (_) => YearMonthPickerSheet(
+        initialYear: _focusedDay.year,
+        initialMonth: _focusedDay.month,
+      ),
     );
+    if (result == null || !mounted) return;
+    final daysInMonth = DateUtils.getDaysInMonth(result.year, result.month);
+    setState(() {
+      _focusedDay = result;
+      _selectedDay = DateTime(
+        result.year,
+        result.month,
+        _selectedDay.day.clamp(1, daysInMonth),
+      );
+    });
+  }
+
+  Future<void> _openScheduleAdd() async {
+    final saved = await Navigator.push<ScheduleModel>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleFormScreen(initialDate: _ymd(_selectedDay)),
+      ),
+    );
+    if (saved != null) _loadSchedules();
   }
 
   // ---- build ---------------------------------------------------------------
@@ -224,9 +314,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       if (_viewIndex == 0) _buildMonthCalendar(),
                       if (_viewIndex == 0) _buildDaySchedule(),
                       if (_viewIndex == 1) ...[
-                        _buildWeekView(),
+                        _buildWeekPager(),
                         _buildWeeklyCategoryList(),
                       ],
+                      if (_viewIndex == 2) _buildDayTimeline(),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -259,7 +350,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           const SizedBox(width: 4),
           Expanded(
             child: GestureDetector(
-              onTap: () {},
+              onTap: _openYearMonthPicker,
               child: Row(
                 children: [
                   Text(
@@ -301,7 +392,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildViewSwitcher() {
-    final labels = ['월간', '주간'];
+    final labels = ['월간', '주간', '타임라인'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
@@ -316,7 +407,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             final isActive = i == _viewIndex;
             return Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _viewIndex = i),
+                onTap: () => _setViewIndex(i),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
@@ -496,73 +587,94 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildWeekView() {
-    final weekStart = _weekStart(_selectedDay);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      child: GlassCard(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(7, (i) {
-            final day = weekStart.add(Duration(days: i));
-            final isSelected = isSameDay(day, _selectedDay);
-            final isToday = isSameDay(day, DateTime.now());
-            final hasEvent = _hasEvent(day);
-            final dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-            return GestureDetector(
-              onTap: () => setState(() => _selectedDay = day),
-              child: Column(
-                children: [
-                  Text(
-                    dayNames[i],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: i == 0
-                          ? AppTheme.red
-                          : (i == 6 ? AppTheme.blue : AppTheme.textSecondary),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.blue : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: isToday && !isSelected
-                          ? Border.all(color: AppTheme.blue, width: 1.5)
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${day.day}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected
-                              ? Colors.white
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: hasEvent ? AppTheme.blue : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ),
+  Widget _buildWeekPager() {
+    return SizedBox(
+      height: WeekDayStrip.pageHeight,
+      child: PageView.builder(
+        controller: _weekPageController,
+        onPageChanged: (page) {
+          // 선택된 요일(오프셋)을 유지한 채 새 주로 이동한다.
+          // (예: 수요일 선택 상태로 스와이프하면 다음 주도 수요일이 선택됨)
+          final offset = _selectedDay.difference(_weekStart(_selectedDay)).inDays;
+          setState(
+            () => _selectedDay = _weekStartForPage(
+              page,
+            ).add(Duration(days: offset)),
+          );
+        },
+        itemBuilder: (context, page) {
+          final weekStart = _weekStartForPage(page);
+          return WeekDayStrip(
+            weekStart: weekStart,
+            selectedDay: _selectedDay,
+            hasEvent: _hasEvent,
+            onDaySelected: (day) => setState(() => _selectedDay = day),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildDayTimeline() {
+    final dateStr =
+        '${_selectedDay.month}월 ${_selectedDay.day}일 ${_weekdayStr(_selectedDay.weekday)}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => setState(
+                  () => _selectedDay =
+                      _selectedDay.subtract(const Duration(days: 1)),
+                ),
+                child: const Icon(
+                  Icons.chevron_left,
+                  color: AppTheme.textPrimary,
+                  size: 24,
+                ),
+              ),
+              Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(
+                  () => _selectedDay = _selectedDay.add(const Duration(days: 1)),
+                ),
+                child: const Icon(
+                  Icons.chevron_right,
+                  color: AppTheme.textPrimary,
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_loading && _all.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_error != null)
+          _buildError()
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: DayTimelineView(
+              date: _selectedDay,
+              schedules: _schedulesFor(_selectedDay),
+              onScheduleTap: _openScheduleDetail,
+            ),
+          ),
+      ],
     );
   }
 
@@ -572,6 +684,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final start = _weekStart(_selectedDay);
     final end = start.add(const Duration(days: 6));
     final rangeText = '${start.month}.${start.day} - ${end.month}.${end.day}';
+    final weekLabel = _relativeWeekLabel(start);
 
     if (_loading && _all.isEmpty) {
       return const Padding(
@@ -591,7 +704,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '이번 주 일정 $total',
+                '$weekLabel 일정 $total',
                 style: AppTextStyles.sectionTitle.copyWith(
                   color: AppTheme.textPrimary,
                 ),
@@ -654,6 +767,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                IconButton(
+                  onPressed: _openScheduleAdd,
+                  tooltip: '일정 추가',
+                  icon: const Icon(Icons.add_circle_outline),
+                  color: AppTheme.blue,
                 ),
             ],
           ),

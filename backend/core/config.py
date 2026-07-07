@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # --- CORS ---
     # Comma-separated list, or "*" to allow all origins (dev default).
     CORS_ORIGINS: str = "*"
+    CORS_ORIGIN_REGEX: str | None = (
+        r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+    )
 
     # --- LLM (optional; falls back to template when key absent) ---
     OPENAI_API_KEY: str | None = None

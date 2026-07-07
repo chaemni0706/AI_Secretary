@@ -24,6 +24,8 @@ from backend.api import (
 )
 from backend.core.config import settings
 from backend.core.response import register_exception_handlers
+from backend.database.init_db import init_db_from_engine
+from backend.database.session import engine
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -33,11 +35,20 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 register_exception_handlers(app)
+
+
+@app.on_event("startup")
+def initialize_local_database() -> None:
+    """Apply the existing idempotent SQLite schema to the configured DB."""
+    init_db_from_engine(engine)
+
+
 app.include_router(health.router)
 
 for r in (

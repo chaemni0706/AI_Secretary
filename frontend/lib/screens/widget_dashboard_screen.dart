@@ -24,6 +24,7 @@ import '../widgets/dashboard_widgets/reservation_candidate_widget.dart';
 import '../widgets/dashboard_widgets/spending_analysis_widget.dart';
 import '../widgets/dashboard_widgets/todo_dashboard_widget.dart';
 import '../widgets/dashboard_widgets/weather_widget.dart';
+import '../widgets/dashboard_widgets/widget_edit_jiggle_wrapper.dart';
 import '../widgets/dashboard_widgets/weekly_calendar_widget.dart';
 import 'ai_chat_screen.dart';
 import 'booking_recommend_screen.dart';
@@ -81,7 +82,8 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
   Future<void> _loadData() async {
     final types = _items.map((e) => e.type).toSet();
     final needTodos = types.contains(DashboardWidgetType.todo);
-    final needSchedules = types.contains(DashboardWidgetType.monthlyCalendar) ||
+    final needSchedules =
+        types.contains(DashboardWidgetType.monthlyCalendar) ||
         types.contains(DashboardWidgetType.weeklyCalendar);
     final needDashboard = types.contains(DashboardWidgetType.briefing);
     if (!needTodos && !needSchedules && !needDashboard) return;
@@ -154,11 +156,13 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
     final result = await showAddWidgetSheet(context);
     if (result == null || !mounted) return;
     setState(() {
-      _items.add(DashboardWidgetItem(
-        id: widgetLayoutStore.newId(result.type),
-        type: result.type,
-        size: result.size,
-      ));
+      _items.add(
+        DashboardWidgetItem(
+          id: widgetLayoutStore.newId(result.type),
+          type: result.type,
+          size: result.size,
+        ),
+      );
       _editing = true;
     });
     _persist();
@@ -193,8 +197,10 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
   }
 
   void _push(Widget screen) {
-    Navigator.of(context, rootNavigator: true)
-        .push(MaterialPageRoute(builder: (_) => screen));
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   void _snack(String message) {
@@ -344,13 +350,18 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
       child: _buildContent(item),
     );
 
-    final sized = SizedBox(width: width, height: height, child: card);
+    final sized = SizedBox(
+      width: width,
+      height: height,
+      child: WidgetEditJiggleWrapper(
+        isEditing: _editing,
+        index: index,
+        child: card,
+      ),
+    );
 
     if (!_editing) {
-      return GestureDetector(
-        onLongPress: _enterEdit,
-        child: sized,
-      );
+      return GestureDetector(onLongPress: _enterEdit, child: sized);
     }
 
     // 편집 모드: 길게 눌러 드래그로 순서 변경.
@@ -368,10 +379,7 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
               child: SizedBox(width: width, height: height, child: card),
             ),
           ),
-          childWhenDragging: Opacity(
-            opacity: 0.3,
-            child: sized,
-          ),
+          childWhenDragging: Opacity(opacity: 0.3, child: sized),
           child: AnimatedScale(
             scale: highlighted ? 1.03 : 1.0,
             duration: const Duration(milliseconds: 150),

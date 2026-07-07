@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import 'glass_card.dart';
+import 'todo_progress_celebration.dart';
 
 class TodoProgressCard extends StatelessWidget {
   final int done;
@@ -13,12 +14,19 @@ class TodoProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final remaining = total - done;
     final rate = total == 0 ? 0.0 : done / total;
+    final complete = total > 0 && done >= total;
     final percent = (rate * 100).round();
     final fillColor = Color.lerp(
       AppTheme.blue.withValues(alpha: 0.35),
-      AppTheme.blue,
+      complete ? AppTheme.green : AppTheme.blue,
       rate,
     )!;
+    final cardStart = complete
+        ? AppTheme.green.withValues(alpha: 0.26)
+        : fillColor.withValues(alpha: 0.24 + (0.26 * rate));
+    final cardEnd = complete
+        ? AppTheme.green.withValues(alpha: 0.12)
+        : Colors.white.withValues(alpha: 0.72);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -31,10 +39,7 @@ class TodoProgressCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [
-                  fillColor.withValues(alpha: 0.24 + (0.26 * rate)),
-                  Colors.white.withValues(alpha: 0.72),
-                ],
+                colors: [cardStart, cardEnd],
                 stops: [rate.clamp(0.18, 0.9), 1.0],
               ),
             ),
@@ -53,12 +58,17 @@ class TodoProgressCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
-                        '$percent%',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
+                      TodoProgressCelebration(
+                        active: complete,
+                        child: Text(
+                          '$percent%',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: complete
+                                ? AppTheme.green
+                                : AppTheme.textPrimary,
+                          ),
                         ),
                       ),
                     ],

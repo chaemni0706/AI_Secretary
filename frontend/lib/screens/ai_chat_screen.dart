@@ -10,7 +10,11 @@ import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
 
 class AiChatScreen extends StatefulWidget {
-  const AiChatScreen({super.key});
+  /// true면 화면 진입 직후 마이크 리스닝을 자동으로 시작한다.
+  /// (AI 비서 버튼을 길게 눌러 바로 음성 대화로 진입하는 경로에서 사용)
+  final bool autoStartVoice;
+
+  const AiChatScreen({super.key, this.autoStartVoice = false});
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -47,6 +51,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _tts.init();
+    if (widget.autoStartVoice) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handleMicPressed();
+      });
+    }
   }
 
   final List<_ChatMessage> _messages = [

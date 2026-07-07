@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # 시도한다. Default OFF → 켜기 전까지 기존 규칙 동작과 100% 동일.
     ENABLE_LLM_INTENT: bool = False
 
+    # --- Clarification (부족 정보 되묻기 문장) ---
+    # 부족 정보 질문을 LLM로 자연스럽게 생성. 실패/비활성 시 기존 템플릿 유지.
+    ENABLE_LLM_CLARIFY: bool = False
+
     # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error

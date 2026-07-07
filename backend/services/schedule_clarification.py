@@ -10,12 +10,53 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
+from backend.core.config import settings
+from backend.services import llm_service
 from backend.services import schedule_rule_loader as rules
 
 STATUS_SUCCESS = "success"
 STATUS_NEEDS_CLARIFICATION = "needs_clarification"
 
 _FIELD_ORDER = ("date", "time", "location")
+
+# 되묻기 문장 최대 길이(글자). 초과하면 LLM 결과를 버리고 템플릿으로 fallback.
+_CLARIFY_MAX_LEN = 80
+_FIELD_KOR = {"title": "무슨 일정인지", "date": "날짜", "time": "시간", "location": "장소"}
+_TONE_HINT = {
+    "formal": "정중한 존댓말",
+    "friendly": "친근하고 부드러운 존댓말",
+    "caring": "따뜻하고 배려하는 존댓말",
+    "concise": "간결한 존댓말",
+}
+
+
+def _llm_clarification(
+    title: Optional[str], missing_fields: List[str], profile: Dict[str, str]
+) -> Optional[str]:
+    """부족 정보를 되묻는 자연스러운 한 문장을 LLM으로 생성. 실패/길이초과 시 None
+    → 호출부는 템플릿 fallback. 말투는 style profile 의 tone 을 반영한다."""
+    need = [_FIELD_KOR[f] for f in ("title", "date", "time", "location") if f in missing_fields]
+    if not need:
+        return None
+    tone = profile.get("tone", "friendly")
+    prompt = (
+        f"일정 제목: {title or '아직 모름'}\n"
+        f"사용자가 빠뜨린 정보: {', '.join(need)}\n"
+        f"말투: {_TONE_HINT.get(tone, '친근한 존댓말')}\n"
+        "위 빠진 정보를 물어보는 자연스러운 한국어 문장을 딱 1개, 40자 이내로 만들어줘. "
+        "따옴표나 설명 없이 문장만 출력해."
+    )
+    text = llm_service.generate(
+        prompt,
+        system="너는 일정 비서야. 부족한 정보를 정중히 되묻는 한 문장만 출력해.",
+        max_tokens=80,
+    )
+    if not text:
+        return None
+    text = text.strip().splitlines()[0].strip()
+    if not text or len(text) > _CLARIFY_MAX_LEN:
+        return None  # 비었거나 너무 길면 템플릿으로.
+    return text
 
 
 def _question_for(category: str, field: str) -> Optional[str]:
@@ -44,6 +85,22 @@ def build_clarification(
     """
     banks = rules.load_clarification_questions()
     status = STATUS_SUCCESS if not missing_fields else STATUS_NEEDS_CLARIFICATION
+
+    # LLM 자연어 되묻기(옵션). 비활성/키없음/실패/길이초과 시 아래 기존 템플릿 로직으로
+    # 그대로 fallthrough 하므로 기존 동작은 보존된다.
+    if missing_fields and settings.ENABLE_LLM_CLARIFY and llm_service.is_enabled():
+        try:
+            from backend.services import assistant_style_service as style
+            profile = style.build_style_profile(preferences or {})
+            llm_msg = _llm_clarification(title, missing_fields, profile)
+        except Exception:
+            llm_msg = None
+        if llm_msg:
+            return {
+                "status": status,
+                "clarification_message": llm_msg,
+                "tts_text": llm_msg,
+            }
 
     if preferences is not None:
         from backend.services import assistant_style_service as style

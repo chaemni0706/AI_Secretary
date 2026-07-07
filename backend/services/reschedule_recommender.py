@@ -29,7 +29,39 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from backend.core.config import settings
+from backend.services import llm_service
+
 _RULES_PATH = Path(__file__).resolve().parents[1] / "rules" / "reschedule_rules.json"
+
+# 설명 문장 최대 길이(초과 시 규칙 reason 유지).
+_RESCHEDULE_REASON_MAX_LEN = 120
+
+
+def _llm_reason(candidate: dict, events_count: int) -> Optional[str]:
+    """이미 규칙으로 계산된 근거(reason/시각/제목)만 자연스러운 한 문장으로 바꾼다.
+    LLM은 시간·우선순위·충돌을 새로 판단하지 않는다(계산은 규칙 담당). 실패/길이초과
+    시 None → 호출부는 규칙 reason 유지."""
+    facts = candidate.get("reason", "")
+    title = candidate.get("title", "")
+    prompt = (
+        f"제안: {title}\n"
+        f"이미 계산된 근거: {facts}\n"
+        f"오늘 일정 수: {events_count}개\n"
+        "위 '근거'만 사용해 이 시간으로 옮기길 권하는 자연스러운 한국어 한 문장을 만들어줘. "
+        "시간·우선순위·충돌을 새로 판단하거나 새 숫자를 지어내지 말고, 주어진 사실만 풀어써. 문장만 출력."
+    )
+    text = llm_service.generate(
+        prompt,
+        system="너는 일정 비서야. 주어진 근거로 제안 문장 하나만 만들어. 계산·판단 금지.",
+        max_tokens=120,
+    )
+    if not text:
+        return None
+    text = text.strip().splitlines()[0].strip()
+    if not text or len(text) > _RESCHEDULE_REASON_MAX_LEN:
+        return None
+    return text
 
 
 @lru_cache(maxsize=1)
@@ -261,4 +293,16 @@ def recommend(
         c.pop("_start_hour", None)
 
     # keep a focused shortlist
-    return scored[:5]
+    shortlist = scored[:5]
+
+    # 설명 문장만 LLM로 자연스럽게(최상위 후보 1개만 → 비용 1콜). 계산/후보/점수는
+    # 위 규칙 결과 그대로 유지되며, 실패 시 규칙 reason 을 그대로 쓴다.
+    if shortlist and settings.ENABLE_LLM_RESCHEDULE and llm_service.is_enabled():
+        try:
+            nice = _llm_reason(shortlist[0], len(events))
+        except Exception:
+            nice = None
+        if nice:
+            shortlist[0]["reason"] = nice
+
+    return shortlist

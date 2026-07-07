@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # 부족 정보 질문을 LLM로 자연스럽게 생성. 실패/비활성 시 기존 템플릿 유지.
     ENABLE_LLM_CLARIFY: bool = False
 
+    # --- Reschedule (일정 변경 제안 설명 문장) ---
+    # 시간 계산·후보·점수는 항상 규칙. LLM은 최상위 후보의 '설명 문장'만 생성.
+    ENABLE_LLM_RESCHEDULE: bool = False
+
     # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error

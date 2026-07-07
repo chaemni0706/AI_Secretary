@@ -13,6 +13,7 @@ import '../services/schedule_api.dart';
 import '../services/dashboard_api.dart';
 import '../services/api_client.dart';
 import 'schedule_detail_screen.dart';
+import 'schedule_add_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -29,6 +30,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _loading = true;
   String? _error;
   List<ScheduleModel> _all = [];
+
+  /// schedule.id → 고정 행(lane) 인덱스. 기간 일정이 여러 날에 걸쳐도 같은 행에
+  /// 놓이도록 월 전체 기준으로 한 번 배정한다(구간 스케줄링).
+  final Map<String, int> _laneOf = {};
 
   @override
   void initState() {
@@ -57,6 +62,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!mounted) return;
       setState(() {
         _all = schedules;
+        _assignLanes();
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -80,10 +86,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   String _ymd(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
-  /// 선택 날짜와 schedule.date("YYYY-MM-DD") 문자열 비교로 필터링.
+  /// 해당 날짜에 걸치는 일정. 기간 일정(시작~종료)은 중간·마지막 날에도 포함한다.
   List<ScheduleModel> _schedulesFor(DateTime day) {
-    final key = _ymd(day);
-    final list = _all.where((s) => s.date == key).toList();
+    final date = DateTime(day.year, day.month, day.day);
+    final list = _all.where((s) {
+      final start = _dateFromSchedule(s);
+      if (start == null) return false;
+      final end = _endDateFor(s, start);
+      return !date.isBefore(start) && !date.isAfter(end);
+    }).toList();
     list.sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
     return list;
   }
@@ -114,6 +125,44 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  /// 월 전체 기준으로 각 일정에 고정 lane(행)을 배정한다. 시작일 오름차순 +
+  /// 기간(긴 것) 우선으로 정렬한 뒤, 겹치지 않는 가장 낮은 행을 재사용한다.
+  /// → 같은 일정은 모든 날에서 같은 행에 그려져 기간 바가 끊기지 않는다.
+  void _assignLanes() {
+    _laneOf.clear();
+    final items = <List<Object>>[]; // [id, start, end, span]
+    for (final s in _all) {
+      final start = _dateFromSchedule(s);
+      if (start == null) continue;
+      final end = _endDateFor(s, start);
+      items.add([s.id, start, end, end.difference(start).inDays]);
+    }
+    items.sort((a, b) {
+      final c = (a[1] as DateTime).compareTo(b[1] as DateTime); // 시작일 asc
+      if (c != 0) return c;
+      return (b[3] as int).compareTo(a[3] as int); // 기간 긴 것 먼저
+    });
+    final laneEnd = <DateTime>[]; // lane → 마지막 점유 종료일
+    for (final it in items) {
+      final start = it[1] as DateTime;
+      final end = it[2] as DateTime;
+      int lane = -1;
+      for (var i = 0; i < laneEnd.length; i++) {
+        if (laneEnd[i].isBefore(start)) {
+          lane = i;
+          break;
+        }
+      }
+      if (lane == -1) {
+        lane = laneEnd.length;
+        laneEnd.add(end);
+      } else {
+        laneEnd[lane] = end;
+      }
+      _laneOf[it[0] as String] = lane;
+    }
+  }
+
   List<_MonthEventSegment> _monthEventSegmentsFor(DateTime day) {
     final date = DateTime(day.year, day.month, day.day);
     final segments = <_MonthEventSegment>[];
@@ -128,14 +177,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           start: start,
           end: end,
           date: date,
+          lane: _laneOf[schedule.id] ?? 0,
         ),
       );
     }
-    segments.sort((a, b) {
-      final lengthCompare = b.daySpan.compareTo(a.daySpan);
-      if (lengthCompare != 0) return lengthCompare;
-      return (a.schedule.startTime ?? '').compareTo(b.schedule.startTime ?? '');
-    });
+    segments.sort((a, b) => a.lane.compareTo(b.lane));
     return segments;
   }
 
@@ -156,16 +202,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   List<ScheduleModel> _schedulesForSelectedWeek() {
     final start = _weekStart(_selectedDay);
-    final end = start.add(const Duration(days: 7));
+    final end = start.add(const Duration(days: 7)); // 주의 끝(exclusive)
     final list = _all.where((schedule) {
-      if (schedule.date == null) return false;
-      try {
-        final parsed = DateTime.parse(schedule.date!);
-        final date = DateTime(parsed.year, parsed.month, parsed.day);
-        return !date.isBefore(start) && date.isBefore(end);
-      } catch (_) {
-        return false;
-      }
+      final sStart = _dateFromSchedule(schedule);
+      if (sStart == null) return false;
+      final sEnd = _endDateFor(schedule, sStart);
+      // 기간이 이번 주와 겹치면 포함(시작이 주 이전이어도 걸치면 표시).
+      return sStart.isBefore(end) && !sEnd.isBefore(start);
     }).toList();
 
     list.sort((a, b) {
@@ -188,6 +231,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
       grouped[key]!.add(schedule);
     }
     return grouped;
+  }
+
+  Future<void> _openAddSchedule() async {
+    final saved = await Navigator.push<ScheduleModel>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScheduleAddScreen(initialDate: _ymd(_selectedDay)),
+      ),
+    );
+    if (saved != null) _loadSchedules(); // 새 일정 즉시 반영
   }
 
   void _openScheduleDetail(ScheduleModel schedule) {
@@ -445,7 +498,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     bool isSelected = false,
     bool isOutside = false,
   }) {
-    final segments = _monthEventSegmentsFor(day).take(2).toList();
+    final segments = _monthEventSegmentsFor(day);
+    const maxLanes = 2; // 셀에 표시할 최대 행 수(초과분은 +N)
+    var maxLane = -1;
+    var hidden = 0;
+    for (final s in segments) {
+      if (s.lane > maxLane) maxLane = s.lane;
+      if (s.lane >= maxLanes) hidden++;
+    }
+    final visibleLanes = (maxLane + 1) > maxLanes ? maxLanes : (maxLane + 1);
+    _MonthEventSegment? laneSeg(int r) {
+      for (final s in segments) {
+        if (s.lane == r) return s;
+      }
+      return null;
+    }
+
     final textColor = isOutside
         ? AppTheme.textSecondary.withValues(alpha: 0.5)
         : isSelected
@@ -481,14 +549,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           const SizedBox(height: 1),
-          ...segments.map(
-            (segment) => CalendarEventBar(
-              title: segment.schedule.title,
-              color: _monthEventColor(segment.schedule),
-              startsOnThisDay: isSameDay(segment.start, segment.date),
-              endsOnThisDay: isSameDay(segment.end, segment.date),
+          // lane별 고정 배치: 해당 행에 일정이 있으면 바, 없으면 빈 자리(정렬 유지).
+          for (int r = 0; r < visibleLanes; r++)
+            laneSeg(r) != null
+                ? CalendarEventBar(
+                    title: laneSeg(r)!.schedule.title,
+                    color: _monthEventColor(laneSeg(r)!.schedule),
+                    startsOnThisDay:
+                        isSameDay(laneSeg(r)!.start, laneSeg(r)!.date),
+                    endsOnThisDay: isSameDay(laneSeg(r)!.end, laneSeg(r)!.date),
+                  )
+                : const SizedBox(height: 18),
+          if (hidden > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                '+$hidden',
+                style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textSecondary),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -647,12 +729,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: AppTheme.textPrimary,
                 ),
               ),
-              if (_loading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_loading)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  TextButton.icon(
+                    onPressed: _openAddSchedule,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('일정 추가'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.blue,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -733,11 +832,15 @@ class _MonthEventSegment {
   final DateTime end;
   final DateTime date;
 
+  /// 월 전체에서 고정된 행 인덱스(모든 날에서 동일 → 기간 바가 끊기지 않고 이어짐).
+  final int lane;
+
   const _MonthEventSegment({
     required this.schedule,
     required this.start,
     required this.end,
     required this.date,
+    this.lane = 0,
   });
 
   int get daySpan => end.difference(start).inDays + 1;

@@ -4,17 +4,21 @@ import '../services/dashboard_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../models/schedule_model.dart';
+import 'schedule_add_screen.dart';
 import 'todo_add_screen.dart';
-import 'voice_schedule_screen.dart';
 
 class AddItemChoiceScreen extends StatelessWidget {
   const AddItemChoiceScreen({super.key});
 
-  void _openSchedule(BuildContext context) {
-    Navigator.pushReplacement(
+  Future<void> _openSchedule(BuildContext context) async {
+    final saved = await Navigator.push<ScheduleModel>(
       context,
-      MaterialPageRoute(builder: (_) => const VoiceScheduleScreen()),
+      MaterialPageRoute(builder: (_) => const ScheduleAddScreen()),
     );
+    if (saved == null || !context.mounted) return;
+    triggerDashboardRefresh();
+    Navigator.pop(context);
   }
 
   Future<void> _openTodo(BuildContext context) async {
@@ -44,7 +48,7 @@ class AddItemChoiceScreen extends StatelessWidget {
                 icon: Icons.event_available_outlined,
                 color: AppTheme.blue,
                 title: '일정 추가',
-                subtitle: 'AI 음성 인식으로 일정을 등록해요',
+                subtitle: '날짜·시간을 입력해 일정을 등록해요',
                 onTap: () => _openSchedule(context),
               ),
               _ChoiceCard(

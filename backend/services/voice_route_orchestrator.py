@@ -30,6 +30,7 @@ from backend.database.schema.chat_schema import (
     ChatRespondRequest,
     ScheduleContext,
     ScheduleEvent,
+    UserProfile,
 )
 from backend.core.config import settings
 from backend.database.schema.local_schedule_schema import (
@@ -48,8 +49,10 @@ from backend.services import (
     briefing_generator,
     chat_orchestrator,
     local_schedule_service,
+    memory_service,
     notification_plan_builder,
     place_recommendation_service,
+    schedule_clarification,
     todo_service,
     voice_intent_router,
 )
@@ -210,8 +213,14 @@ def _handle_emotion_schedule_coaching(db: Session, req: VoiceRouteRequest) -> Vo
             for s in todays if s.start_time
         ],
     )
+    # 학습된 선호(집중 시간대)를 user_profile 로 전달 → reschedule 추천 점수에 반영.
+    learned = memory_service.build_recommendation_profile(db, user_id)
+    blocks = learned.get("preferred_time_blocks")
+    user_profile = UserProfile(preferred_time_blocks=blocks) if blocks else None
     chat_data = chat_orchestrator.respond(
-        ChatRespondRequest(message=req.text, schedule_context=schedule_context)
+        ChatRespondRequest(
+            message=req.text, schedule_context=schedule_context, user_profile=user_profile,
+        )
     )
 
     solutions_raw = [s.model_dump() for s in chat_data.solutions]
@@ -415,6 +424,30 @@ def _augment_schedule_with_llm(parsed, req: VoiceRouteRequest):
     })
 
 
+def _voice_prefs(req: VoiceRouteRequest) -> dict:
+    """VoiceRouteRequest 의 음성 스타일 prefs 를 dict 로(빈 값 제외)."""
+    prefs = {
+        "assistant_tone": req.assistant_tone,
+        "response_length": req.response_length,
+        "reminder_strength": req.reminder_strength,
+    }
+    return {k: v for k, v in prefs.items() if v}
+
+
+def _clarify_tts(category, title, missing, req: VoiceRouteRequest, fallback: str) -> str:
+    """부족 정보 되묻기 문구를 build_clarification(말투/LLM 반영)로 생성. 실패 시 fallback."""
+    try:
+        clar = schedule_clarification.build_clarification(
+            category=category or "default",
+            title=title or None,
+            missing_fields=[m for m in missing if m in ("date", "time", "title", "location")],
+            preferences=_voice_prefs(req) or None,
+        )
+        return clar.get("tts_text") or fallback
+    except Exception:
+        return fallback
+
+
 def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
     parsed = parse_schedule(ScheduleParseRequest(
         input=req.text, input_type="voice", current_datetime=req.current_datetime,
@@ -432,9 +465,13 @@ def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteDa
     )
     if not registerable:
         # 멀티턴: 부족한 슬롯을 다음 턴에 채우도록 부분 draft 를 context 로 넘긴다.
+        ask = _clarify_tts(
+            draft.category, draft.title, parsed.missing_fields, req,
+            parsed.tts_text or "날짜와 시간을 포함해서 다시 말씀해주세요.",
+        )
         return VoiceRouteData(
             intent="schedule_create",
-            tts_text=parsed.tts_text or "날짜와 시간을 포함해서 다시 말씀해주세요.",
+            tts_text=ask,
             screen_action=ScreenAction(type="show_card", target="schedule_draft", payload={}),
             data={"schedule_draft": draft.model_dump(), "missing_fields": parsed.missing_fields},
             context={
@@ -525,8 +562,9 @@ def _handle_schedule_followup(db: Session, req: VoiceRouteRequest, ctx: dict) ->
         missing.append("time")
     if not has_title:
         missing.append("title")
-    ask = "날짜를 알려주세요." if "date" in missing else (
+    default_ask = "날짜를 알려주세요." if "date" in missing else (
         "시간을 알려주세요." if "time" in missing else "무슨 일정인지 알려주세요.")
+    ask = _clarify_tts(partial.get("category"), partial.get("title"), missing, req, default_ask)
     return VoiceRouteData(
         intent="schedule_create",
         tts_text=ask,
@@ -736,6 +774,15 @@ def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
             screen_action=ScreenAction(type="none", payload={}),
             data={},
         )
+
+    # 대화형 턴에서 사용자 선호를 자동 학습(옵션). 게이팅/실패는 memory_service 내부에서
+    # 처리되어 비활성/키없음이면 아무것도 하지 않는다. 결과 응답에는 영향 없음.
+    if intent in ("fallback_chat", "emotion_schedule_coaching"):
+        try:
+            uid, _ = repo.ensure_default_owner(db)
+            memory_service.extract_and_save_preference(db, uid, text)
+        except Exception:
+            _logger.exception("[VOICE ROUTE] preference auto-learn failed")
 
     result.debug = {"matched_keywords": classified.get("matched_keywords", {})}
     return result

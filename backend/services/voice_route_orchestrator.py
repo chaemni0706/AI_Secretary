@@ -53,6 +53,7 @@ from backend.services import (
     todo_service,
     voice_intent_router,
 )
+from backend.services import llm_service
 from backend.services.naver_place_client import NaverApiError, NaverConfigError
 from backend.services.schedule_parse_service import parse_enhanced
 from backend.services.schedule_parser import parse_schedule
@@ -562,6 +563,36 @@ def _llm_modify_slots(text: str, ctx: dict) -> dict:
     return out
 
 
+def _shift_end_time(db: Session, schedule_id: str, new_start: str) -> Optional[str]:
+    """새 시작 시간에 맞춰 종료 시간을 기존 소요시간만큼 이동해 반환("HH:mm").
+    기존 종료가 없거나 자정을 넘기는 경우 None(종료 미변경)."""
+    from datetime import datetime, timedelta
+
+    def _p(t: str) -> datetime:
+        return datetime.strptime(t, "%H:%M")
+
+    dur = timedelta(hours=1)
+    try:
+        cur = local_schedule_service.get_schedule(db, schedule_id)
+    except Exception:
+        cur = None
+    if cur and cur.start_time and cur.end_time:
+        try:
+            d = _p(cur.end_time) - _p(cur.start_time)
+            if d.total_seconds() > 0:
+                dur = d
+        except ValueError:
+            pass
+    try:
+        ns = _p(new_start)
+    except ValueError:
+        return None
+    ne = ns + dur
+    if ne.day != ns.day or ne <= ns:  # 자정 넘김 방지
+        return None
+    return ne.strftime("%H:%M")
+
+
 def _handle_schedule_modify(db: Session, req: VoiceRouteRequest, ctx: dict) -> VoiceRouteData:
     """직전에 만든 일정(context.type == schedule_created, EVENT)을 수정한다.
     새 시각/날짜는 규칙 파서로 우선 추출하고, 못 잡으면 LLM 해석(옵션)으로 보완.
@@ -584,6 +615,12 @@ def _handle_schedule_modify(db: Session, req: VoiceRouteRequest, ctx: dict) -> V
         update["end_time"] = d.end_time
     if not update:  # 규칙이 못 잡음 → LLM 해석(모호한 참조)
         update.update(_llm_modify_slots(req.text, ctx))
+
+    # 시작 시간만 바뀌면 종료 시간도 함께 옮겨(기존 소요시간 유지) end>start 제약 위반 방지.
+    if update.get("start_time") and not update.get("end_time"):
+        shifted = _shift_end_time(db, schedule_id, update["start_time"])
+        if shifted:
+            update["end_time"] = shifted
 
     keep_ctx = {"type": "schedule_created", "schedule_id": schedule_id,
                 "title": ctx.get("title"), "item_type": "EVENT"}

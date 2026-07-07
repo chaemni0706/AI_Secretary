@@ -234,7 +234,10 @@ def select_voice_intent(text: str, context: Optional[dict] = None) -> dict:
         # 6. schedule_create — explicit verb OR a concrete date/time signal.
         cfg = rules["schedule_create"]
         hits = _matched(text, cfg["strong"]) + _matched(text, cfg["weak"])
-        if hits or _schedule_create_signal(text):
+        # 감정 표현만 있고 명시적 일정 키워드가 없으면, 날짜 신호(예: "오늘")만으로는
+        # 일정 생성으로 보지 않는다("오늘 너무 힘들어" → 상담/일반대화로).
+        emo = _matched(text, rules["emotion_schedule_coaching"]["emotion_keywords"])
+        if hits or (_schedule_create_signal(text) and not emo):
             matched_keywords["schedule_create"] = hits
             return _result("schedule_create", matched_keywords)
 

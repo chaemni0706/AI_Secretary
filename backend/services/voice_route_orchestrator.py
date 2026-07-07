@@ -30,7 +30,9 @@ from backend.database.schema.chat_schema import (
     ScheduleContext,
     ScheduleEvent,
 )
+from backend.core.config import settings
 from backend.database.schema.local_schedule_schema import ScheduleDraftInput, ScheduleRead
+from backend.database.schema.schedule_parse_schema import EnhancedParseRequest
 from backend.database.schema.schedule_schema import ScheduleParseRequest
 from backend.database.schema.voice_route_schema import (
     ScreenAction,
@@ -47,6 +49,7 @@ from backend.services import (
     voice_intent_router,
 )
 from backend.services.naver_place_client import NaverApiError, NaverConfigError
+from backend.services.schedule_parse_service import parse_enhanced
 from backend.services.schedule_parser import parse_schedule
 
 _logger = logging.getLogger("voice_route")
@@ -341,12 +344,72 @@ def _handle_reminder_setting(db: Session, req: VoiceRouteRequest, classified: di
 # 6. schedule_create — same parser + persistence path as the existing voice
 #    schedule screen, but registers immediately and offers a reminder confirm.
 # --------------------------------------------------------------------------- #
+def _augment_schedule_with_llm(parsed, req: VoiceRouteRequest):
+    """규칙 파서가 놓친 '빈 필드만' enhanced 파서(rule-first + LLM 갭필 + 환각
+    가드)로 보정한다. 규칙 결과가 항상 우선이며, 아래 조건에서만 LLM을 호출한다:
+
+      - ``ENABLE_LLM_SCHEDULE_PARSE`` 가 켜져 있고
+      - 규칙 결과에 날짜/시간/제목 중 하나라도 비어 있을 때(= 보정할 게 있을 때)
+
+    이미 규칙으로 충분히 채워졌으면 LLM을 호출하지 않아 비용을 아낀다. LLM/네트워크
+    실패 시 원본(규칙) 결과를 그대로 반환한다. 프론트로 나가는 응답 스키마는
+    바뀌지 않는다(schedule_draft/missing_fields만 보정).
+    """
+    if not settings.ENABLE_LLM_SCHEDULE_PARSE:
+        return parsed
+    d = parsed.schedule_draft
+    if d.date and d.start_time and d.title:
+        return parsed  # 규칙이 다 채움 → LLM 미호출
+
+    today = req.current_datetime[:10] if req.current_datetime else None
+    try:
+        enh, _ = parse_enhanced(EnhancedParseRequest(
+            text=req.text, timezone=req.timezone or "Asia/Seoul",
+            today=today, use_llm=True,
+        ))
+    except Exception:
+        return parsed  # 어떤 실패든 규칙 결과 유지
+
+    # 규칙 우선 — 규칙이 비운 필드에만 enhanced 값을 채운다.
+    new_date = d.date or enh.date
+    new_start = d.start_time or enh.start_time
+    new_end = d.end_time or (enh.end_time if not d.start_time else None)
+    new_title = d.title or (enh.title or "")
+    new_location = d.location or enh.location
+    updated_draft = d.model_copy(update={
+        "date": new_date, "start_time": new_start, "end_time": new_end,
+        "title": new_title, "location": new_location,
+    })
+
+    # 보정된 필드는 missing_fields 에서 제거.
+    missing = [
+        m for m in parsed.missing_fields
+        if not (m == "date" and new_date)
+        and not (m == "time" and new_start)
+        and not (m == "title" and new_title)
+    ]
+
+    # 규칙이 unknown 이었는데 LLM 보정으로 채워졌으면 intent 승격.
+    intent = parsed.intent
+    if intent == "unknown" and new_title and new_date:
+        item_type = getattr(enh.item_type, "value", str(enh.item_type))
+        intent = "create_todo" if item_type == "TODO" else "create_schedule"
+
+    return parsed.model_copy(update={
+        "schedule_draft": updated_draft,
+        "missing_fields": missing,
+        "intent": intent,
+    })
+
+
 def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
     parsed = parse_schedule(ScheduleParseRequest(
         input=req.text, input_type="voice", current_datetime=req.current_datetime,
         timezone=req.timezone, assistant_tone=req.assistant_tone,
         response_length=req.response_length, reminder_strength=req.reminder_strength,
     ))
+    # 규칙 우선 + LLM 갭필(enhanced). 플래그 꺼짐/실패 시 규칙 결과 그대로.
+    parsed = _augment_schedule_with_llm(parsed, req)
     draft = parsed.schedule_draft
     registerable = (
         parsed.intent in ("create_schedule", "create_todo")

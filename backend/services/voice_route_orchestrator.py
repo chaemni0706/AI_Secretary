@@ -13,6 +13,7 @@ a voice turn never surfaces a 500.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from typing import List
 
@@ -31,7 +32,11 @@ from backend.database.schema.chat_schema import (
     ScheduleEvent,
 )
 from backend.core.config import settings
-from backend.database.schema.local_schedule_schema import ScheduleDraftInput, ScheduleRead
+from backend.database.schema.local_schedule_schema import (
+    ScheduleDraftInput,
+    ScheduleRead,
+    ScheduleUpdate,
+)
 from backend.database.schema.schedule_parse_schema import EnhancedParseRequest
 from backend.database.schema.schedule_schema import ScheduleParseRequest
 from backend.database.schema.voice_route_schema import (
@@ -425,17 +430,30 @@ def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteDa
         and bool(draft.title)
     )
     if not registerable:
+        # 멀티턴: 부족한 슬롯을 다음 턴에 채우도록 부분 draft 를 context 로 넘긴다.
         return VoiceRouteData(
             intent="schedule_create",
             tts_text=parsed.tts_text or "날짜와 시간을 포함해서 다시 말씀해주세요.",
             screen_action=ScreenAction(type="show_card", target="schedule_draft", payload={}),
             data={"schedule_draft": draft.model_dump(), "missing_fields": parsed.missing_fields},
+            context={
+                "type": "schedule_pending",
+                "draft": draft.model_dump(),
+                "missing": parsed.missing_fields,
+                "intent": parsed.intent,
+            },
         )
 
+    return _register_draft(db, parsed.intent, draft.model_dump())
+
+
+def _register_draft(db: Session, intent: str, draft_dict: dict) -> VoiceRouteData:
+    """정규화된 draft dict 를 기존 저장 로직으로 등록하고 성공 응답을 만든다.
+    schedule_create/멀티턴 완성 양쪽에서 재사용한다(저장 로직 중복 제거)."""
     user_id, calendar_id = repo.ensure_default_owner(db)
-    draft_input = ScheduleDraftInput(**draft.model_dump())
+    draft_input = ScheduleDraftInput(**draft_dict)
     try:
-        if parsed.intent == "create_todo":
+        if intent == "create_todo":
             created_todo = todo_service.create_todo_from_draft(db, draft_input, user_id=user_id)
             item_id, title, item_type = created_todo.id, created_todo.title, "TODO"
             created_payload = created_todo.model_dump()
@@ -466,6 +484,139 @@ def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteDa
 
 
 # --------------------------------------------------------------------------- #
+# 멀티턴: 부족 슬롯 이어받기 (schedule_pending)
+# --------------------------------------------------------------------------- #
+def _handle_schedule_followup(db: Session, req: VoiceRouteRequest, ctx: dict) -> VoiceRouteData:
+    """직전 턴에서 정보가 부족했던 일정(context.type == schedule_pending)에 대해,
+    이번 발화의 슬롯을 규칙 파서로 뽑아 부분 draft 에 '빈 필드만' 병합한다.
+    완성되면 기존 저장 로직으로 등록, 여전히 부족하면 다시 되묻는다.
+    새 대화 엔진 없이 pendingContext + 기존 parse/create 만 사용한다."""
+    partial = dict(ctx.get("draft") or {})
+    intent = ctx.get("intent") or "create_schedule"
+
+    newp = parse_schedule(ScheduleParseRequest(
+        input=req.text, input_type="voice", current_datetime=req.current_datetime,
+        timezone=req.timezone,
+    ))
+    nd = newp.schedule_draft.model_dump()
+    # 빈 필드만 채움(기존 부분 draft 우선).
+    for k in ("date", "start_time", "end_time", "location", "category"):
+        if nd.get(k) and not partial.get(k):
+            partial[k] = nd[k]
+    # 제목이 아직 없으면 이번 발화의 제목을 사용.
+    if not partial.get("title") and nd.get("title"):
+        partial["title"] = nd["title"]
+
+    is_todo = intent == "create_todo"
+    has_title = bool(partial.get("title"))
+    has_date = bool(partial.get("date"))
+    has_time = bool(partial.get("start_time"))
+    complete = has_title and has_date and (is_todo or has_time)
+
+    if complete:
+        return _register_draft(db, intent, partial)
+
+    # 아직 부족 → 무엇이 비었는지 안내하고 pending 유지.
+    missing = []
+    if not has_date:
+        missing.append("date")
+    if not is_todo and not has_time:
+        missing.append("time")
+    if not has_title:
+        missing.append("title")
+    ask = "날짜를 알려주세요." if "date" in missing else (
+        "시간을 알려주세요." if "time" in missing else "무슨 일정인지 알려주세요.")
+    return VoiceRouteData(
+        intent="schedule_create",
+        tts_text=ask,
+        screen_action=ScreenAction(type="show_card", target="schedule_draft", payload={}),
+        data={"schedule_draft": partial, "missing_fields": missing},
+        context={"type": "schedule_pending", "draft": partial, "missing": missing, "intent": intent},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 멀티턴: 직전 일정 수정 지시 ("아까 그거 오후로 바꿔줘")
+# --------------------------------------------------------------------------- #
+_MODIFY_SIGNALS = ("바꿔", "변경", "수정", "말고", "옮겨", "미뤄", "당겨", "로 해")
+
+
+def _llm_modify_slots(text: str, ctx: dict) -> dict:
+    """모호한 수정 참조에서 새 날짜/시간을 LLM으로 해석(규칙이 못 잡을 때만).
+    반환: {"date"?, "start_time"?} (없으면 {}). 실패/비활성 시 {}."""
+    if not (settings.ENABLE_LLM_MULTITURN and llm_service.is_enabled()):
+        return {}
+    prompt = (
+        f"직전 일정: {ctx.get('title')} (id={ctx.get('schedule_id')})\n"
+        f"사용자 수정 발화: \"{text}\"\n"
+        "이 발화가 가리키는 새 날짜/시간만 JSON으로. 모르면 null.\n"
+        '형식: {"date": "YYYY-MM-DD"|null, "start_time": "HH:MM"|null}'
+    )
+    data = llm_service.generate_json(prompt, system="너는 일정 수정 해석기야. 날짜/시간만 JSON으로.", temperature=0.0)
+    out = {}
+    if isinstance(data, dict):
+        if isinstance(data.get("date"), str) and re.match(r"^\d{4}-\d{2}-\d{2}$", data["date"]):
+            out["date"] = data["date"]
+        if isinstance(data.get("start_time"), str) and re.match(r"^\d{2}:\d{2}$", data["start_time"]):
+            out["start_time"] = data["start_time"]
+    return out
+
+
+def _handle_schedule_modify(db: Session, req: VoiceRouteRequest, ctx: dict) -> VoiceRouteData:
+    """직전에 만든 일정(context.type == schedule_created, EVENT)을 수정한다.
+    새 시각/날짜는 규칙 파서로 우선 추출하고, 못 잡으면 LLM 해석(옵션)으로 보완.
+    실제 변경은 기존 local_schedule_service.update_schedule(PATCH)만 사용한다."""
+    schedule_id = ctx.get("schedule_id")
+    if not schedule_id or ctx.get("item_type") != "EVENT":
+        return _handle_fallback_chat(req)
+
+    p = parse_schedule(ScheduleParseRequest(
+        input=req.text, input_type="voice",
+        current_datetime=req.current_datetime, timezone=req.timezone,
+    ))
+    d = p.schedule_draft
+    update = {}
+    if d.date:
+        update["date"] = d.date
+    if d.start_time:
+        update["start_time"] = d.start_time
+    if d.end_time:
+        update["end_time"] = d.end_time
+    if not update:  # 규칙이 못 잡음 → LLM 해석(모호한 참조)
+        update.update(_llm_modify_slots(req.text, ctx))
+
+    keep_ctx = {"type": "schedule_created", "schedule_id": schedule_id,
+                "title": ctx.get("title"), "item_type": "EVENT"}
+    if not update:
+        return VoiceRouteData(
+            intent="schedule_create",
+            tts_text="어떻게 바꿀까요? 새 날짜나 시간을 알려주세요.",
+            screen_action=ScreenAction(type="show_card", target="schedule_created",
+                                       payload={"item_id": schedule_id}),
+            data={}, context=keep_ctx,
+        )
+    try:
+        updated = local_schedule_service.update_schedule(db, schedule_id, ScheduleUpdate(**update))
+    except Exception:
+        updated = None
+    if updated is None:
+        return VoiceRouteData(
+            intent="schedule_create",
+            tts_text="일정을 바꾸지 못했어요. 다시 말씀해주세요.",
+            screen_action=ScreenAction(type="none", payload={}), data={}, context=keep_ctx,
+        )
+    when = f"{updated.date or ''} {updated.start_time or ''}".strip()
+    return VoiceRouteData(
+        intent="schedule_create",
+        tts_text=f"{updated.title} 일정을 {when}로 바꿨어요." if when else f"{updated.title} 일정을 바꿨어요.",
+        screen_action=ScreenAction(type="show_card", target="schedule_created",
+                                   payload={"item_id": schedule_id}),
+        data={"item_type": "EVENT", "item": updated.model_dump()},
+        context=keep_ctx,
+    )
+
+
+# --------------------------------------------------------------------------- #
 # 7. fallback_chat
 # --------------------------------------------------------------------------- #
 def _handle_fallback_chat(req: VoiceRouteRequest) -> VoiceRouteData:
@@ -491,6 +642,32 @@ def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
             screen_action=ScreenAction(type="none", payload={}),
             data={},
         )
+
+    # 멀티턴 이어받기: 직전 턴이 '정보 부족한 일정'이었다면, 이번 발화를 부족 슬롯
+    # 채우기로 우선 처리한다(의도 재분류보다 앞선다). 단, 사용자가 명백히 다른
+    # 주제로 넘어가면(예약/브리핑/감정 등 명확 intent) 그쪽을 우선한다.
+    if (req.context or {}).get("type") == "schedule_pending":
+        pre = voice_intent_router.select_voice_intent(text, context=req.context)
+        if pre.get("intent") in ("schedule_create", "fallback_chat"):
+            try:
+                result = _handle_schedule_followup(db, req, req.context)
+            except Exception:
+                _logger.exception("[VOICE ROUTE] followup failed text=%r", text)
+                result = _handle_fallback_chat(req)
+            result.debug = {"matched_keywords": {"schedule_pending": True}}
+            return result
+
+    # 멀티턴 수정: 직전에 만든 일정이 있고 "바꿔/변경/…" 같은 수정 지시가 오면
+    # 기존 일정을 PATCH(수정)한다. (알림 응답 "응/네" 등은 신호가 없어 그대로 통과)
+    if ((req.context or {}).get("type") == "schedule_created"
+            and any(sig in text for sig in _MODIFY_SIGNALS)):
+        try:
+            result = _handle_schedule_modify(db, req, req.context)
+        except Exception:
+            _logger.exception("[VOICE ROUTE] modify failed text=%r", text)
+            result = _handle_fallback_chat(req)
+        result.debug = {"matched_keywords": {"schedule_modify": True}}
+        return result
 
     classified = voice_intent_router.select_voice_intent_hybrid(text, context=req.context)
     intent = classified["intent"]

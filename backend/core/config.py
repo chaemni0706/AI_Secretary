@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # 건강 정보는 저장 금지(허용목록 + 블록리스트로 이중 차단). Default OFF.
     ENABLE_LLM_MEMORY: bool = False
 
+    # --- Multi-turn (대화형 일정 관리) ---
+    # 슬롯 채우기/수정 지시의 '모호한 참조'를 LLM으로 해석(예: "아까 그거 오후로").
+    # 구체적 날짜/시간은 규칙으로 처리하고, 규칙이 못 잡을 때만 LLM. Default OFF.
+    ENABLE_LLM_MULTITURN: bool = False
+
     # --- Naver local search (지역 검색용; endpoint errors clearly when absent) ---
     # Keys live in `.env` (NAVER_CLIENT_ID / NAVER_CLIENT_SECRET). When missing,
     # the server still boots; the place-recommend endpoint returns a clear error

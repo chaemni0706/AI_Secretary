@@ -21,6 +21,7 @@ from backend.api import (
     ledger,
     voice,
     user_preferences,
+    weather,
 )
 from backend.core.config import settings
 from backend.core.response import register_exception_handlers
@@ -59,6 +60,7 @@ for r in (
     travel,
     voice,
     user_preferences,
+    weather,
 ):
     app.include_router(r.router, prefix=settings.API_V1_PREFIX)
 

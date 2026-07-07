@@ -55,6 +55,7 @@ from backend.services import (
     schedule_clarification,
     todo_service,
     voice_intent_router,
+    weather_service,
 )
 from backend.services import llm_service
 from backend.services.naver_place_client import NaverApiError, NaverConfigError
@@ -251,6 +252,26 @@ def _handle_emotion_schedule_coaching(db: Session, req: VoiceRouteRequest) -> Vo
 # --------------------------------------------------------------------------- #
 # 3. daily_briefing
 # --------------------------------------------------------------------------- #
+def _weather_note() -> str:
+    """오늘 날씨 한 문장(브리핑용). 실패/데이터 없으면 일정 중심 안내로 degrade."""
+    try:
+        w = weather_service.get_weather()
+        n = w.now
+        bits = []
+        if n.sky:
+            bits.append(n.sky)
+        if n.temp_c is not None:
+            bits.append(f"{round(n.temp_c)}도")
+        if not bits:
+            return "오늘 일정 중심으로 안내해드릴게요."
+        rng = ""
+        if w.temp_min is not None and w.temp_max is not None:
+            rng = f" (최저 {round(w.temp_min)}도, 최고 {round(w.temp_max)}도)"
+        return f"오늘 날씨는 {', '.join(bits)}{rng}예요."
+    except Exception:
+        return "오늘 일정 중심으로 안내해드릴게요."
+
+
 def _handle_daily_briefing(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
     user_id, _ = repo.ensure_default_owner(db)
     date_str = _today(req)
@@ -277,10 +298,10 @@ def _handle_daily_briefing(db: Session, req: VoiceRouteRequest) -> VoiceRouteDat
     prefs = {k: v for k, v in prefs.items() if v}
     data = briefing_generator.generate_briefing(briefing_req, preferences=prefs or None)
 
-    # 날씨 연동 지점(TODO): 실제 날씨 API 키가 연결되면 이 fallback 문구 대신
-    # briefing_generator 쪽에서 날씨 문장을 만들어 tts_text에 포함시킨다.
-    weather_note = "날씨 연동은 아직 준비 중이라 오늘 일정 중심으로 안내해드릴게요."
-    tts_text = f"{data.tts_text} {weather_note}" if data.tts_text else weather_note
+    # 날씨: 기상청 서비스에서 오늘 날씨 한 문장을 만들어 브리핑에 덧붙인다.
+    # (서버엔 GPS가 없어 기본 격자/키 없으면 Mock. 키가 있으면 실측 반영.)
+    weather_note = _weather_note()
+    tts_text = f"{data.tts_text} {weather_note}".strip() if data.tts_text else weather_note
     return VoiceRouteData(
         intent="daily_briefing",
         tts_text=tts_text,

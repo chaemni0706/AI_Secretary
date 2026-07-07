@@ -29,6 +29,7 @@ dependencies:
   # 위치
   geolocator: ^14.0.2
   google_maps_flutter: ^2.12.3
+  geocoding: ^3.0.0  # 좌표→지역명(기기 지오코더, API 키 불필요)
 
   # 권한
   permission_handler: ^12.0.1

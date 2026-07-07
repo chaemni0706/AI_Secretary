@@ -95,6 +95,21 @@ class Settings(BaseSettings):
     )
     NAVER_MAPS_TIMEOUT_SECONDS: float = 5.0
 
+    # --- 기상청(공공데이터포털) 단기예보 조회서비스 ---
+    # 키가 없으면 weather_service 가 Mock 을 반환(앱은 정상 동작). 키가 있으면 실측.
+    KMA_SERVICE_KEY: str | None = None
+    KMA_VILAGE_FCST_URL: str = (
+        "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
+    )
+    KMA_ULTRA_NCST_URL: str = (
+        "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst"
+    )
+    KMA_TIMEOUT_SECONDS: float = 5.0
+
+    @property
+    def kma_configured(self) -> bool:
+        return bool((self.KMA_SERVICE_KEY or "").strip())
+
     model_config = SettingsConfigDict(
         env_file=_ENV_FILES,
         env_file_encoding="utf-8",

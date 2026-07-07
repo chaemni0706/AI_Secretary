@@ -30,6 +30,7 @@ import 'booking_recommend_screen.dart';
 import 'daily_briefing_screen.dart';
 import 'dashboard_stub_screens.dart';
 import 'ledger_report_screen.dart';
+import 'weather_detail_screen.dart';
 
 /// 위젯 탭 — 사용자가 직접 구성하는 AI 대시보드.
 /// 편집 모드에서 위젯을 드래그로 재배치 / 크기 변경 / 삭제 / 추가할 수 있다.
@@ -174,7 +175,7 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
       case DashboardWidgetType.weeklyCalendar:
         requestTab(DashboardTabIndex.calendar);
       case DashboardWidgetType.weather:
-        _snack('날씨 상세 화면은 준비 중입니다.');
+        _push(const WeatherDetailScreen());
       case DashboardWidgetType.budget:
         requestTab(DashboardTabIndex.ledger);
       case DashboardWidgetType.spendingAnalysis:

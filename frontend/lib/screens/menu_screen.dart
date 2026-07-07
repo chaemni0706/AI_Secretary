@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import 'briefing_screen.dart';
@@ -188,7 +189,7 @@ class MenuScreen extends StatelessWidget {
       _MenuItem(
         icon: Icons.phone_in_talk_outlined,
         color: AppTheme.teal,
-        title: '챔니 전화 알림',
+        title: AppStrings.callAlertTitle(),
         subtitle: '일정 전 음성 알림',
         onTap: () => _openService(context, const MockCallAlertScreen()),
       ),

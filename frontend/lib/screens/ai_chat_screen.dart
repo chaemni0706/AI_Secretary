@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/api_client.dart';
+import '../services/assistant_text_sanitizer.dart';
 import '../services/preference_store.dart';
 import '../services/voice_router_api.dart';
 import '../services/voice_stt_service.dart';
@@ -193,15 +194,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _sending = false;
         _voiceStatus = null;
       });
+      // 표시/재생 전 방어적으로 다듬는다(깨진 인코딩/빈 응답 → 안전 문구).
+      final safeText =
+          sanitizeAssistantText(result.ttsText, fallback: '확인했어요.');
       _addMessage(
-        result.ttsText.isNotEmpty ? result.ttsText : '확인했어요.',
+        safeText,
         isUser: false,
         route: result,
       );
       handleVoiceSideEffects(result);
       if (mounted) handleVoiceScreenAction(context, result);
 
-      if (fromVoice) await _speak(result.ttsText);
+      if (fromVoice) await _speak(safeText);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {

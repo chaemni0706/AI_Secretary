@@ -6,6 +6,8 @@
 /// 화면/서비스 코드는 `response['data']` 만 파싱하므로 변경이 최소화된다.
 library;
 
+import '../theme/app_constants.dart';
+
 /// 하루 브리핑 Mock (`POST /api/v1/briefings/daily`).
 final Map<String, dynamic> mockDailyBriefing = {
   "success": true,
@@ -108,7 +110,7 @@ final Map<String, dynamic> mockCallAlert = {
           "reminder_id": "rem_003",
           "type": "mock_call",
           "trigger_datetime": "2026-07-02T09:30:00+09:00",
-          "title": "챔니 전화 알림",
+          "title": AppStrings.callAlertTitle(),
           "message": "팀 회의가 곧 시작돼요.",
           "screen": "voice_alert_screen",
           "notification_channel": "mock_call",
@@ -119,7 +121,7 @@ final Map<String, dynamic> mockCallAlert = {
         "회의 자료",
         "필기구",
       ],
-      "voice_alert_text": "챔니가 알려드려요. 팀 회의가 30분 후 시작돼요. 노트북과 회의 자료를 챙겨주세요.",
+      "voice_alert_text": "${AppStrings.assistantNotifiesPrefix()} 팀 회의가 30분 후 시작돼요. 노트북과 회의 자료를 챙겨주세요.",
       "save_required_on_frontend": true,
     },
   },

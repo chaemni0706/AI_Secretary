@@ -102,13 +102,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   DateTime _endDateFor(ScheduleModel schedule, DateTime startDate) {
-    final memo = schedule.memo ?? '';
-    final match = RegExp(
-      r'(?:end_date|endDate|종료일)\s*[:=]\s*(\d{4}-\d{2}-\d{2})',
-    ).firstMatch(memo);
-    if (match == null) return startDate;
+    // 종료일은 모델의 effectiveEndDate(서버 end_date → memo 규칙 순)로 통일한다.
+    final raw = schedule.effectiveEndDate;
+    if (raw == null) return startDate;
     try {
-      final parsed = DateTime.parse(match.group(1)!);
+      final parsed = DateTime.parse(raw);
       final end = DateTime(parsed.year, parsed.month, parsed.day);
       return end.isBefore(startDate) ? startDate : end;
     } catch (_) {

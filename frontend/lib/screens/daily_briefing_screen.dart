@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/daily_briefing_mock.dart';
@@ -88,7 +89,7 @@ class _DailyBriefingScreenState extends State<DailyBriefingScreen> {
   // 이 버튼은 되는데 "브리핑 듣기"만 안 되면 데이터 연결 문제.
   Future<void> _playTtsTest() async {
     debugPrint('Daily briefing TTS TEST button pressed');
-    await _ttsService.speak('안녕하세요. 챔니 음성 테스트입니다.');
+    await _ttsService.speak('안녕하세요. ${AppStrings.assistantName} 음성 테스트입니다.');
   }
   // ===== 디버깅용 임시 메서드 끝 =====
 

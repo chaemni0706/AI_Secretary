@@ -40,15 +40,27 @@ class ScheduleDraftMapper {
     final rawSource = s(draft['source']);
     final source = rawSource ?? (inputType == 'voice' ? 'voice' : 'ai');
 
+    // 기간 일정 종료일(end_date). 백엔드 스키마(ScheduleDraftInput)에는 end_date
+    // 필드가 없어 그대로 보내면 버려지므로, 기존 캘린더가 이미 인식하는 memo 의
+    // `end_date: YYYY-MM-DD` 규칙으로 인코딩해 저장한다(스키마 불변, 하위 호환).
+    final date = s(draft['date']);
+    final endDate = s(draft['end_date']);
+    final userMemo = s(draft['memo']);
+    final validEndDate =
+        (endDate != null && date != null && endDate.compareTo(date) > 0)
+            ? endDate
+            : null;
+    final memo = ScheduleModel.encodeMemoWithEndDate(userMemo, validEndDate);
+
     // 백엔드 ScheduleDraftInput 필드만 골라 담는다(알 수 없는 키는 버림).
     final result = <String, dynamic>{
       'title': s(draft['title']) ?? '',
       'category': s(draft['category']),
-      'date': s(draft['date']),
+      'date': date,
       'start_time': s(draft['start_time']),
       'end_time': s(draft['end_time']),
       'location': s(draft['location']),
-      'memo': s(draft['memo']),
+      'memo': memo,
       'priority': priority,
       'source': source,
     };

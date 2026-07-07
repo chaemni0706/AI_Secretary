@@ -196,6 +196,68 @@ def _extract_date(text: str, base: datetime) -> Tuple[Optional[str], Optional[st
 
 
 # --------------------------------------------------------------------------- #
+# Date-range parsing (기간 일정: 시작일 + 종료일)
+# --------------------------------------------------------------------------- #
+# 종료일 후보로 인정하는 날짜 토큰(ISO / N월 M일 / M/D / N일 단독).
+_DATE_TOKEN = r"(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s*월\s*\d{1,2}\s*일|\d{1,2}\s*/\s*\d{1,2}|\d{1,2}\s*일)"
+# 범위 구분 기호(물결/대시 계열).
+_RANGE_MARK = r"(?:~|∼|〜|–|—|-)"
+
+
+def _resolve_end_expr(expr: str, base: datetime, start_date: str) -> Optional[str]:
+    """종료일 표현 하나를 'YYYY-MM-DD' 로 해석. 'N일' 단독이면 시작일의
+    연/월을 물려받는다. 실패 시 None."""
+    expr = (expr or "").strip()
+    # "9일" / "9" 처럼 일(day)만 있는 경우 → 시작일의 연·월 사용.
+    m = re.fullmatch(r"(\d{1,2})\s*일?", expr)
+    if m:
+        try:
+            y, mo = int(start_date[0:4]), int(start_date[5:7])
+            day = int(m.group(1))
+            return datetime(y, mo, day).date().isoformat()
+        except ValueError:
+            return None
+    # 그 외에는 일반 날짜 파서를 재사용(상대표현/요일/월일/ISO 등 모두 지원).
+    value, _ = _extract_date(expr, base)
+    return value
+
+
+def _extract_date_range(
+    text: str, base: datetime, start_date: Optional[str]
+) -> Tuple[Optional[str], Optional[str]]:
+    """기간 일정의 (종료일 'YYYY-MM-DD', 매칭된 원문 표현)을 반환. 단일 일정이면
+    (None, None). [start_date] 는 이미 해석된 시작일로, 일(day)만 있는 종료
+    표현의 연·월을 물려받는 데 쓴다.
+
+    지원: 'A부터 B까지', 'A~B', 'A-B'. 종료일이 시작일보다 뒤일 때만 인정한다.
+    (마감 표현 'X까지' 단독은 '부터'가 없으므로 기간으로 보지 않는다.)
+    """
+    if not start_date:
+        return None, None
+
+    right: Optional[str] = None
+    matched: Optional[str] = None
+
+    m = re.search(r"(.+?)\s*부터\s*(.+?)\s*까지", text)
+    if m:
+        right = m.group(2)
+        matched = m.group(0)
+    else:
+        m2 = re.search(rf"({_DATE_TOKEN})\s*{_RANGE_MARK}\s*({_DATE_TOKEN})", text)
+        if m2:
+            right = m2.group(2)
+            matched = m2.group(0)
+
+    if not right:
+        return None, None
+
+    end_date = _resolve_end_expr(right, base, start_date)
+    if not end_date or end_date <= start_date:
+        return None, None
+    return end_date, matched
+
+
+# --------------------------------------------------------------------------- #
 # Time parsing
 # --------------------------------------------------------------------------- #
 def _extract_time(text: str) -> Tuple[Optional[str], Optional[str], bool]:
@@ -358,9 +420,15 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
     base = _base_datetime(req)
 
     date_value, date_expr = _extract_date(text, base)
+    # 기간 일정(시작일~종료일). 종료일이 있으면 제목 정제 시 범위 표현을 통째로
+    # 제거해 "여행" 같은 순수 제목만 남긴다.
+    end_date_value, range_expr = _extract_date_range(text, base, date_value)
     start_time, time_expr, ambiguous = _extract_time(text)
     end_time = _add_one_hour(start_time) if start_time else None
-    title = _extract_title(text, date_expr, time_expr)
+    if range_expr:
+        title = _extract_title(text.replace(range_expr, " "), None, time_expr)
+    else:
+        title = _extract_title(text, date_expr, time_expr)
     title = _maybe_refine_title(title, text)
 
     category = _detect_category(title, re.sub(re.escape(time_expr or ""), "", text))
@@ -411,6 +479,8 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
     # InputType 은 str Enum 이라 "voice" 문자열 비교로 충분하다.
     source = "voice" if req.input_type == "voice" else "ai"
 
+    # 기간 일정 종료일은 DB 스키마 불변을 위해 memo 의 `end_date:` 규칙으로 저장한다
+    # (기존 캘린더가 이미 인식하는 방식). 파싱 응답 계약(slots/draft 키)도 그대로 유지.
     draft = ScheduleDraft(
         title=final_title,
         category=category,
@@ -418,7 +488,7 @@ def parse_schedule(req: ScheduleParseRequest) -> ScheduleParseData:
         start_time=start_time,
         end_time=end_time,
         location=None,
-        memo=None,
+        memo=(f"end_date: {end_date_value}" if end_date_value else None),
         priority=priority,
         source=source,
     )

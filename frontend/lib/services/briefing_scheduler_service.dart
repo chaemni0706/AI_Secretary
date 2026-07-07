@@ -8,6 +8,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../models/schedule_model.dart';
 import '../screens/mock_call_alert_screen.dart';
+import '../theme/app_constants.dart';
 import 'briefing_api.dart';
 import 'preference_store.dart';
 
@@ -143,7 +144,7 @@ class BriefingSchedulerService {
       await _plugin.zonedSchedule(
         _notificationId,
         '오늘의 브리핑',
-        '챔니가 오늘 일정과 브리핑을 알려드려요. 눌러서 들어보세요.',
+        '${AppStrings.assistantName}가 오늘 일정과 브리핑을 알려드려요. 눌러서 들어보세요.',
         _nextInstance(hour, minute),
         const NotificationDetails(
           android: AndroidNotificationDetails(

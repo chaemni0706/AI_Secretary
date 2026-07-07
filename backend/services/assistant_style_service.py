@@ -110,25 +110,57 @@ def _lead(tone: str, title: str) -> str:
     }.get(tone, f"{title} 일정으로 잡아둘게요.")
 
 
+def _has_batchim(word: str) -> bool:
+    """마지막 글자에 받침이 있는지(한글 음절 기준)."""
+    if not word:
+        return False
+    ch = word[-1]
+    if not ("가" <= ch <= "힣"):
+        return False
+    return (ord(ch) - 0xAC00) % 28 != 0
+
+
+def _join_with_wa_gwa(labels: List[str]) -> str:
+    """라벨들을 자연스러운 한국어로 잇는다. 마지막 연결은 받침에 따라 '와/과'.
+    예: ['날짜','시간'] -> '날짜와 시간', ['시간','장소'] -> '시간과 장소'."""
+    if not labels:
+        return ""
+    if len(labels) == 1:
+        return labels[0]
+    head = ", ".join(labels[:-1])
+    connector = "과 " if _has_batchim(labels[-2]) else "와 "
+    return f"{head}{connector}{labels[-1]}"
+
+
+def _eul_reul(word: str) -> str:
+    """받침에 맞는 목적격 조사('을'/'를')."""
+    return "을" if _has_batchim(word) else "를"
+
+
+def _neun_eun(word: str) -> str:
+    """받침에 맞는 보조사('은'/'는')."""
+    return "은" if _has_batchim(word) else "는"
+
+
 def _ask(tone: str, fields: List[str]) -> str:
     labels = [_FIELD_LABEL[f] for f in fields if f in _FIELD_LABEL]
     if not labels:
         return ""
-    joined = ", ".join(labels[:-1]) + ("과 " if len(labels) > 1 else "") + labels[-1] \
-        if len(labels) > 1 else labels[0]
+    joined = _join_with_wa_gwa(labels)
+    obj = _eul_reul(joined)  # 조사는 마지막 글자 받침 기준.
     # natural single-time phrasing for friendly/concise
     if tone == "formal":
-        return f"{joined}를 알려주세요."
+        return f"{joined}{obj} 알려주세요."
     if tone == "friendly":
         if fields == ["time"]:
             return "시간은 언제로 할까요?"
         if fields == ["date"]:
             return "날짜는 언제로 할까요?"
-        return f"{joined}는 어떻게 할까요?"
+        return f"{joined}{_neun_eun(joined)} 어떻게 할까요?"
     if tone == "caring":
-        return f"편하신 {joined}를 알려주시면 이어서 등록해드릴게요."
+        return f"편하신 {joined}{obj} 알려주시면 이어서 등록해드릴게요."
     # concise
-    return f"{joined}를 알려주세요."
+    return f"{joined}{obj} 알려주세요."
 
 
 def _tail(tone: str) -> str:

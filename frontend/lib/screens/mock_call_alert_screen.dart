@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../models/mock_call_alert.dart';
 import '../services/mock_voice_service.dart';
@@ -80,7 +81,7 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
   Future<void> _playAlertVoice() async {
     final base = widget.overrideTtsText ??
         _data?.alertPlan.voiceAlertText ??
-        '챔니가 알려드려요. 곧 일정이 시작돼요.';
+        '${AppStrings.assistantNotifiesPrefix()} 곧 일정이 시작돼요.';
     // reminder_strength 에 따라 알림 문구 강도를 로컬에서 조절(gentle/strong).
     final text = preferenceStore.applyReminderStrength(base);
     debugPrint('Mock call alert TTS text: $text');
@@ -134,7 +135,8 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
     final plan = _data?.alertPlan;
     final reminder = plan?.primary;
 
-    final headerTitle = widget.overrideTitle ?? reminder?.title ?? '챔니 전화 알림';
+    final headerTitle =
+        widget.overrideTitle ?? reminder?.title ?? AppStrings.callAlertTitle();
     // 일정 전 알림(Mock)에서는 next_event 성격상 reminder.title 이
     // "챔니 전화 알림" 고정값이라 데모용 일정 제목을 별도로 고정 사용했다.
     // 자동 브리핑 등 override 호출은 overrideMessage 를 본문으로 그대로 쓴다.

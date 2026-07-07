@@ -35,6 +35,7 @@ class LocalScheduleParser {
       final isTodo = _isTodo(text);
 
       final dateRes = _extractDate(text, base);
+      final endDate = _extractEndDate(text, base, dateRes.date);
       final timeRes = _extractStartTime(text);
       final category = _inferCategory(text);
       var title = _extractTitle(text, dateRes.expr, timeRes.expr);
@@ -44,6 +45,7 @@ class LocalScheduleParser {
         'title': title,
         'category': category,
         'date': dateRes.date,
+        'end_date': endDate,
         'start_time': timeRes.time,
         'end_time': null,
         'location': null,
@@ -195,6 +197,46 @@ class LocalScheduleParser {
     }
 
     return const _DateResult(null, null);
+  }
+
+  // ------------------------------------------------------------------ //
+  // 기간(종료일)
+  // ------------------------------------------------------------------ //
+  /// "A부터 B까지" / "A~B" / "A-B" 형태에서 종료일을 뽑는다(없으면 null).
+  /// [startDate] 는 이미 해석된 시작일("YYYY-MM-DD")로, "N일" 단독 종료 표현의
+  /// 연·월을 물려받는 데 쓴다. 종료일이 시작일보다 뒤일 때만 반환한다.
+  static String? _extractEndDate(String t, DateTime base, String? startDate) {
+    if (startDate == null) return null;
+
+    String? rightExpr;
+    final buteo = RegExp(r'(.+?)\s*부터\s*(.+?)\s*까지').firstMatch(t);
+    if (buteo != null) {
+      rightExpr = buteo.group(2);
+    } else {
+      const tok =
+          r'(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s*월\s*\d{1,2}\s*일|\d{1,2}\s*/\s*\d{1,2}|\d{1,2}\s*일)';
+      final tilde =
+          RegExp('($tok)\\s*[~∼〜–—-]\\s*($tok)').firstMatch(t);
+      if (tilde != null) rightExpr = tilde.group(2);
+    }
+    if (rightExpr == null) return null;
+
+    final end = _resolveEndExpr(rightExpr.trim(), base, startDate);
+    if (end == null || end.compareTo(startDate) <= 0) return null;
+    return end;
+  }
+
+  static String? _resolveEndExpr(String expr, DateTime base, String startDate) {
+    // "9일" / "9" → 시작일의 연·월 사용.
+    final dOnly = RegExp(r'^(\d{1,2})\s*일?$').firstMatch(expr);
+    if (dOnly != null) {
+      final y = int.parse(startDate.substring(0, 4));
+      final m = int.parse(startDate.substring(5, 7));
+      final d = int.parse(dOnly.group(1)!);
+      final dt = _safeDate(y, m, d);
+      return dt == null ? null : _fmt(dt);
+    }
+    return _extractDate(expr, base).date;
   }
 
   // ------------------------------------------------------------------ //

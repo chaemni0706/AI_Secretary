@@ -6,6 +6,7 @@ import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../theme/todo_styles.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/picker_field.dart';
 
 class TodoAddScreen extends StatefulWidget {
   const TodoAddScreen({super.key});
@@ -45,6 +46,24 @@ class _TodoAddScreenState extends State<TodoAddScreen> {
     _timeController.dispose();
     _memoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await DateTimePickers.pickDate(
+      context,
+      initial: _dateController.text,
+    );
+    if (picked == null) return;
+    setState(() => _dateController.text = picked);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await DateTimePickers.pickTime(
+      context,
+      initial: _timeController.text,
+    );
+    if (picked == null) return;
+    setState(() => _timeController.text = picked);
   }
 
   String _colorHex(Color color) {
@@ -136,17 +155,23 @@ class _TodoAddScreenState extends State<TodoAddScreen> {
                       label: '제목',
                       icon: Icons.title,
                     ),
-                    _InputField(
-                      controller: _dateController,
-                      label: '날짜',
-                      hint: 'YYYY-MM-DD',
+                    PickerField(
                       icon: Icons.event_outlined,
+                      label: '마감 날짜',
+                      value: _dateController.text,
+                      hint: '날짜 선택',
+                      onTap: _pickDate,
+                      onClear: () =>
+                          setState(() => _dateController.clear()),
                     ),
-                    _InputField(
-                      controller: _timeController,
-                      label: '시간',
-                      hint: 'HH:mm',
+                    PickerField(
                       icon: Icons.schedule_outlined,
+                      label: '마감 시간 (선택)',
+                      value: _timeController.text,
+                      hint: '시간 선택',
+                      onTap: _pickTime,
+                      onClear: () =>
+                          setState(() => _timeController.clear()),
                     ),
                     _DropdownField<String>(
                       label: '카테고리',

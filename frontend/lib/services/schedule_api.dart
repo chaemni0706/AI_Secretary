@@ -154,6 +154,20 @@ class ScheduleApi {
     return ScheduleModel.fromJson(data as Map<String, dynamic>);
   }
 
+  /// 수정: `PATCH /api/v1/local/schedules/{id}`
+  ///
+  /// 백엔드 `ScheduleUpdate` 스키마는 모든 필드가 optional(부분 수정) 이므로,
+  /// [payload] 에는 바뀐 필드만 담아 보내면 된다. null 값은 "비우기"가 아니라
+  /// 백엔드에서 무시되도록 호출부에서 걸러 담는 것을 권장한다.
+  /// 응답은 수정된 일정 전체(`ScheduleModel`)다.
+  Future<ScheduleModel> update(String id, Map<String, dynamic> payload) async {
+    final data = await apiClient.patchData(
+      '$apiPrefix/local/schedules/$id',
+      body: payload,
+    );
+    return ScheduleModel.fromJson(data as Map<String, dynamic>);
+  }
+
   /// 삭제: `DELETE /api/v1/local/schedules/{id}`
   Future<void> delete(String id) async {
     await apiClient.deleteData('$apiPrefix/local/schedules/$id');

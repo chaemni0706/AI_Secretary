@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/schedule_model.dart';
 import '../services/api_client.dart';
+import '../services/assistant_text_sanitizer.dart';
 import '../services/dashboard_api.dart';
 import '../services/schedule_api.dart';
 import '../services/preference_store.dart';
@@ -154,9 +156,10 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
         _parseResult = result;
         _isParsing = false;
       });
-      final phrase = (result.ttsText != null && result.ttsText!.trim().isNotEmpty)
-          ? result.ttsText!
-          : '일정 정보를 정리했어요. 등록할까요?';
+      final phrase = sanitizeAssistantText(
+        result.ttsText,
+        fallback: '일정 정보를 정리했어요. 등록할까요?',
+      );
       await _speak(phrase);
     } on ApiException catch (e) {
       setState(() {
@@ -355,7 +358,7 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
           ),
           const SizedBox(height: 12),
           _row('제목', v(d['title'])),
-          _row('날짜', v(d['date'])),
+          _row('날짜', _dateRangeText(d)),
           _row('시간', timeText),
           _row('카테고리', _categoryLabel(d['category'])),
           _row('장소', v(d['location'])),
@@ -369,6 +372,20 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
         ],
       ),
     );
+  }
+
+  /// 초안의 날짜 표시. 기간 일정이면 "시작 ~ 종료". 종료일은 end_date 키
+  /// 또는 memo 의 `end_date:` 토큰(서버 파싱 결과)에서 읽는다.
+  String _dateRangeText(Map<String, dynamic> d) {
+    final date = d['date'];
+    if (date == null || '$date'.isEmpty) return '-';
+    final endRaw = (d['end_date'] != null && '${d['end_date']}'.isNotEmpty)
+        ? '${d['end_date']}'
+        : ScheduleModel.endDateFromMemo(d['memo']?.toString());
+    if (endRaw != null && endRaw.isNotEmpty && endRaw.compareTo('$date') > 0) {
+      return '$date ~ $endRaw';
+    }
+    return '$date';
   }
 
   Widget _row(String label, String value) {

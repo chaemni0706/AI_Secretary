@@ -7,7 +7,17 @@ can be wired in later without code changes.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# .env 로딩을 실행 위치(CWD)와 무관하게 만든다.
+# 이 파일은 backend/core/config.py 이므로 parents[1] = backend/ 다.
+# 실제 파일은 backend/.env 이지만, 루트/백엔드 어디서 uvicorn 을 실행해도
+# 로드되도록 두 위치를 모두 시도한다(뒤 항목 우선 → backend/.env 값이 최종 적용).
+_BACKEND_DIR = Path(__file__).resolve().parents[1]
+_ROOT_DIR = _BACKEND_DIR.parent
+_ENV_FILES = (_ROOT_DIR / ".env", _BACKEND_DIR / ".env")
 
 
 class Settings(BaseSettings):
@@ -63,7 +73,7 @@ class Settings(BaseSettings):
     NAVER_MAPS_TIMEOUT_SECONDS: float = 5.0
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
     )

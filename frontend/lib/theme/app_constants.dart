@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 /// 명칭을 바꾸려면 [assistantName] 값 하나만 수정하면 전체에 반영된다.
 class AppStrings {
   /// AI 비서의 공식 표시 이름(프로젝트 공식 명칭).
-  static const String assistantName = '나의 완벽한 AI 비서';
+  static const String assistantName = 'AI 비서';
 
   /// "{이름}가 알려드려요." 처럼 조사(가/이)가 붙는 안내 접두 문구.
   static String assistantNotifiesPrefix() => '$assistantName가 알려드려요.';

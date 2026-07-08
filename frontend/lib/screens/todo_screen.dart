@@ -13,6 +13,7 @@ import '../widgets/todo_category_section.dart';
 import '../widgets/todo_completion_calendar.dart';
 import '../widgets/todo_progress_card.dart';
 import '../widgets/todo_segmented_control.dart';
+import '../widgets/toss_button.dart';
 import 'todo_form_screen.dart';
 
 class TodoScreen extends StatefulWidget {
@@ -501,10 +502,11 @@ class _TodoScreenState extends State<TodoScreen>
                 style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 12),
-              FilledButton(
+              TossButton(
+                label: '다시 시도',
                 onPressed: _loadTodos,
-                style: FilledButton.styleFrom(backgroundColor: AppTheme.blue),
-                child: const Text('다시 시도'),
+                size: TossButtonSize.m,
+                style: TossButtonStyle.primaryWeak,
               ),
             ],
           ),

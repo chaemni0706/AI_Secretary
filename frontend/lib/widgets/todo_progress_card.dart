@@ -16,111 +16,68 @@ class TodoProgressCard extends StatelessWidget {
     final rate = total == 0 ? 0.0 : done / total;
     final complete = total > 0 && done >= total;
     final percent = (rate * 100).round();
-    final fillColor = Color.lerp(
-      AppTheme.blue.withValues(alpha: 0.35),
-      complete ? AppTheme.green : AppTheme.blue,
-      rate,
-    )!;
-    final cardStart = complete
-        ? AppTheme.green.withValues(alpha: 0.26)
-        : fillColor.withValues(alpha: 0.24 + (0.26 * rate));
-    final cardEnd = complete
-        ? AppTheme.green.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.72);
+    final fillColor = complete ? TossColors.green : TossColors.blue500;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: GlassCard(
-        padding: EdgeInsets.zero,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.card),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [cardStart, cardEnd],
-                stops: [rate.clamp(0.18, 0.9), 1.0],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '오늘 진행률',
-                          style: AppTextStyles.sectionTitle.copyWith(
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                      ),
-                      TodoProgressCelebration(
-                        active: complete,
-                        child: Text(
-                          '$percent%',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: complete
-                                ? AppTheme.green
-                                : AppTheme.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 12,
-                          color: AppTheme.separator.withValues(alpha: 0.7),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: rate.clamp(0.0, 1.0),
-                          child: Container(
-                            height: 12,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  fillColor.withValues(alpha: 0.72),
-                                  fillColor,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+        padding: const EdgeInsets.all(TossSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Expanded(
+                  child: Text('오늘 진행률', style: TossTypography.caption),
+                ),
+                TodoProgressCelebration(
+                  active: complete,
+                  child: Text(
+                    '$percent%',
+                    style: TossTypography.display.copyWith(
+                      color: complete
+                          ? TossColors.green
+                          : TossColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _Metric(label: '완료', value: '$done개', color: fillColor),
-                      const SizedBox(width: 10),
-                      _Metric(
-                        label: '남은 할 일',
-                        value: '${remaining < 0 ? 0 : remaining}개',
-                        color: AppTheme.orange,
-                      ),
-                      const SizedBox(width: 10),
-                      _Metric(
-                        label: '전체',
-                        value: '$total개',
-                        color: AppTheme.textSecondary,
-                      ),
-                    ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(TossRadius.full),
+              child: Stack(
+                children: [
+                  Container(height: 10, color: TossColors.grey100),
+                  AnimatedFractionallySizedBox(
+                    duration: TossMotion.normal,
+                    curve: TossMotion.easeOut,
+                    widthFactor: rate.clamp(0.0, 1.0),
+                    child: Container(height: 10, color: fillColor),
                   ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                _Metric(label: '완료', value: '$done개', color: fillColor),
+                const SizedBox(width: 8),
+                _Metric(
+                  label: '남은 할 일',
+                  value: '${remaining < 0 ? 0 : remaining}개',
+                  color: TossColors.textPrimary,
+                ),
+                const SizedBox(width: 8),
+                _Metric(
+                  label: '전체',
+                  value: '$total개',
+                  color: TossColors.textSecondary,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -144,9 +101,8 @@ class _Metric extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.58),
+          color: TossColors.grey50,
           borderRadius: BorderRadius.circular(AppRadii.small),
-          border: Border.all(color: AppTheme.separator.withValues(alpha: 0.65)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

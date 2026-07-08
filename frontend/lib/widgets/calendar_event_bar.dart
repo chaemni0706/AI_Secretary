@@ -25,7 +25,8 @@ class CalendarEventBar extends StatelessWidget {
         right: endsOnThisDay ? 5 : 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.82),
+        // 토스식: 원색 채움 대신 옅은 배경 + 진한 글자.
+        color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.horizontal(
           left: Radius.circular(startsOnThisDay ? AppRadii.small : 1),
           right: Radius.circular(endsOnThisDay ? AppRadii.small : 1),
@@ -37,10 +38,10 @@ class CalendarEventBar extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: color,
                 height: 1,
               ),
             )

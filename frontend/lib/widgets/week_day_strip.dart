@@ -70,11 +70,12 @@ class WeekDayStrip extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.blue : Colors.transparent,
+                      color: isSelected
+                          ? TossColors.blue500
+                          : isToday
+                          ? TossColors.blueWeak
+                          : Colors.transparent,
                       shape: BoxShape.circle,
-                      border: isToday && !isSelected
-                          ? Border.all(color: AppTheme.blue, width: 1.5)
-                          : null,
                     ),
                     child: Center(
                       child: Text(
@@ -84,7 +85,9 @@ class WeekDayStrip extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: isSelected
                               ? Colors.white
-                              : AppTheme.textPrimary,
+                              : isToday
+                              ? TossColors.blue600
+                              : TossColors.textPrimary,
                         ),
                       ),
                     ),

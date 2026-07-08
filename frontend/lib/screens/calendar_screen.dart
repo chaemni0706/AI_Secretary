@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../theme/schedule_styles.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_top_actions.dart';
+import '../widgets/budget_segmented_control.dart';
+import '../widgets/toss_button.dart';
 import '../widgets/calendar_event_bar.dart';
 import '../widgets/category_schedule_section.dart';
 import '../widgets/schedule_card.dart';
@@ -392,53 +394,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildViewSwitcher() {
-    final labels = ['월간', '주간', '타임라인'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.55),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.separator.withOpacity(0.6)),
-        ),
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          children: List.generate(labels.length, (i) {
-            final isActive = i == _viewIndex;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => _setViewIndex(i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isActive ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: isActive
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Text(
-                    labels[i],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      color: isActive
-                          ? AppTheme.textPrimary
-                          : AppTheme.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
+      child: BudgetSegmentedControl(
+        selectedIndex: _viewIndex,
+        labels: const ['월간', '주간', '타임라인'],
+        onChanged: _setViewIndex,
       ),
     );
   }
@@ -467,6 +428,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
           daysOfWeekHeight: 28,
           rowHeight: 68,
           calendarBuilders: CalendarBuilders(
+            // 요일 헤더 — 토스식: 일요일 red, 토요일 blue, 평일 grey.
+            dowBuilder: (context, day) {
+              const labels = ['월', '화', '수', '목', '금', '토', '일'];
+              final color = day.weekday == DateTime.sunday
+                  ? TossColors.red
+                  : day.weekday == DateTime.saturday
+                  ? TossColors.blue500
+                  : TossColors.grey500;
+              return Center(
+                child: Text(
+                  labels[day.weekday - 1],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              );
+            },
             defaultBuilder: (context, day, focusedDay) =>
                 _buildMonthDayCell(day),
             todayBuilder: (context, day, focusedDay) =>
@@ -477,8 +457,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 _buildMonthDayCell(day, isOutside: true),
           ),
           calendarStyle: CalendarStyle(
-            todayDecoration: BoxDecoration(
-              color: AppTheme.blue.withOpacity(0.2),
+            todayDecoration: const BoxDecoration(
+              color: TossColors.blueWeak,
               shape: BoxShape.circle,
             ),
             todayTextStyle: const TextStyle(
@@ -503,8 +483,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
-            outsideTextStyle: TextStyle(
-              color: AppTheme.textSecondary.withOpacity(0.5),
+            outsideTextStyle: const TextStyle(
+              color: TossColors.textAssistive,
               fontSize: 14,
             ),
             markerDecoration: const BoxDecoration(
@@ -539,23 +519,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
     bool isOutside = false,
   }) {
     final segments = _monthEventSegmentsFor(day).take(2).toList();
+    // 토스식 요일 색: 일요일 red, 토요일 blue.
+    final weekdayColor = day.weekday == DateTime.sunday
+        ? TossColors.red
+        : day.weekday == DateTime.saturday
+        ? TossColors.blue500
+        : TossColors.textPrimary;
     final textColor = isOutside
-        ? AppTheme.textSecondary.withValues(alpha: 0.5)
+        ? TossColors.textAssistive
         : isSelected
         ? Colors.white
         : isToday
-        ? AppTheme.blue
-        : AppTheme.textPrimary;
+        ? TossColors.blue600
+        : weekdayColor;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
       padding: const EdgeInsets.fromLTRB(2, 2, 2, 1),
       decoration: BoxDecoration(
-        color: isSelected ? AppTheme.blue : Colors.transparent,
+        color: isSelected
+            ? TossColors.blue500
+            : isToday
+            ? TossColors.blueWeak
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
-        border: isToday && !isSelected
-            ? Border.all(color: AppTheme.blue.withValues(alpha: 0.6))
-            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -832,10 +819,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
-            FilledButton(
+            TossButton(
+              label: '다시 시도',
               onPressed: _loadSchedules,
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.blue),
-              child: const Text('다시 시도'),
+              size: TossButtonSize.m,
+              style: TossButtonStyle.primaryWeak,
             ),
           ],
         ),

@@ -248,14 +248,10 @@ class _AssistantMainButton extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [AppTheme.purple, AppTheme.blue],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: TossColors.blue500,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.blue.withValues(alpha: open ? 0.26 : 0.16),
+            color: TossColors.blue500.withValues(alpha: open ? 0.32 : 0.22),
             blurRadius: open ? 18 : 12,
             offset: const Offset(0, 5),
           ),

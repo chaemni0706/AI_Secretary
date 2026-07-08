@@ -179,14 +179,13 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        border: Border(top: BorderSide(color: AppTheme.separator, width: 0.5)),
+      decoration: const BoxDecoration(
+        color: TossColors.bgWhite,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, -2),
+            color: Color(0x0A191F28),
+            blurRadius: 16,
+            offset: Offset(0, -2),
           ),
         ],
       ),

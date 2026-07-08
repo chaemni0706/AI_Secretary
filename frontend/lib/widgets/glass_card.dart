@@ -1,8 +1,11 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-class GlassCard extends StatelessWidget {
+/// 토스식 카드 표면 — 불투명 화이트 + 부드러운 그림자.
+///
+/// (구 글래스모피즘 카드에서 전환. 파일명/클래스명은 참조 호환을 위해 유지)
+/// 탭 가능하면 누름 시 살짝 눌리는 스케일 피드백을 준다.
+class GlassCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final double borderRadius;
@@ -13,43 +16,44 @@ class GlassCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding,
-    this.borderRadius = 18,
+    this.borderRadius = TossRadius.lg,
     this.color,
     this.onTap,
   });
 
   @override
+  State<GlassCard> createState() => _GlassCardState();
+}
+
+class _GlassCardState extends State<GlassCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final card = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: color ?? Colors.white.withOpacity(0.72),
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.55),
-              width: 0.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: padding ?? const EdgeInsets.all(16),
-          child: child,
-        ),
+    final card = Container(
+      decoration: BoxDecoration(
+        color: widget.color ?? TossColors.bgWhite,
+        borderRadius: BorderRadius.circular(widget.borderRadius),
+        boxShadow: TossShadow.weak,
       ),
+      padding: widget.padding ?? const EdgeInsets.all(TossSpacing.lg),
+      child: widget.child,
     );
 
-    if (onTap != null) {
-      return GestureDetector(onTap: onTap, child: card);
-    }
-    return card;
+    if (widget.onTap == null) return card;
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? TossMotion.pressedScale : 1.0,
+        duration: TossMotion.fast,
+        curve: TossMotion.easeOut,
+        child: card,
+      ),
+    );
   }
 }
 
@@ -70,8 +74,8 @@ class PillBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(TossRadius.full),
       ),
       child: Text(
         label,
@@ -100,7 +104,8 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: const EdgeInsets.fromLTRB(
+        TossSpacing.screen, TossSpacing.xl, TossSpacing.screen, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -109,7 +114,7 @@ class SectionHeader extends StatelessWidget {
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
+              color: TossColors.textPrimary,
             ),
           ),
           if (trailing != null)
@@ -119,7 +124,7 @@ class SectionHeader extends StatelessWidget {
                 trailing!,
                 style: const TextStyle(
                   fontSize: 14,
-                  color: AppTheme.blue,
+                  color: TossColors.blue500,
                   fontWeight: FontWeight.w500,
                 ),
               ),

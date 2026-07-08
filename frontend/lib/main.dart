@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'screens/add_item_choice_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/todo_screen.dart';
@@ -19,6 +20,8 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // 포그라운드 서비스(음성 대기)와 UI 격리자 간 통신 포트 초기화.
+  FlutterForegroundTask.initCommunicationPort();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

@@ -9,20 +9,12 @@ import '../data/mock_voice_data.dart';
 /// 화면 코드는 그대로 유지된다.
 ///
 /// 대응 엔드포인트:
-///   - getDailyBriefing   → POST /api/v1/briefings/daily
 ///   - getEmotionCoaching → POST /api/v1/emotion/analyze
 ///   - getMockCallAlert   → POST /api/v1/alerts/departure-plan
 ///   - requestTts         → POST /api/v1/voice/tts
 class MockVoiceService {
   /// 네트워크 지연을 흉내내는 가짜 딜레이.
   static const Duration _fakeLatency = Duration(milliseconds: 600);
-
-  /// 하루 브리핑 Mock 응답(`{success, message, data}`) 반환.
-  Future<Map<String, dynamic>> getDailyBriefing({String? date}) async {
-    await Future.delayed(_fakeLatency);
-    // TODO(backend): apiClient.postData('$apiPrefix/briefings/daily', body: {...})
-    return mockDailyBriefing;
-  }
 
   /// 감정 기반 코칭 Mock 응답 반환.
   /// [text] 는 사용자의 발화/입력이며, 이번 단계에서는 응답에 영향을 주지 않는다.

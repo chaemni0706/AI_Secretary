@@ -8,51 +8,7 @@ library;
 
 import '../theme/app_constants.dart';
 
-/// 하루 브리핑 Mock (`POST /api/v1/briefings/daily`).
-final Map<String, dynamic> mockDailyBriefing = {
-  "success": true,
-  "message": "하루 브리핑을 생성했습니다.",
-  "data": {
-    "briefing_id": "brief_20260702_user1",
-    "date": "2026-07-02",
-    "summary": {
-      "schedule_count": 2,
-      "todo_count": 1,
-      "high_priority_count": 2,
-    },
-    "briefing_text":
-        "좋은 아침이에요. 오늘은 오전 10시에 팀 회의가 있고, 오후 3시에 병원 예약이 있어요. 오늘 안에 과제 제출도 필요하니 회의가 끝난 뒤 미리 정리해두면 좋아요.",
-    "sections": [
-      {
-        "type": "today_schedule",
-        "title": "오늘 일정",
-        "content": "오늘은 팀 회의와 병원 예약이 있습니다.",
-      },
-      {
-        "type": "important_todo",
-        "title": "중요한 할 일",
-        "content": "오늘 안에 과제 제출이 필요합니다.",
-      },
-      {
-        "type": "recommendation",
-        "title": "추천 행동",
-        "content": "팀 회의 후 과제 제출 준비 시간을 확보하는 것을 추천합니다.",
-      },
-    ],
-    "next_event": {
-      "id": "sch_001",
-      "title": "팀 회의",
-      "start_time": "10:00",
-      "minutes_until_start": 120,
-    },
-    "tts_text":
-        "좋은 아침이에요. 오늘은 오전 10시에 팀 회의가 있고, 오후 3시에 병원 예약이 있어요. 과제 제출도 오늘까지라서 회의가 끝난 뒤 미리 정리해두면 좋아요.",
-    "recommended_actions": [
-      "팀 회의 30분 전 알림 설정",
-      "과제 제출 마감 알림 설정",
-    ],
-  },
-};
+// (mockDailyBriefing 제거됨: 브리핑은 BriefingScreen + 실제 briefingApi 로 통합)
 
 /// 음성 챗봇이 흉내낼 사용자의 고정 발화(마이크 버튼용).
 const String mockUserSpeechText = "오늘 너무 힘들어. 과제 시간을 좀 미룰 수 있을까?";

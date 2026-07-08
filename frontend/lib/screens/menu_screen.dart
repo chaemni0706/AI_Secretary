@@ -3,6 +3,7 @@ import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import 'briefing_screen.dart';
+import 'hotword_control_screen.dart';
 import 'booking_recommend_screen.dart';
 import 'booking_message_screen.dart';
 import 'voice_chat_screen.dart';
@@ -121,13 +122,6 @@ class MenuScreen extends StatelessWidget {
   Widget _buildMvpSection(BuildContext context) {
     final items = [
       _MenuItem(
-        icon: Icons.summarize_outlined,
-        color: AppTheme.blue,
-        title: '브리핑 상세',
-        subtitle: '오늘 요약·주의사항',
-        onTap: () => _openService(context, const BriefingScreen()),
-      ),
-      _MenuItem(
         icon: Icons.event_available_outlined,
         color: AppTheme.green,
         title: '예약 후보 추천',
@@ -184,6 +178,13 @@ class MenuScreen extends StatelessWidget {
         title: 'AI 음성 챗봇',
         subtitle: '감정 기반 코칭',
         onTap: () => _openService(context, const VoiceChatScreen()),
+      ),
+      _MenuItem(
+        icon: Icons.record_voice_over_outlined,
+        color: AppTheme.green,
+        title: '음성 비서 (포비)',
+        subtitle: '"포비" 로 브리핑 호출',
+        onTap: () => _openService(context, const HotwordControlScreen()),
       ),
       _MenuItem(
         icon: Icons.phone_in_talk_outlined,

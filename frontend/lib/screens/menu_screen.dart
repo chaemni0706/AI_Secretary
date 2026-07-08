@@ -5,7 +5,6 @@ import '../widgets/glass_card.dart';
 import 'briefing_screen.dart';
 import 'booking_recommend_screen.dart';
 import 'booking_message_screen.dart';
-import 'daily_briefing_screen.dart';
 import 'voice_chat_screen.dart';
 import 'voice_schedule_screen.dart';
 import 'mock_call_alert_screen.dart';
@@ -177,7 +176,7 @@ class MenuScreen extends StatelessWidget {
         color: AppTheme.blue,
         title: '오늘의 브리핑',
         subtitle: '하루 요약·듣기',
-        onTap: () => _openService(context, const DailyBriefingScreen()),
+        onTap: () => _openService(context, const BriefingScreen()),
       ),
       _MenuItem(
         icon: Icons.mic_none_outlined,

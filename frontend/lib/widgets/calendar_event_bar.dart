@@ -18,8 +18,8 @@ class CalendarEventBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 16,
-      margin: const EdgeInsets.only(top: 2),
+      height: 14,
+      margin: const EdgeInsets.only(top: 1),
       padding: EdgeInsets.only(
         left: startsOnThisDay ? 5 : 2,
         right: endsOnThisDay ? 5 : 2,
@@ -37,6 +37,7 @@ class CalendarEventBar extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textScaler: TextScaler.noScaling,
               style: const TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,

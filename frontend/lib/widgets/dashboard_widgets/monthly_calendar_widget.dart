@@ -111,12 +111,17 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 22,
-          height: 22,
+    // 정사각형 그리드 셀(GridView 비율 1.0)보다 내용이 살짝 커서 생기던
+    // bottom overflow(수 px)를 방지: 셀 크기에 맞게 내용을 축소만(scaleDown) 한다.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isToday ? accent : Colors.transparent,
@@ -140,7 +145,8 @@ class _DayCell extends StatelessWidget {
             shape: BoxShape.circle,
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }

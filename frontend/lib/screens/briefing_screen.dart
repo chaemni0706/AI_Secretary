@@ -4,6 +4,8 @@ import '../widgets/glass_card.dart';
 import '../models/briefing_model.dart';
 import '../services/briefing_api.dart';
 import '../services/api_client.dart';
+import '../services/voice_api.dart';
+import '../services/voice_tts_service.dart';
 
 class BriefingScreen extends StatefulWidget {
   const BriefingScreen({super.key});
@@ -17,10 +19,45 @@ class _BriefingScreenState extends State<BriefingScreen> {
   String? _error;
   BriefingModel? _data;
 
+  final VoiceTtsService _ttsService = VoiceTtsService();
+  bool _speaking = false;
+
   @override
   void initState() {
     super.initState();
+    _ttsService.init();
     _loadBriefing();
+  }
+
+  @override
+  void dispose() {
+    _ttsService.stop();
+    super.dispose();
+  }
+
+  /// "브리핑 듣기": 백엔드가 내려준 음성 문장(ttsText)을 우선 재생하고,
+  /// 없으면 요약 + 핵심 포인트를 이어 붙여 읽는다. 재생 중 다시 누르면 중지.
+  Future<void> _playBriefingTts() async {
+    final d = _data;
+    if (d == null) return;
+
+    if (_speaking) {
+      await _ttsService.stop();
+      if (mounted) setState(() => _speaking = false);
+      return;
+    }
+
+    final fromPoints = [d.summary, ...d.keyPoints]
+        .where((s) => s.trim().isNotEmpty)
+        .join('. ');
+    final raw = (d.ttsText != null && d.ttsText!.trim().isNotEmpty)
+        ? d.ttsText!.trim()
+        : fromPoints;
+    final text = raw.trim().isEmpty ? '오늘 브리핑을 불러오지 못했습니다.' : raw;
+
+    setState(() => _speaking = true);
+    await voiceApi.speak(_ttsService, text, source: 'briefing');
+    if (mounted) setState(() => _speaking = false);
   }
 
   Future<void> _loadBriefing() async {
@@ -219,6 +256,31 @@ class _BriefingScreenState extends State<BriefingScreen> {
               fontSize: 14,
               color: AppTheme.textPrimary,
               height: 1.55,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _playBriefingTts,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.blue,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: Icon(
+                _speaking ? Icons.stop_rounded : Icons.volume_up_rounded,
+                size: 20,
+              ),
+              label: Text(
+                _speaking ? '중지' : '브리핑 듣기',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],

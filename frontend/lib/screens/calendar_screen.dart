@@ -425,7 +425,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           eventLoader: (_) => const [],
           headerVisible: false,
           daysOfWeekHeight: 28,
-          rowHeight: 68,
+          rowHeight: 74,
           calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, day, focusedDay) =>
                 _buildMonthDayCell(day),
@@ -539,6 +539,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             alignment: Alignment.topCenter,
             child: Text(
               '${day.day}',
+              textScaler: TextScaler.noScaling,
               style: TextStyle(
                 color: textColor,
                 fontSize: 12,
@@ -548,7 +549,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 1),
           // lane별 고정 배치: 해당 행에 일정이 있으면 바, 없으면 빈 자리(정렬 유지).
           for (int r = 0; r < visibleLanes; r++)
             laneSeg(r) != null
@@ -559,12 +559,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         isSameDay(laneSeg(r)!.start, laneSeg(r)!.date),
                     endsOnThisDay: isSameDay(laneSeg(r)!.end, laneSeg(r)!.date),
                   )
-                : const SizedBox(height: 18),
+                : const SizedBox(height: 15),
           if (hidden > 0)
             Padding(
               padding: const EdgeInsets.only(top: 1),
               child: Text(
                 '+$hidden',
+                textScaler: TextScaler.noScaling,
                 style: const TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w700,

@@ -11,13 +11,13 @@ import 'package:flutter/foundation.dart';
 /// 환경에 맞게 아래 값 하나만 바꾸면 됩니다.
 // const String baseUrl = 'http://127.0.0.1:8000';
 // const String baseUrl = 'http://141.223.140.84:8000';
-const String baseUrl = 'http://192.168.0.61:8000';
+// const String baseUrl = 'http://192.168.0.61:8000';
 
 // Android Emulator용:
 // const String baseUrl = 'http://10.0.2.2:8000';
 
 // 실제 기기용:
-// const String baseUrl = 'http://192.168.0.10:8000';
+const String baseUrl = 'http://192.168.0.73:8000';
 
 /// API 공통 prefix (`/health` 제외).
 const String apiPrefix = '/api/v1';

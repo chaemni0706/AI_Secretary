@@ -2,6 +2,9 @@
     <!-- 음성 인식(speech_to_text)용 마이크 권한 + 백엔드 /voice/tts 호출용 인터넷 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 날씨/위치 조회(geolocator)용 위치 권한 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- 자동 브리핑 local notification (flutter_local_notifications) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />

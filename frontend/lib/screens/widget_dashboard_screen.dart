@@ -27,7 +27,7 @@ import '../widgets/dashboard_widgets/weather_widget.dart';
 import '../widgets/dashboard_widgets/weekly_calendar_widget.dart';
 import 'ai_chat_screen.dart';
 import 'booking_recommend_screen.dart';
-import 'daily_briefing_screen.dart';
+import 'briefing_screen.dart';
 import 'dashboard_stub_screens.dart';
 import 'ledger_report_screen.dart';
 import 'weather_detail_screen.dart';
@@ -170,7 +170,7 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
   void _onWidgetTap(DashboardWidgetType type) {
     switch (type) {
       case DashboardWidgetType.briefing:
-        _push(const DailyBriefingScreen());
+        _push(const BriefingScreen());
       case DashboardWidgetType.monthlyCalendar:
       case DashboardWidgetType.weeklyCalendar:
         requestTab(DashboardTabIndex.calendar);

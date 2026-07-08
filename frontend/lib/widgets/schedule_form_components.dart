@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../core/utils/schedule_date_parser.dart';
@@ -434,6 +435,8 @@ class ScheduleTimePickerRow extends StatelessWidget {
   }
 }
 
+/// iOS 캘린더 스타일 시간 휠 선택기(오전/오후 + 시 + 5분 단위 분).
+/// [ScheduleFormComponents]/[TodoFormComponents] 양쪽에서 공용으로 쓴다.
 class InlineTimePicker extends StatelessWidget {
   final String selectedTime;
   final ValueChanged<String> onTimeSelected;
@@ -444,39 +447,42 @@ class InlineTimePicker extends StatelessWidget {
     required this.onTimeSelected,
   });
 
+  DateTime _initialDateTime() {
+    final now = DateTime.now();
+    final match = RegExp(
+      r'^(\d{1,2}):(\d{2})$',
+    ).firstMatch(selectedTime.trim());
+    if (match == null) {
+      final roundedMinute = (now.minute / 5).round() * 5 % 60;
+      return DateTime(now.year, now.month, now.day, now.hour, roundedMinute);
+    }
+    final hour = int.parse(match.group(1)!);
+    final minute = int.parse(match.group(2)!);
+    return DateTime(now.year, now.month, now.day, hour, minute);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final times = <String>[
-      for (var hour = 6; hour <= 23; hour++) ...[
-        '${hour.toString().padLeft(2, '0')}:00',
-        '${hour.toString().padLeft(2, '0')}:30',
-      ],
-    ];
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppTheme.background.withValues(alpha: 0.68),
           borderRadius: BorderRadius.circular(AppRadii.control),
           border: Border.all(color: AppTheme.separator.withValues(alpha: 0.7)),
         ),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: times
-              .map(
-                (time) => GestureDetector(
-                  onTap: () => onTimeSelected(time),
-                  child: TimeSelectionChip(
-                    label: time,
-                    selected: selectedTime == time,
-                  ),
-                ),
-              )
-              .toList(),
+        height: 216,
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.time,
+          backgroundColor: Colors.transparent,
+          use24hFormat: false,
+          minuteInterval: 5,
+          initialDateTime: _initialDateTime(),
+          onDateTimeChanged: (value) {
+            final hh = value.hour.toString().padLeft(2, '0');
+            final mm = value.minute.toString().padLeft(2, '0');
+            onTimeSelected('$hh:$mm');
+          },
         ),
       ),
     );

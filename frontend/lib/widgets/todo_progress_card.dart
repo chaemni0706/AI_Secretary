@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
+import '../theme/illustrations.dart';
 import 'glass_card.dart';
 import 'todo_progress_celebration.dart';
 import 'toss_motion_widgets.dart';
@@ -23,14 +24,30 @@ class TodoProgressCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: GlassCard(
         padding: const EdgeInsets.all(TossSpacing.xl),
+        shadow: TossShadow.medium,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Expanded(
-                  child: Text('오늘 진행률', style: TossTypography.caption),
+                Expanded(
+                  child: Row(
+                    children: [
+                      if (complete) ...[
+                        Image.asset(
+                          AppIllustrations.party,
+                          width: 26,
+                          height: 26,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      const Text(
+                        '오늘 진행률',
+                        style: TossTypography.caption,
+                      ),
+                    ],
+                  ),
                 ),
                 TodoProgressCelebration(
                   active: complete,

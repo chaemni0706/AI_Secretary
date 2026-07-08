@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/todo_model.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
+import '../theme/illustrations.dart';
 import '../theme/todo_styles.dart';
 import 'todo_card.dart';
+
+/// 카테고리 헤더에 작게 곁들이는 일러스트(있는 카테고리만).
+const Map<String, String> _categoryIllustrations = {
+  '공부': AppIllustrations.books,
+  '건강': AppIllustrations.muscle,
+};
 
 class TodoCategorySection extends StatelessWidget {
   final String title;
@@ -55,6 +62,14 @@ class TodoCategorySection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+                if (_categoryIllustrations[title] != null) ...[
+                  Image.asset(
+                    _categoryIllustrations[title]!,
+                    width: 22,
+                    height: 22,
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Text(
                   title,
                   style: AppTextStyles.sectionTitle.copyWith(

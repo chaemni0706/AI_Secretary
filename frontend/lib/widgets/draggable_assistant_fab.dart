@@ -213,13 +213,7 @@ class AssistantSpeedDialMenu extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: action.color,
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: action.color.withValues(alpha: 0.28),
-                            blurRadius: 14,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
+                        boxShadow: TossShadow.glow(action.color),
                       ),
                       child: Icon(action.icon, color: Colors.white, size: 22),
                     ),
@@ -249,13 +243,11 @@ class _AssistantMainButton extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: TossColors.blue500,
-        boxShadow: [
-          BoxShadow(
-            color: TossColors.blue500.withValues(alpha: open ? 0.32 : 0.22),
-            blurRadius: open ? 18 : 12,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        boxShadow: TossShadow.glow(
+          TossColors.blue500,
+          alpha: open ? 0.32 : 0.22,
+          blur: open ? 18 : 12,
+        ),
       ),
       child: AnimatedRotation(
         turns: open ? 0.125 : 0,

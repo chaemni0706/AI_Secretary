@@ -3,6 +3,7 @@ import '../../data/widget_catalog.dart';
 import '../../models/dashboard_model.dart';
 import '../../models/dashboard_widget_model.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/illustrations.dart';
 import 'dashboard_widget_card.dart';
 
 /// 오늘 요약 / 하루 브리핑 (Medium).
@@ -55,7 +56,7 @@ class BriefingWidget extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.auto_awesome, size: 14, color: spec.accent),
+            Image.asset(AppIllustrations.wave, width: 16, height: 16),
             const SizedBox(width: 6),
             Expanded(
               child: Text(

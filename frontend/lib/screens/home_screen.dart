@@ -250,13 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(
                     color: AppTheme.separator.withOpacity(0.8), width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: TossShadow.tiny,
               ),
               child: const Icon(Icons.notifications_outlined,
                   color: AppTheme.textPrimary, size: 20),

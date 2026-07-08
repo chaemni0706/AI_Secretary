@@ -22,13 +22,12 @@ class LedgerAiBriefingCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LedgerStyles.briefingGradient,
-        boxShadow: [
-          BoxShadow(
-            color: TossColors.blue700.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: TossShadow.glow(
+          TossColors.blue700,
+          alpha: 0.25,
+          blur: 20,
+          offset: const Offset(0, 6),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(18, 17, 18, 16),
       child: Column(

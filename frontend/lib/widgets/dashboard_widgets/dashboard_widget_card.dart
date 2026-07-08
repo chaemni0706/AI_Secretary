@@ -112,13 +112,7 @@ class _DeleteButton extends StatelessWidget {
           color: AppTheme.red,
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: TossShadow.tiny,
         ),
         child: const Icon(Icons.remove, size: 16, color: Colors.white),
       ),
@@ -146,13 +140,7 @@ class _SizeSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: TossShadow.tiny,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

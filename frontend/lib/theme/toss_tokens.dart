@@ -107,6 +107,25 @@ class TossShadow {
       offset: Offset(0, 8),
     ),
   ];
+
+  /// 색이 있는 강조 그림자(버튼/칩/아바타 글로우). 무채색 elevation 토큰과 별개로,
+  /// 브랜드/카테고리 색을 그대로 은은하게 퍼뜨릴 때 사용한다.
+  static List<BoxShadow> glow(
+    Color color, {
+    double alpha = 0.28,
+    double blur = 14,
+    Offset offset = const Offset(0, 5),
+    double spreadRadius = 0,
+  }) {
+    return [
+      BoxShadow(
+        color: color.withValues(alpha: alpha),
+        blurRadius: blur,
+        offset: offset,
+        spreadRadius: spreadRadius,
+      ),
+    ];
+  }
 }
 
 class TossTypography {

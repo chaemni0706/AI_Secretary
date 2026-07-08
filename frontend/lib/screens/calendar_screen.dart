@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
+import '../theme/illustrations.dart';
 import '../theme/schedule_styles.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/app_top_actions.dart';
@@ -708,13 +709,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         if (total == 0)
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: GlassCard(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Text(
-                '이번 주에 등록된 일정이 없습니다.',
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              ),
-            ),
+            child: _EmptyScheduleCard(message: '이번 주에 등록된 일정이 없습니다.'),
           )
         else
           ...ScheduleStyles.categoryOrder.map(
@@ -775,13 +770,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         else if (daySchedules.isEmpty)
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: GlassCard(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Text(
-                '이 날짜에 등록된 일정이 없습니다.',
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              ),
-            ),
+            child: _EmptyScheduleCard(message: '이 날짜에 등록된 일정이 없습니다.'),
           )
         else
           ...daySchedules.map(
@@ -851,4 +840,29 @@ class _MonthEventSegment {
   });
 
   int get daySpan => end.difference(start).inDays + 1;
+}
+
+/// 일정 없음 빈 상태 카드 — 일러스트 + 안내 문구.
+class _EmptyScheduleCard extends StatelessWidget {
+  final String message;
+
+  const _EmptyScheduleCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+      child: Column(
+        children: [
+          Image.asset(AppIllustrations.seedling, width: 64, height: 64),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
 }

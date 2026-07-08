@@ -103,13 +103,7 @@ class _BalanceCard extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.white.withValues(alpha: 0.55)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: TossShadow.weak,
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -232,13 +226,7 @@ class _SectionCard extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.white.withValues(alpha: 0.55)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: TossShadow.weak,
       ),
       padding: const EdgeInsets.all(20),
       child: child,

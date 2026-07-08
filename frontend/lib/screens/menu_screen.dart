@@ -92,13 +92,7 @@ class MenuScreen extends StatelessWidget {
           color: const Color(0xFFEEEFF5),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.separator),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: TossShadow.tiny,
         ),
         child: const TextField(
           style: TextStyle(fontSize: 14, color: AppTheme.textPrimary),

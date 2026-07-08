@@ -660,13 +660,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.blue,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.blue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                boxShadow: TossShadow.glow(
+                  AppTheme.blue,
+                  alpha: 0.3,
+                  blur: 8,
+                  offset: const Offset(0, 3),
+                ),
               ),
               child: const Icon(Icons.send, color: Colors.white, size: 18),
             ),
@@ -733,13 +732,7 @@ class _ChatBubble extends StatelessWidget {
                   bottomLeft: Radius.circular(message.isUser ? 16 : 4),
                   bottomRight: Radius.circular(message.isUser ? 4 : 16),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: TossShadow.tiny,
               ),
               child: Text(
                 message.text,

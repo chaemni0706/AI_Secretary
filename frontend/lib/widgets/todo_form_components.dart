@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import '../core/utils/schedule_date_parser.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../theme/todo_styles.dart';
 import 'glass_card.dart';
+// 날짜/시간 인라인 피커는 일정 추가 폼과 공용으로 쓴다(중복 구현 금지).
+import 'schedule_form_components.dart' show InlineCalendarPicker, InlineTimePicker;
 
 class TodoFormSection extends StatelessWidget {
   final List<Widget> children;
@@ -112,46 +115,187 @@ class TodoTextInputRow extends StatelessWidget {
   }
 }
 
-class TodoDateInputRow extends StatelessWidget {
+/// 날짜 입력 행 — 탭하면 일정 추가 폼과 동일한 인라인 달력이 펼쳐진다.
+class TodoDatePickerRow extends StatelessWidget {
   final TextEditingController controller;
+  final bool expanded;
+  final DateTime focusedDay;
+  final ValueChanged<bool> onExpandedChanged;
+  final ValueChanged<DateTime> onFocusedDayChanged;
+  final ValueChanged<DateTime> onDateSelected;
   final VoidCallback onNormalize;
   final bool showDivider;
 
-  const TodoDateInputRow({
+  const TodoDatePickerRow({
     super.key,
     required this.controller,
+    required this.expanded,
+    required this.focusedDay,
+    required this.onExpandedChanged,
+    required this.onFocusedDayChanged,
+    required this.onDateSelected,
     required this.onNormalize,
     this.showDivider = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TodoFormRow(
-      icon: Icons.event_outlined,
-      label: '날짜',
-      showDivider: showDivider,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 34),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.blue.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: TextField(
-          controller: controller,
-          onSubmitted: (_) => onNormalize(),
-          onEditingComplete: onNormalize,
-          style: AppTextStyles.cardTitle.copyWith(color: AppTheme.blue),
-          decoration: InputDecoration(
-            hintText: 'YYYY-MM-DD',
-            isDense: true,
-            border: InputBorder.none,
-            hintStyle: AppTextStyles.cardTitle.copyWith(
-              color: AppTheme.blue.withValues(alpha: 0.62),
+    return Column(
+      children: [
+        TodoFormRow(
+          icon: Icons.event_outlined,
+          label: '날짜',
+          showDivider: false,
+          child: GestureDetector(
+            onTap: () => onExpandedChanged(!expanded),
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 34),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.blue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: TextField(
+                      controller: controller,
+                      onTap: () => onExpandedChanged(true),
+                      onSubmitted: (_) => onNormalize(),
+                      onEditingComplete: onNormalize,
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: AppTheme.blue,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'YYYY-MM-DD',
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintStyle: AppTextStyles.cardTitle.copyWith(
+                          color: AppTheme.blue.withValues(alpha: 0.62),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: AppTheme.textSecondary,
+                ),
+              ],
             ),
           ),
         ),
-      ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: InlineCalendarPicker(
+            selectedDate: ScheduleDateParser.parse(controller.text),
+            focusedDay: focusedDay,
+            onFocusedDayChanged: onFocusedDayChanged,
+            onDateSelected: onDateSelected,
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
+          sizeCurve: Curves.easeOut,
+        ),
+        if (showDivider)
+          Divider(
+            height: 1,
+            indent: 58,
+            color: AppTheme.separator.withValues(alpha: 0.7),
+          ),
+      ],
+    );
+  }
+}
+
+/// 시간 입력 행 — 탭하면 iOS 스타일 시간 휠(오전/오후 + 5분 단위)이 펼쳐진다.
+/// 값이 비어 있으면 "시간 미정"으로 표시되는 선택 항목(할 일은 시간이 선택 사항).
+class TodoTimePickerRow extends StatelessWidget {
+  final TextEditingController controller;
+  final bool expanded;
+  final ValueChanged<bool> onExpandedChanged;
+  final ValueChanged<String> onTimeSelected;
+  final bool showDivider;
+
+  const TodoTimePickerRow({
+    super.key,
+    required this.controller,
+    required this.expanded,
+    required this.onExpandedChanged,
+    required this.onTimeSelected,
+    this.showDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TodoFormRow(
+          icon: Icons.schedule_outlined,
+          label: '시간',
+          showDivider: false,
+          child: GestureDetector(
+            onTap: () => onExpandedChanged(!expanded),
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.blue.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    controller.text.trim().isEmpty
+                        ? '시간 미정'
+                        : controller.text.trim(),
+                    style: AppTextStyles.cardTitle.copyWith(
+                      color: AppTheme.blue,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: AppTheme.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: InlineTimePicker(
+            selectedTime: controller.text,
+            onTimeSelected: onTimeSelected,
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 180),
+          sizeCurve: Curves.easeOut,
+        ),
+        if (showDivider)
+          Divider(
+            height: 1,
+            indent: 58,
+            color: AppTheme.separator.withValues(alpha: 0.7),
+          ),
+      ],
     );
   }
 }

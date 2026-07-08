@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/add_item_choice_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/todo_screen.dart';
@@ -34,6 +35,13 @@ class MyApp extends StatelessWidget {
       title: '나의 AI 비서',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      // CupertinoDatePicker(시간 휠 선택) 등 Cupertino 위젯이 필요로 함.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ko', 'KR')],
       home: const MainNavigator(),
     );
   }

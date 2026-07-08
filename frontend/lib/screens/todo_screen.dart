@@ -5,6 +5,7 @@ import '../services/dashboard_api.dart';
 import '../services/todo_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
+import '../theme/illustrations.dart';
 import '../theme/todo_styles.dart';
 import '../widgets/app_top_actions.dart';
 import '../widgets/glass_card.dart';
@@ -341,12 +342,9 @@ class _TodoScreenState extends State<TodoScreen>
           if (_todayTodos.isEmpty && _todayDoneTodos.isEmpty)
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: GlassCard(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                child: Text(
-                  '오늘 마감인 할 일이 없습니다.',
-                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                ),
+              child: _TodoEmptyState(
+                illustration: AppIllustrations.coffee,
+                message: '오늘 마감인 할 일이 없습니다.',
               ),
             )
           else ...[
@@ -414,18 +412,9 @@ class _TodoScreenState extends State<TodoScreen>
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
-                  child: GlassCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 18,
-                    ),
-                    child: Text(
-                      emptyText,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
+                  child: _TodoEmptyState(
+                    illustration: AppIllustrations.leaf,
+                    message: emptyText,
                   ),
                 ),
               ],
@@ -546,6 +535,32 @@ class _TodoSectionTitle extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 할 일 빈 상태 카드 — 일러스트 + 안내 문구.
+class _TodoEmptyState extends StatelessWidget {
+  final String illustration;
+  final String message;
+
+  const _TodoEmptyState({required this.illustration, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+      child: Column(
+        children: [
+          Image.asset(illustration, width: 64, height: 64),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }

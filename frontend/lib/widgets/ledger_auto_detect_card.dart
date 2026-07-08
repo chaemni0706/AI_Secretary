@@ -29,6 +29,7 @@ class LedgerAutoDetectCard extends StatelessWidget {
         color: AppTheme.blue.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.blue.withValues(alpha: 0.18)),
+        boxShadow: TossShadow.tiny,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(

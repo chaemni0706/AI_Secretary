@@ -19,8 +19,14 @@ class TodoFormScreen extends StatefulWidget {
 }
 
 class _TodoFormScreenState extends State<TodoFormScreen> {
+  static final RegExp _timeLinePattern = RegExp(
+    r'^\s*시간:\s*([^\n]+)\s*$',
+    multiLine: true,
+  );
+
   final _titleController = TextEditingController();
   final _dateController = TextEditingController();
+  final _timeController = TextEditingController();
   final _memoController = TextEditingController();
 
   String _category = TodoStyles.categoryOrder.first;
@@ -28,6 +34,9 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
   bool _completed = false;
   bool _saving = false;
   bool _deleting = false;
+  bool _datePickerOpen = false;
+  bool _timePickerOpen = false;
+  DateTime _focusedDate = DateTime.now();
 
   bool get _isEditMode => widget.initialTodo != null;
 
@@ -35,21 +44,61 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
   void initState() {
     super.initState();
     final todo = widget.initialTodo;
-    if (todo == null) return;
-    _titleController.text = todo.title;
-    _dateController.text = todo.dueDate ?? '';
-    _memoController.text = todo.memo ?? '';
-    _category = TodoStyles.categoryLabel(todo.category);
-    _priority = todo.priority;
-    _completed = todo.completed;
+    if (todo != null) {
+      _titleController.text = todo.title;
+      _dateController.text = todo.dueDate ?? '';
+      _category = TodoStyles.categoryLabel(todo.category);
+      _priority = todo.priority;
+      _completed = todo.completed;
+
+      final memo = todo.memo ?? '';
+      final timeMatch = _timeLinePattern.firstMatch(memo);
+      if (timeMatch != null) {
+        _timeController.text = timeMatch.group(1)!.trim();
+        _memoController.text = memo.replaceAll(_timeLinePattern, '').trim();
+      } else {
+        _memoController.text = memo;
+      }
+    }
+    _focusedDate =
+        ScheduleDateParser.parse(_dateController.text) ?? DateTime.now();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _dateController.dispose();
+    _timeController.dispose();
     _memoController.dispose();
     super.dispose();
+  }
+
+  void _closePickersExcept(String target) {
+    setState(() {
+      _datePickerOpen = target == 'date' ? !_datePickerOpen : false;
+      _timePickerOpen = target == 'time' ? !_timePickerOpen : false;
+    });
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      _dateController.text = ScheduleDateParser.format(date);
+      _focusedDate = date;
+      _datePickerOpen = false;
+    });
+  }
+
+  void _selectTime(String time) {
+    setState(() => _timeController.text = time);
+  }
+
+  /// 메모 텍스트에 "시간: HH:mm" 한 줄을 반영(있으면 교체, 없으면 추가/제거).
+  String? _composeMemo() {
+    final memo = _memoController.text.trim();
+    final time = _timeController.text.trim();
+    if (time.isEmpty) return memo.isEmpty ? null : memo;
+    final timeLine = '시간: $time';
+    return memo.isEmpty ? timeLine : '$memo\n$timeLine';
   }
 
   void _snack(String message) {
@@ -67,6 +116,7 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
       return false;
     }
     _dateController.text = normalized;
+    _focusedDate = ScheduleDateParser.parse(normalized) ?? _focusedDate;
     return true;
   }
 
@@ -82,7 +132,7 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
       'priority': _priority,
       'completed': _completed,
       'category': _category,
-      'memo': optional(_memoController.text),
+      'memo': _composeMemo(),
       'source': widget.initialTodo?.source ?? 'user',
     };
   }
@@ -222,9 +272,15 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
                     icon: Icons.title,
                     hint: '예: 자료 정리하기',
                   ),
-                  TodoDateInputRow(
+                  TodoDatePickerRow(
                     controller: _dateController,
-                    onNormalize: _normalizeDate,
+                    expanded: _datePickerOpen,
+                    focusedDay: _focusedDate,
+                    onExpandedChanged: (_) => _closePickersExcept('date'),
+                    onFocusedDayChanged: (date) =>
+                        setState(() => _focusedDate = date),
+                    onDateSelected: _selectDate,
+                    onNormalize: () => _normalizeDate(),
                   ),
                   TodoCategorySelector(
                     value: _category,
@@ -250,10 +306,11 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
                     value: _completed,
                     onChanged: (value) => setState(() => _completed = value),
                   ),
-                  const TodoDisabledInfoRow(
-                    icon: Icons.schedule_outlined,
-                    label: '시간',
-                    value: '추후 지원',
+                  TodoTimePickerRow(
+                    controller: _timeController,
+                    expanded: _timePickerOpen,
+                    onExpandedChanged: (_) => _closePickersExcept('time'),
+                    onTimeSelected: _selectTime,
                   ),
                   const TodoDisabledInfoRow(
                     icon: Icons.notifications_outlined,

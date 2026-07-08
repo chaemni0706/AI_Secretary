@@ -11,6 +11,7 @@ class GlassCard extends StatefulWidget {
   final double borderRadius;
   final Color? color;
   final VoidCallback? onTap;
+  final List<BoxShadow>? shadow;
 
   const GlassCard({
     super.key,
@@ -19,6 +20,7 @@ class GlassCard extends StatefulWidget {
     this.borderRadius = TossRadius.lg,
     this.color,
     this.onTap,
+    this.shadow,
   });
 
   @override
@@ -34,7 +36,7 @@ class _GlassCardState extends State<GlassCard> {
       decoration: BoxDecoration(
         color: widget.color ?? TossColors.bgWhite,
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        boxShadow: TossShadow.weak,
+        boxShadow: widget.shadow ?? TossShadow.weak,
       ),
       padding: widget.padding ?? const EdgeInsets.all(TossSpacing.lg),
       child: widget.child,

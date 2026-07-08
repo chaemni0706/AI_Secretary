@@ -227,13 +227,7 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
                     color: isSelected ? AppTheme.blue : AppTheme.separator,
                   ),
                   boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.blue.withOpacity(0.25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          )
-                        ]
+                      ? TossShadow.glow(AppTheme.blue, alpha: 0.25, blur: 8, offset: const Offset(0, 3))
                       : null,
                 ),
                 child: Text(

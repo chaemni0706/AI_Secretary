@@ -13,6 +13,7 @@ import '../services/todo_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/toss_button.dart';
+import '../widgets/toss_motion_widgets.dart';
 import '../widgets/dashboard_widgets/add_widget_sheet.dart';
 import '../widgets/dashboard_widgets/ai_recommendation_widget.dart';
 import '../widgets/dashboard_widgets/briefing_widget.dart';
@@ -278,8 +279,8 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
           ),
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
           children: [
-            for (final row in rows) ...[
-              _buildRow(row, cellW),
+            for (final (i, row) in rows.indexed) ...[
+              TossFadeSlideIn(index: i, child: _buildRow(row, cellW)),
               const SizedBox(height: _gap),
             ],
             if (_editing) _buildEditFooter(),

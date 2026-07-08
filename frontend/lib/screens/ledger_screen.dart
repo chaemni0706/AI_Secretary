@@ -11,6 +11,7 @@ import '../widgets/ledger_ai_briefing_card.dart';
 import '../widgets/ledger_auto_detect_card.dart';
 import '../widgets/ledger_calendar_grid.dart';
 import '../widgets/ledger_transaction_row.dart';
+import '../widgets/toss_motion_widgets.dart';
 import 'ledger_report_screen.dart';
 
 /// AI 가계부 메인 화면 — 소비 달력 홈.
@@ -191,8 +192,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   style: TossTypography.caption,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${LedgerStyles.formatWon(MockLedgerData.monthSpend)}원',
+                TossCountUpText(
+                  value: MockLedgerData.monthSpend,
+                  formatter: (v) => '${LedgerStyles.formatWon(v)}원',
                   style: TossTypography.display.copyWith(fontSize: 26),
                 ),
                 const SizedBox(height: 6),

@@ -3,6 +3,7 @@ import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import 'glass_card.dart';
 import 'todo_progress_celebration.dart';
+import 'toss_motion_widgets.dart';
 
 class TodoProgressCard extends StatelessWidget {
   final int done;
@@ -33,8 +34,9 @@ class TodoProgressCard extends StatelessWidget {
                 ),
                 TodoProgressCelebration(
                   active: complete,
-                  child: Text(
-                    '$percent%',
+                  child: TossCountUpText(
+                    value: percent,
+                    formatter: (v) => '${v.round()}%',
                     style: TossTypography.display.copyWith(
                       color: complete
                           ? TossColors.green

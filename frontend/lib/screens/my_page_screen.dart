@@ -114,22 +114,15 @@ class _ProfileCard extends StatelessWidget {
               Container(
                 width: 76,
                 height: 76,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.teal, AppTheme.blue],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.blue.withValues(alpha: 0.16),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: TossColors.blueWeak,
                 ),
-                child: const Icon(Icons.person, color: Colors.white, size: 38),
+                child: const Icon(
+                  Icons.person,
+                  color: TossColors.blue500,
+                  size: 38,
+                ),
               ),
               Positioned(
                 right: -2,

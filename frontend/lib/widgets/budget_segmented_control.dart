@@ -19,9 +19,8 @@ class BudgetSegmentedControl extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.55),
+        color: TossColors.grey200,
         borderRadius: BorderRadius.circular(AppRadii.control),
-        border: Border.all(color: AppTheme.separator.withValues(alpha: 0.7)),
       ),
       child: Row(
         children: List.generate(labels.length, (index) {
@@ -31,21 +30,13 @@ class BudgetSegmentedControl extends StatelessWidget {
               onTap: () => onChanged(index),
               behavior: HitTestBehavior.opaque,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                curve: Curves.easeOut,
+                duration: TossMotion.fast,
+                curve: TossMotion.easeOut,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: selected ? Colors.white : Colors.transparent,
+                  color: selected ? TossColors.bgWhite : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadii.small),
-                  boxShadow: selected
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.07),
-                            blurRadius: 7,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
+                  boxShadow: selected ? TossShadow.tiny : null,
                 ),
                 child: Text(
                   labels[index],

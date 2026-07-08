@@ -178,7 +178,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   Widget _buildMonthSummary() {
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       onTap: _openReport,
       child: Row(
         children: [
@@ -186,21 +186,36 @@ class _LedgerScreenState extends State<LedgerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SummaryLine(
-                  label: '지출',
-                  value: LedgerStyles.formatWon(MockLedgerData.monthSpend),
-                  color: AppTheme.textPrimary,
+                Text(
+                  '${MockLedgerData.month}월에 쓴 돈',
+                  style: TossTypography.caption,
                 ),
-                const SizedBox(height: 9),
-                _SummaryLine(
-                  label: '수입',
-                  value: LedgerStyles.formatWon(MockLedgerData.monthIncome),
-                  color: AppTheme.blue,
+                const SizedBox(height: 4),
+                Text(
+                  '${LedgerStyles.formatWon(MockLedgerData.monthSpend)}원',
+                  style: TossTypography.display.copyWith(fontSize: 26),
+                ),
+                const SizedBox(height: 6),
+                Text.rich(
+                  TextSpan(
+                    style: TossTypography.caption,
+                    children: [
+                      const TextSpan(text: '수입 '),
+                      TextSpan(
+                        text:
+                            '${LedgerStyles.formatWon(MockLedgerData.monthIncome)}원',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: TossColors.blue600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+          const Icon(Icons.chevron_right, color: TossColors.grey400),
         ],
       ),
     );
@@ -372,63 +387,6 @@ class _LedgerPage extends StatelessWidget {
   }
 }
 
-class _SummaryLine extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _SummaryLine({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        SizedBox(
-          width: 30,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textTertiary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: value,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                  color: color,
-                ),
-              ),
-              TextSpan(
-                text: ' 원',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _BudgetAlertBanner extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -441,9 +399,8 @@ class _BudgetAlertBanner extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.orange.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.orange.withValues(alpha: 0.28)),
+          color: TossColors.orangeWeak,
+          borderRadius: BorderRadius.circular(TossRadius.lg),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
@@ -453,7 +410,7 @@ class _BudgetAlertBanner extends StatelessWidget {
               height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppTheme.orange.withValues(alpha: 0.18),
+                color: AppTheme.orange.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(9),
               ),
               child: const Icon(

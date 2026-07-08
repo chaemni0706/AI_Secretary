@@ -110,15 +110,13 @@ class LedgerTransactionRow extends StatelessWidget {
     final color = LedgerStyles.categoryColor(tx.catKey);
     return Container(
       decoration: showDivider
-          ? BoxDecoration(
+          ? const BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.separator.withValues(alpha: 0.7),
-                ),
+                bottom: BorderSide(color: TossColors.grey100),
               ),
             )
           : null,
-      padding: const EdgeInsets.symmetric(vertical: 13),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
           TransactionCategoryBar(color: color),

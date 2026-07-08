@@ -112,7 +112,8 @@ class _HotwordControlScreenState extends State<HotwordControlScreen> {
                     const SizedBox(height: 10),
                     const Text(
                       '예) "포비 오늘 브리핑", "포비 오늘 하루 요약"\n'
-                      '※ 지금은 이 앱이 켜져 있을 때만 동작합니다.',
+                      '※ 처음 켤 때 음성 모델(~48MB)을 내려받아 잠시 걸릴 수 있어요.\n'
+                      '※ 화면을 꺼도 대기하려면 배터리 최적화를 꺼주세요.',
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.5,

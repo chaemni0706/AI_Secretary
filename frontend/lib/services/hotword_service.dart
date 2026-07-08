@@ -17,11 +17,12 @@ import 'voice_tts_service.dart';
 /// flutter_foreground_task 로 마이크 타입 포그라운드 서비스를 띄워 프로세스를
 /// 살려두고(웨이크락), 인식은 메인 격리자의 이 서비스가 계속 수행한다.
 ///
-/// ⚠️ 사전 준비(무료): assets/models/ 에 Vosk 한국어 소형 모델 zip 을 넣고
-///   [_modelAsset] 경로를 맞출 것. (assets/models/README.txt 참고)
+/// 모델은 첫 실행 때 [_modelUrl] 에서 자동으로 내려받아 기기에 캐시한다.
+/// (assets 번들 불필요 → APK 경량 + 팀원 수동 준비 불필요. 이후엔 캐시 재사용.)
 class HotwordService {
-  // assets/models/ 에 넣은 Vosk 한국어 모델 zip. 압축 풀지 말 것(ModelLoader 가 품).
-  static const String _modelAsset = 'assets/models/vosk-model-small-ko-0.22.zip';
+  // Vosk 한국어 소형 모델(zip) URL. 첫 실행 때만 받고 이후엔 기기 캐시 사용.
+  static const String _modelUrl =
+      'https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip';
   static const int _sampleRate = 16000; // Vosk 소형 모델 표준 샘플레이트.
 
   // 웨이크워드 "포비" 의 STT 오인식 변형들(소형 모델 로그 기반: 후비/보비 등).
@@ -76,7 +77,8 @@ class HotwordService {
     // 화면이 꺼져도 프로세스가 살아있도록 포그라운드 서비스(마이크 타입) 구동.
     await _startForegroundService();
     try {
-      final modelPath = await ModelLoader().loadFromAssets(_modelAsset);
+      // 첫 실행 때 URL 에서 받아 기기에 캐시(이미 있으면 즉시 반환).
+      final modelPath = await ModelLoader().loadFromNetwork(_modelUrl);
       _model = await _vosk.createModel(modelPath);
       // 문법 제한 모드로 생성(정확도↑). grammar 단어에 사전에 없는 게 있어
       // 실패하면(OOV) 자유인식으로 폴백해 최소한 동작은 하게 한다.

@@ -58,7 +58,7 @@ class WidgetCatalog {
       title: '날씨',
       description: '오늘·주간 날씨',
       icon: Icons.cloud_outlined,
-      accent: Color(0xFF3AA0E8),
+      accent: TossColors.blue500,
       supportedSizes: [WidgetSize.small, WidgetSize.medium],
     ),
     DashboardWidgetType.budget: DashboardWidgetSpec(
@@ -74,7 +74,7 @@ class WidgetCatalog {
       title: '소비 분석',
       description: '소비 패턴·AI 코멘트',
       icon: Icons.pie_chart_outline,
-      accent: Color(0xFFE5457E),
+      accent: TossColors.red,
       supportedSizes: [WidgetSize.medium],
     ),
     DashboardWidgetType.preparation: DashboardWidgetSpec(
@@ -106,7 +106,7 @@ class WidgetCatalog {
       title: 'AI 추천',
       description: '일정·예약 AI 추천',
       icon: Icons.auto_awesome,
-      accent: Color(0xFF5E5CE6),
+      accent: TossColors.purple,
       supportedSizes: [WidgetSize.medium],
     ),
     DashboardWidgetType.reservation: DashboardWidgetSpec(

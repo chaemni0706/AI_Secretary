@@ -64,6 +64,12 @@ Camera Image
 water(clear+bottle)→verified, water(empty)→rejected, study(laptop_only)→rejected, study(open_book+doc)→verified,
 exercise(equipment_only)→rejected, exercise(person_exercising)→verified, water(unc high)→retake_required.
 
-## 9. 한계 / 다음
+## 9. 런타임 (실추론 구현됨)
+- `qwen3b_evidence_engine.py` 에 **transformers Qwen2.5-VL 실추론** 구현: `Qwen2_5_VLForConditionalGeneration` + `AutoProcessor`(+ `qwen_vl_utils.process_vision_info`), **lazy singleton**(최초 1회 로드 후 재사용). config: `qwen3b_runtime_config.py`(env: QWEN3B_MODEL_PATH/DEVICE/DTYPE/MAX_NEW_TOKENS/TEMPERATURE/DO_SAMPLE). **weight 는 repo 에 없음.**
+- CLI smoke: `--image <img> --task <t> [--model-path ...]` → raw/parsed/final_result/rule_reason/rule_engine_fallback 출력. `--evidence-only` 는 Rule Engine 미호출.
+- **FP=0 안전**: engine_error/parse_failed → uncertainty high → 기존 Rule Engine 이 retake_required(절대 verified 아님).
+
+## 10. 한계 / 다음
 - 서버 Qwen-3B 의존(온디바이스 완결성 낮음). **YOLO/OpenImages 전환 예정**(별도 phase).
-- 실제 Qwen 로드/generate 는 skeleton(런타임 구현). backend/Flutter production 대규모 수정 없음; 통합은 local_eval/vlm_baseline adapter 로 먼저.
+- ⚠️ 로컬이 `Qwen2.5-VL-3B-Instruct-AWQ`(int4) 뿐이면 이 env(torch2.8/Triton3.4/AutoAWQ0.2.9)에서 **AWQ Triton GEMM 커널 오류로 generate 실패**(로드는 성공) → smoke 는 fail-safe retake. 실추론 검증엔 **비-AWQ bf16 3B** 또는 **vLLM(awq_marlin)** 필요. 코드는 비-AWQ 모델이면 즉시 동작.
+- backend/Flutter production 대규모 수정 없음; 통합은 local_eval/vlm_baseline adapter 로 먼저.

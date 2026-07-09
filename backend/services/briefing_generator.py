@@ -14,6 +14,7 @@ is used so the endpoint never breaks.
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -46,15 +47,15 @@ DEFAULT_BRIEFING_RULES: dict = {
     "todo_stem_suffixes": ["챙기기", "준비하기", "하기"],
     "default_prep_word": "준비물",
     "summary_templates": {
-        "has_schedules": "오늘은 {listing}{subject_particle} 있습니다.",
-        "no_schedules": "오늘은 등록된 일정이 없습니다. 할 일에 집중하기 좋은 날입니다.",
-        "prep_tip": " {top_title} 전에는 {prep}{object_particle} 챙기고 이동 시간을 여유 있게 확보하는 것이 좋습니다.",
+        "has_schedules": "오늘은 {listing}{subject_particle} 있어요.",
+        "no_schedules": "오늘은 등록된 일정이 없어요.",
+        "prep_tip": " {top_title} 전에 {prep}{object_particle} 챙기고 일찍 나서세요.",
     },
     "key_point_templates": {
-        "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요한 일정입니다.",
-        "todo_checklist": "{stem}{object_particle} 챙겨야 합니다.",
+        "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요해요.",
+        "todo_checklist": "{stem}{object_particle} 챙기세요.",
         "todo_reminder": "'{title}'{object_particle} 잊지 마세요.",
-        "other_schedule": "{daypart_prefix}{title}{subject_particle} 있습니다.",
+        "other_schedule": "{daypart_prefix}{title}{subject_particle} 있어요.",
     },
     "todo_checklist_suffix": "챙기기",
     "other_schedule_daypart_suffix": "에는 ",
@@ -100,6 +101,41 @@ def _eul_reul(word: str) -> str:
     if "가" <= last <= "힣":
         return "을" if (ord(last) - 0xAC00) % 28 else "를"
     return "를"
+
+
+# 모델이 요약 외 구조(key_points/priority_order 등)를 덧붙였을 때 잘라낼 표지들.
+_SUMMARY_CUT_MARKERS = (
+    "**key", "key_points", "keypoints", "**핵심", "핵심 포인트", "핵심포인트",
+    "**priority", "priority_order", "우선순위",
+)
+
+
+def _clean_summary(text: Optional[str]) -> Optional[str]:
+    """LLM 요약 출력에서 요약 문장만 안전하게 추출한다.
+
+    모델이 마크다운/라벨/불릿/번호 목록이나 key_points·priority_order 섹션까지
+    덧붙여도 요약 첫 부분만 남기고 정리한다(프롬프트로 1차 방지 + 여기서 2차 방어).
+    """
+    if not text:
+        return None
+    t = text.strip()
+
+    # 1) 요약 외 구조 섹션이 붙었으면 그 앞까지만 사용(대소문자 무시).
+    low = t.lower()
+    cut = len(t)
+    for marker in _SUMMARY_CUT_MARKERS:
+        idx = low.find(marker.lower())
+        if idx != -1:
+            cut = min(cut, idx)
+    t = t[:cut]
+
+    # 2) 마크다운/라벨/목록 기호 제거.
+    t = t.replace("**", "").replace("`", "")
+    t = re.sub(r"(?im)^\s*(summary|요약)\s*[:：]\s*", "", t)  # 'summary:' 라벨
+    t = re.sub(r"(?m)^\s*[-*•]\s+", "", t)                    # 불릿
+    t = re.sub(r"(?m)^\s*\d+[.)]\s+", "", t)                  # 번호목록
+    t = re.sub(r"\s+", " ", t).strip()
+    return t or None
 
 
 def _to_min(hhmm: Optional[str]) -> int:
@@ -255,14 +291,18 @@ def generate_briefing(req: DailyBriefingRequest, preferences: Optional[dict] = N
     # ----- summary (LLM, optional) -----
     llm_summary = None
     try:
-        base_system = "너는 사용자의 하루를 따뜻하고 간결하게 정리하는 한국어 비서야. 2~3문장으로만 요약해."
+        base_system = (
+            "너는 사용자의 하루 일정을 담백하고 간결하게 정리하는 한국어 비서야. "
+            "응원·격려·일반적인 조언은 넣지 말고 일정 사실 위주로 1~2문장으로만 요약해. "
+            "'~하는 것이 좋습니다' 같은 상투적 표현을 피하고 해요체로 자연스럽게 써."
+        )
         if preferences:
             from backend.services import assistant_style_service as style
             base_system = style.styled_system(base_system, preferences)
-        llm_summary = llm_service.generate(
+        llm_summary = _clean_summary(llm_service.generate(
             _build_prompt(req, priority_order),
             system=base_system,
-        )
+        ))
     except Exception:
         llm_summary = None
 

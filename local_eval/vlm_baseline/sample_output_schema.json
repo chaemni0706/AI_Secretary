@@ -1,0 +1,8 @@
+{
+  "task": "water|study|exercise",
+  "result": "verified|rejected|retake_required",
+  "positive_evidence": [],
+  "negative_evidence": [],
+  "uncertainty": "low|medium|high",
+  "reason": ""
+}

@@ -1,6 +1,11 @@
 # SmolVLM-500M 온디바이스화 계획 (Z Flip3 / Android)
 
-목적: 현재 온디바이스 1차 후보로 확정된 **SmolVLM-500M-Instruct** 를 Z Flip3(Android)에서
+> ⚠️ **HOLD — SmolVLM-500M 온디바이스 단독 NO-GO (2026-07-09).** real-only 171장 실측 FP=9(시각 분별력 부족)로
+> 온디바이스 단독 인증 후보 탈락. 이 패키징 계획(ORT Mobile/조합 A)은 **아키텍처 참고용으로 보존**하되, SmolVLM-500M
+> 으로는 진행하지 않는다. 다음 온디바이스 후보가 real-only **FP=0** 를 통과하면(→ NEXT_ONDEVICE_MODEL_SEARCH_PLAN)
+> 그 모델로 본 패키징 절차를 적용한다. 근거: SMOLVLM_FINAL_NO_GO.md.
+
+목적: (초기) 온디바이스 1차 후보였던 **SmolVLM-500M-Instruct** 를 Z Flip3(Android)에서
 실행하기 위한 패키징/런타임/측정/통합 계획. 이 문서는 계획서이며 backend/Flutter/Rule Engine 을
 변경하지 않는다. 모델은 **evidence 만 추출**하고 최종 판정은 항상 **Rule Engine** 이 한다(FP=0 최우선).
 

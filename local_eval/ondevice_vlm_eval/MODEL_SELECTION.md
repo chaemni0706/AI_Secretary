@@ -142,6 +142,15 @@
 - **개선 없음 / FP 발생**: 미채택 기록. study 는 프롬프트/파서 튜닝(`--reparse`) 또는
   Qwen2.5-VL-3B-AWQ anchor 로 상한 확인 후 재판단.
 
+## ⚠️ 업데이트 (2026-07-09): SmolVLM-500M 온디바이스 단독 NO-GO
+아래 "온디바이스 1차 후보: SmolVLM-500M"은 합성/쉬운셋 기준이었다. **real-only 171장(contamination=0)** 실측 결과
+SmolVLM-500M **FP=9**(water 6, study 3, exercise 0)로 **온디바이스 단독 인증 후보 탈락**(FP=0 미달).
+원인은 단순 hallucination 이 아니라 **기본 시각 분별력 부족**(빈컵/물컵, 색음료/물, 공부/게임화면 구분 실패).
+상세: [SMOLVLM_FINAL_NO_GO.md](SMOLVLM_FINAL_NO_GO.md), [SMOLVLM_FP_FAILURE_TAXONOMY.csv](SMOLVLM_FP_FAILURE_TAXONOMY.csv),
+아카이브 `report_archive_20260709/`. 다음: [NEXT_ONDEVICE_MODEL_SEARCH_PLAN.md](NEXT_ONDEVICE_MODEL_SEARCH_PLAN.md)
+(온디바이스 소형 후보 재탐색, 분별력 우선). 서버 fallback 은 후순위(마지막 보험).
+아래 표/결론은 초기(합성 기준) 기록으로 보존한다.
+
 ## 최종 결론 (현재 선정 상태 — 2026-07-08 갱신)
 
 역할 분담으로 확정한다.

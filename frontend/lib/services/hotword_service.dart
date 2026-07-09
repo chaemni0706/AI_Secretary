@@ -6,7 +6,6 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:vosk_flutter_2/vosk_flutter_2.dart';
 
 import 'briefing_api.dart';
-import 'voice_api.dart';
 import 'voice_stt_service.dart' show VoiceSttService;
 import 'voice_tts_service.dart';
 
@@ -251,8 +250,11 @@ class HotwordService {
 
   /// 오늘 브리핑을 받아 음성으로 읽는다(BriefingScreen 과 동일한 텍스트 규칙).
   Future<void> _speakBriefing() async {
+    // 브리핑 요청(네트워크/LLM)을 먼저 시작하고, 그동안 짧은 응답을 재생한다(병렬).
+    final briefingFuture = briefingApi.getDailyBriefing();
+    await _tts.speak('네, 오늘 브리핑 확인할게요.');
     try {
-      final b = await briefingApi.getDailyBriefing();
+      final b = await briefingFuture;
       final fromPoints = [b.summary, ...b.keyPoints]
           .where((s) => s.trim().isNotEmpty)
           .join('. ');
@@ -260,7 +262,8 @@ class HotwordService {
           ? b.ttsText!.trim()
           : fromPoints;
       final text = raw.trim().isEmpty ? '오늘 브리핑을 불러오지 못했습니다.' : raw;
-      await voiceApi.speak(_tts, text, source: 'briefing');
+      // 2) /voice/tts 서버 왕복 생략 → 기기 TTS 로 바로 재생(지연 감소).
+      await _tts.speak(text);
     } catch (e) {
       debugPrint('브리핑 재생 실패: $e');
       await _tts.speak('브리핑을 불러오지 못했어요.');

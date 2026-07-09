@@ -19,10 +19,10 @@
 - 원래 구상: **local SmolVLM(온디바이스) → 불확실 시 서버 Qwen-3B fallback**.
 - Qwen2.5-VL-3B(-AWQ)는 별도 실측에서 **전 task FP=0, study accuracy/recall 1.000**(성능 anchor/서버 fallback)로 확인됨(`MODEL_SELECTION.md`).
 
-## 5. 이번 branch 에서 Qwen-3B 를 unified verification baseline 으로 정리한 이유
-- 팀장님 공유용으로 **VLM task 를 빠르게 정리**해야 함.
-- SmolVLM 단독 온디바이스 인증은 탈락 → 임시로 **Qwen-3B 하나가 local/fallback 구분 없이 전체 verification 을 수행**하는 단일 baseline 으로 정리(구현 스켈레톤 + 문서).
-- 즉 이 baseline 은 "온디바이스 완결"이 아니라 **서버 Qwen-3B 가 water/study/exercise 를 직접 verified/rejected/retake_required 판정**하는 임시 통합본.
+## 5. 이번 branch 의 정리 방향 (개정 2026-07-10)
+- **새 verification 시스템을 만들지 않는다.** 기존 앱/API/Rule Engine 구조를 유지하고, 그 안에서 **"이미지 판독 엔진"만 Qwen-3B 로 교체**한다.
+- 즉 Qwen-3B 는 기존 객체/장면/evidence 판독 엔진(또는 SmolVLM) 자리를 대체하는 **evidence extractor** 이고, **최종 verified/rejected/retake_required 는 기존 Rule Engine 이 결정**한다(Qwen 이 final 판정 금지).
+- 통합은 `local_eval/vlm_baseline/` 의 adapter(evidence engine + Rule Engine 연결)로 먼저 구성(backend/Flutter 대규모 수정 없음). 상세: `QWEN3B_UNIFIED_VERIFICATION_BASELINE.md`.
 
 ## 6. YOLO 전환 예정 (명시)
 - 다음 단계는 **YOLO/OpenImages 기반 구조**로 전환 예정(별도 phase). 이번 branch 에는 **YOLO 구현 미포함**.

@@ -1,26 +1,38 @@
 # local_eval/vlm_baseline
 
-Qwen-3B **unified verification baseline** (VLM task 정리용). 임시 baseline — 최종 제품 구조 아님, **YOLO 전환 예정**.
+**기존 이미지 판독 엔진을 Qwen-3B 로 교체하는 adapter** (기존 앱/Rule Engine 구조 유지). 임시 VLM baseline — 최종 제품 구조 아님, **YOLO 전환 예정**.
+> **Qwen-3B 는 최종 판정 모델이 아니다.** evidence extractor 이며, 최종 verified/rejected/retake_required 는 **기존 Rule Engine** 이 결정한다.
 
-## 구성
-- `qwen3b_unified_verifier.py` — image_path + task → verified/rejected/retake_required (JSON). FP=0 우선 normalize. **skeleton**(런타임에서 Qwen2.5-VL 로드/generate 구현).
-- `prompts.py` — task별 prompt(water/study/exercise). 요약: 루트 `QWEN3B_TASK_PROMPTS.md`.
-- `sample_output_schema.json` — 출력 스키마 예시.
+## 파이프라인
+```
+image + task
+  → qwen3b_evidence_engine.extract()   # Qwen evidence JSON (final result 없음)
+  → qwen3b_evidence_adapter.to_existing_rule_input()  # → 기존 VisionAnalysis schema
+  → 기존 evaluate_image_verification() (Rule Engine core, 미수정)  ← 최종 판정
+  → final_result (verified/rejected/retake_required)
+```
 
-## 사용 (개념)
+## 파일
+- `qwen3b_evidence_engine.py` — Qwen evidence 추출(extract/run_qwen_evidence_extraction/parse_qwen_evidence). 모델 로드/generate 는 skeleton(런타임). **weight 는 repo 에 없음**(env `QWEN3B_MODEL_PATH`).
+- `qwen3b_evidence_adapter.py` — Qwen evidence → 기존 Rule Engine 입력 매핑 + `run_existing_rule_engine()` + `verify()`.
+- `qwen3b_unified_verifier.py` — [deprecated] adapter.verify 로 위임(직접 판정 없음).
+- `prompts.py` — task별 evidence-extraction prompt. `sample_output_schema.json` — 최종 output 예시.
+
+## 사용
 ```
 export QWEN3B_MODEL_PATH=/data/models/Qwen2.5-VL-3B-Instruct-AWQ   # weight 는 repo 에 없음
-python qwen3b_unified_verifier.py --task water --image <path>
-python qwen3b_unified_verifier.py --task study --image <path> --dry-run   # 모델 없이 normalize 경로 확인
+# dry-run (모델 없이 mock evidence → 기존 Rule Engine → final_result 검증)
+python local_eval/vlm_baseline/qwen3b_evidence_engine.py --dry-run
+# 실제(런타임에서 Qwen generate 구현 후)
+python local_eval/vlm_baseline/qwen3b_evidence_engine.py --image <path> --task water   # evidence JSON
 ```
+- dry-run: 7 케이스(water/study/exercise × positive/blocker/uncertain) 모두 **final_result 를 기존 Rule Engine 에서** 산출(7/7 기대 일치).
 
 ## 원칙
-- **VLM weight 는 git 에 포함하지 않는다**(config 경로로 분리).
-- Qwen-3B 하나가 local/fallback 구분 없이 전체 verification 수행(임시).
-- FP=0 우선: 애매/불확실 → retake_required, 부정 근거 → rejected, positive 충분+blocker 없음+불확실 낮음 → verified.
-- 최종 판정 로직/제품 통합은 별도(backend Rule Engine 미수정). 이 폴더는 baseline 정리/스켈레톤.
+- Qwen weight/outputs/데이터셋 이미지 **git 미포함**. backend/Rule Engine core **미수정**(read-only import).
+- 앱 사용: `final_result`. 앱 사용 금지: `qwen_raw_output`, `qwen_suggested_result`(debug).
+- Rule Engine import 실패 시 adapter 는 보수적 fallback(retake) + TODO 로 연결 지점 표기.
 
 ## 배경
-- SmolVLM-500M 온디바이스 단독 인증 = FP=9 로 탈락(루트 `SMOLVLM_ONDEVICE_EVAL_FINAL_DECISION.md`).
-- Qwen2.5-VL-3B(별도 실측 전 task FP=0/study 1.000)를 임시 unified baseline 으로 정리.
-- 상세: 루트 `VLM_TASK_ARCHIVE_SUMMARY.md`, `QWEN3B_UNIFIED_VERIFICATION_BASELINE.md`, `QWEN3B_FALLBACK_ARCHITECTURE_NOTE.md`.
+- SmolVLM-500M 온디바이스 단독 인증 = FP=9 탈락(루트 `SMOLVLM_ONDEVICE_EVAL_FINAL_DECISION.md`).
+- 상세: 루트 `VLM_TASK_ARCHIVE_SUMMARY.md`, `QWEN3B_UNIFIED_VERIFICATION_BASELINE.md`, `QWEN3B_TASK_PROMPTS.md`, `QWEN3B_FALLBACK_ARCHITECTURE_NOTE.md`.

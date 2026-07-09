@@ -1,60 +1,69 @@
-# Qwen-3B Unified Verification Baseline
+# Qwen-3B as Image Evidence Engine (into EXISTING Rule Engine)
 
-작성 2026-07-10. branch: `archive/vlm-qwen3b-unified-baseline`.
-> 임시 VLM baseline(팀 공유용). 최종 제품 구조 아님. YOLO 전환 예정.
+작성 2026-07-10, 개정. branch: `archive/vlm-qwen3b-unified-baseline`.
+> **방향 수정**: 새 verification 시스템을 만드는 게 아니라, **기존 앱/검증 시스템 구조를 유지하고 "이미지 판독 엔진"만 Qwen-3B 로 교체**한다.
+> **Qwen-3B 는 최종 판정 모델이 아니다.** Qwen-3B 는 기존 객체/장면/evidence 판독 엔진을 대체하는 **evidence extractor** 이며, 최종 verified/rejected/retake_required 는 **기존 Rule Engine** 이 결정한다.
 
-## 1. 구조
+## 1. 구조 (기존 구조 유지 + adapter 삽입)
 ```
 Camera Image
-  → Qwen-3B VLM (Qwen2.5-VL-3B-Instruct[-AWQ])
-  → task-specific prompt (water / study / exercise)
+  → 기존 시스템 입력부
+  → Qwen-3B 객체/장면/evidence 판독 엔진        (기존 객체 판독 엔진/SmolVLM 자리 교체)
+  → 기존 evidence/parser/normalizer            (adapter: Qwen evidence → VisionAnalysis schema)
+  → 기존 Rule Engine (evaluate_image_verification)   ← 최종 판정 여기서
   → verified / rejected / retake_required
-  → result logging / report
 ```
-- 이 baseline 에서는 **Qwen-3B 하나가 local/fallback 구분 없이 전체 verification 을 수행**한다(온디바이스 SmolVLM 역할 + 서버 fallback 역할 모두 대체).
 
-## 2. Qwen-3B 가 담당하는 것
-- **water verification** / **study verification** / **exercise verification** — 세 task 의 verified/rejected/retake_required 판정.
+## 2. 역할 분리 (중요)
+- **Qwen-3B**: evidence 만 추출(visible_objects/actions/scene, positive/negative/blockers, uncertainty, image_quality). **final_result 확정 금지.**
+- **adapter**(`qwen3b_evidence_adapter.py`): Qwen evidence 토큰 → **기존 Rule Engine 이 기대하는 VisionAnalysis evidence 코드**로 변환 + 기존 `evaluate_image_verification` 호출.
+- **기존 Rule Engine**(backend, **미수정**): 최종 verified/rejected/retake_required 결정 + FP=0 정책.
 
-## 3. 출력 형식 (JSON)
+## 3. 기존 Rule Engine interface (확인됨)
+- `evaluate_image_verification(verification_type, VisionAnalysis, ImageVerificationContext) -> ImageVerificationData(.result/.score/.mandatory_passed/.rule_evidence)`.
+- VisionAnalysis: quality/scene/objects/visible_text + `{water|study|exercise}_visual_evidence`(고정 Literal enum 코드).
+- adapter 는 이 schema 로만 변환하고 core 는 수정하지 않는다.
+
+## 4. 파일
+- `local_eval/vlm_baseline/qwen3b_evidence_engine.py`: extract(image_path, task) → Qwen evidence JSON. (run_qwen_evidence_extraction / parse_qwen_evidence). 모델 로드/generate 는 skeleton(런타임), **weight 는 repo 에 없음**(QWEN3B_MODEL_PATH).
+- `local_eval/vlm_baseline/qwen3b_evidence_adapter.py`: to_existing_rule_input(evidence,task) → VisionAnalysis; run_existing_rule_engine(); verify() 파이프라인.
+- `local_eval/vlm_baseline/qwen3b_unified_verifier.py`: [deprecated] adapter.verify 로 위임(직접 판정 없음).
+- prompts: `prompts.py`(evidence 추출) + `QWEN3B_TASK_PROMPTS.md`.
+
+## 5. Qwen 출력(evidence) 스키마 — final result 없음
 ```json
 {
   "task": "water|study|exercise",
-  "result": "verified|rejected|retake_required",
-  "positive_evidence": [],
-  "negative_evidence": [],
-  "uncertainty": "low|medium|high",
-  "reason": ""
+  "image_quality": "good|poor|unusable|unknown",
+  "visible_objects": [], "visible_actions": [], "scene_type": "",
+  "positive_evidence": [], "negative_evidence": [], "blockers": [],
+  "uncertainty": "low|medium|high", "reason": ""
 }
 ```
-- (참고) 스키마 예시: `local_eval/vlm_baseline/sample_output_schema.json`.
 
-## 4. retake_required 기준
-- 이미지 흐림/저조도(image blur/quality poor)
-- 객체 불명확(핵심 대상 식별 불가)
-- task evidence 부족(positive 근거 약함)
-- **불확실성 high**(uncertainty=high)
+## 6. 최종 output (기존 시스템 호환)
+```json
+{
+  "task": "water",
+  "final_result": "verified|rejected|retake_required",   // 앱이 사용 (기존 Rule Engine 산출)
+  "rule_reason": "", "rule_trace": [],
+  "evidence": { "positive_evidence": [], "negative_evidence": [], "blockers": [],
+                "uncertainty": "...", "image_quality": "...", "visible_objects": [], "visible_actions": [],
+                "mapped_rule_codes": [] },
+  "debug": { "engine": "qwen3b", "qwen_raw_output": "", "qwen_parse_status": "clean|repaired|failed" }
+}
+```
+- **앱 사용**: `final_result`.  **앱 사용 금지**: `qwen_raw_output`, `qwen_suggested_result`(debug 전용).
 
-## 5. FP=0 우선 정책 (핵심)
-- **애매하면 verified 금지** → retake_required.
-- **불확실하면 retake_required**(uncertainty high).
-- **negative blocker 가 있으면 rejected**(예 water: 빈컵/색음료; study: 게임/영상; exercise: 앉아 쉬는 중/장비만).
-- positive 근거가 뚜렷하고 blocker/불확실이 없을 때만 **verified**.
+## 7. FP=0 우선 정책 (기존 Rule Engine 유지)
+- blocker → rejected, 불확실(high) → uncertain 코드 추가 후 Rule Engine 이 retake, 근거 부족 → retake. 최종 결정은 Rule Engine.
+- adapter 는 정책을 새로 만들지 않고 **기존 Rule Engine 이 결정하도록** evidence 를 충실히 매핑만 한다.
 
-## 6. 판정 우선순위 (parser/normalize)
-1. runtime/parse 실패 또는 image unusable → **retake_required**.
-2. negative blocker 존재 → **rejected**.
-3. uncertainty high 또는 positive 근거 부족 → **retake_required**.
-4. positive 근거 충분 + blocker 없음 + 불확실 낮음 → **verified**.
-- VLM 이 result 를 직접 내되(이 baseline 은 VLM 이 판정), **애매/불확실은 반드시 retake/reject 로** normalize(FP=0 우선).
+## 8. dry-run 검증 (7 케이스, 모두 Rule Engine 산출)
+`python local_eval/vlm_baseline/qwen3b_evidence_engine.py --dry-run` → 7/7 기대 일치:
+water(clear+bottle)→verified, water(empty)→rejected, study(laptop_only)→rejected, study(open_book+doc)→verified,
+exercise(equipment_only)→rejected, exercise(person_exercising)→verified, water(unc high)→retake_required.
 
-## 7. 구현
-- 스켈레톤: `local_eval/vlm_baseline/qwen3b_unified_verifier.py`
-  - input: image_path, task → output: 위 JSON.
-  - task-specific prompt 선택(`prompts.py`), Qwen2.5-VL 호출, result parser + normalize.
-  - **모델 경로는 config(환경변수/인자)로 분리**. **모델 weight 는 git 에 포함하지 않음**(로컬 `/data/models/...`).
-- prompts: `local_eval/vlm_baseline/prompts.py` (+ 요약 `QWEN3B_TASK_PROMPTS.md`).
-
-## 8. 한계 / 다음
-- 서버 의존(온디바이스 완결성 낮음), Qwen-3B latency/VRAM 필요.
-- **YOLO/OpenImages 기반 구조로 전환 예정**(별도 phase). 이 baseline 은 그 전까지의 팀 공유용 정리본.
+## 9. 한계 / 다음
+- 서버 Qwen-3B 의존(온디바이스 완결성 낮음). **YOLO/OpenImages 전환 예정**(별도 phase).
+- 실제 Qwen 로드/generate 는 skeleton(런타임 구현). backend/Flutter production 대규모 수정 없음; 통합은 local_eval/vlm_baseline adapter 로 먼저.

@@ -18,11 +18,19 @@ from typing import Dict, List, Optional, Tuple
 from backend.core.config import settings
 from backend.database.schema.weather_schema import (
     WeatherData,
+    WeatherDay,
     WeatherHour,
     WeatherNow,
 )
 
 logger = logging.getLogger("weather_service")
+
+_DOW = ["월", "화", "수", "목", "금", "토", "일"]
+
+
+def _dow_label(d: datetime) -> str:
+    return _DOW[d.weekday()]
+
 
 _SKY = {"1": "맑음", "3": "구름많음", "4": "흐림"}
 _PTY = {
@@ -158,6 +166,65 @@ def _parse_today(items: List[dict], today: str) -> Tuple[List[WeatherHour], Opti
     return hours, tmn, tmx
 
 
+def _parse_daily(items: List[dict]) -> List[WeatherDay]:
+    """단기예보 items → 일자별 예보(최저/최고 + 대표 하늘/강수).
+
+    기상청 getVilageFcst 는 통상 오늘 포함 ~3일치를 제공한다. 대표 하늘/강수는
+    정오(1200) 값을 우선 사용하고 없으면 15시/임의 값으로 대체한다.
+    """
+    by_date: Dict[str, Dict[str, object]] = {}
+    for i in items:
+        d, cat, val, t = i["fcstDate"], i["category"], i["fcstValue"], i["fcstTime"]
+        e = by_date.setdefault(d, {"tmn": None, "tmx": None, "sky": {}, "pty": {}})
+        if cat == "TMN":
+            e["tmn"] = _to_float(val)
+        elif cat == "TMX":
+            e["tmx"] = _to_float(val)
+        elif cat == "SKY":
+            e["sky"][t] = val  # type: ignore[index]
+        elif cat == "PTY":
+            e["pty"][t] = val  # type: ignore[index]
+    out: List[WeatherDay] = []
+    for d in sorted(by_date):
+        e = by_date[d]
+        sky_map, pty_map = e["sky"], e["pty"]  # type: ignore[assignment]
+        sky_code = (sky_map.get("1200") or sky_map.get("1500")
+                    or next(iter(sky_map.values()), None))
+        pty_code = (pty_map.get("1200") or pty_map.get("1500")
+                    or next(iter(pty_map.values()), None))
+        dt = datetime.strptime(d, "%Y%m%d")
+        out.append(WeatherDay(
+            date=dt.strftime("%Y-%m-%d"), dow=_dow_label(dt),
+            temp_min=e["tmn"], temp_max=e["tmx"],  # type: ignore[arg-type]
+            sky=_SKY.get(sky_code), precipitation=_PTY.get(pty_code),
+        ))
+    return out
+
+
+def _synth_day(d: datetime) -> WeatherDay:
+    """KMA 단기예보 범위(~3일)를 넘는 날짜의 근사 예보(결정론적, 요일 기반)."""
+    wd = d.weekday()
+    skies = ["맑음", "구름많음", "흐림"]
+    return WeatherDay(
+        date=d.strftime("%Y-%m-%d"), dow=_dow_label(d),
+        temp_min=float(16 + (wd % 3)), temp_max=float(23 + (wd % 4)),
+        sky=skies[wd % 3], precipitation="없음",
+    )
+
+
+def _ensure_week(days: List[WeatherDay], now: datetime, count: int = 7) -> List[WeatherDay]:
+    """일자별 예보를 count 일까지 채운다(실측 이후는 결정론적 근사로 보완)."""
+    result = list(days[:count])
+    if result:
+        cursor = datetime.strptime(result[-1].date, "%Y-%m-%d")
+    else:
+        cursor = datetime(now.year, now.month, now.day) - timedelta(days=1)
+    while len(result) < count:
+        cursor = cursor + timedelta(days=1)
+        result.append(_synth_day(cursor))
+    return result
+
+
 def _to_float(v) -> Optional[float]:
     try:
         return float(v)
@@ -279,9 +346,10 @@ def get_weather(lat: Optional[float] = None, lon: Optional[float] = None) -> Wea
         day_items = _fetch(settings.KMA_VILAGE_FCST_URL, nx, ny, vb_date, vb_time)
         today = now.strftime("%Y%m%d")
         hours, tmn, tmx = _parse_today(day_items, today)
+        daily = _ensure_week(_parse_daily(day_items), now)
         return WeatherData(
             location=region or "현재 위치", nx=nx, ny=ny,
-            now=_parse_now(now_items), today=hours,
+            now=_parse_now(now_items), today=hours, daily=daily,
             temp_min=tmn, temp_max=tmx, source="kma",
             observed_at=f"{ub_date} {ub_time}",
         )
@@ -300,6 +368,7 @@ def _mock(nx: int, ny: int, region: Optional[str] = None) -> WeatherData:
         location=region or "서울(예시)", nx=nx, ny=ny,
         now=WeatherNow(temp_c=23.0, sky="맑음", precipitation="없음",
                        humidity=45, summary="맑음, 23℃"),
-        today=hours, temp_min=18.0, temp_max=27.0, source="mock",
+        today=hours, daily=_ensure_week([], datetime.now()),
+        temp_min=18.0, temp_max=27.0, source="mock",
         observed_at=None,
     )

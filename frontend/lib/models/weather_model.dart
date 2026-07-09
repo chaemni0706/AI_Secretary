@@ -49,10 +49,40 @@ class WeatherHour {
       );
 }
 
+class WeatherDay {
+  final String date; // 'YYYY-MM-DD'
+  final String dow; // 요일 라벨(월~일)
+  final double? tempMin;
+  final double? tempMax;
+  final String? sky;
+  final String? precipitation;
+
+  const WeatherDay({
+    required this.date,
+    required this.dow,
+    this.tempMin,
+    this.tempMax,
+    this.sky,
+    this.precipitation,
+  });
+
+  factory WeatherDay.fromJson(Map<String, dynamic> j) => WeatherDay(
+        date: (j['date'] ?? '').toString(),
+        dow: (j['dow'] ?? '').toString(),
+        tempMin: (j['temp_min'] as num?)?.toDouble(),
+        tempMax: (j['temp_max'] as num?)?.toDouble(),
+        sky: j['sky'] as String?,
+        precipitation: j['precipitation'] as String?,
+      );
+
+  IconData get icon => weatherIcon(sky, precipitation);
+}
+
 class WeatherModel {
   final String location;
   final WeatherNow now;
   final List<WeatherHour> today;
+  final List<WeatherDay> daily;
   final double? tempMin;
   final double? tempMax;
   final String source; // kma | mock
@@ -61,6 +91,7 @@ class WeatherModel {
     required this.location,
     required this.now,
     this.today = const [],
+    this.daily = const [],
     this.tempMin,
     this.tempMax,
     this.source = 'kma',
@@ -73,6 +104,9 @@ class WeatherModel {
         today: ((j['today'] as List?) ?? const [])
             .map((e) => WeatherHour.fromJson((e as Map).cast<String, dynamic>()))
             .toList(),
+        daily: ((j['daily'] as List?) ?? const [])
+            .map((e) => WeatherDay.fromJson((e as Map).cast<String, dynamic>()))
+            .toList(),
         tempMin: (j['temp_min'] as num?)?.toDouble(),
         tempMax: (j['temp_max'] as num?)?.toDouble(),
         source: (j['source'] ?? 'kma').toString(),
@@ -82,6 +116,7 @@ class WeatherModel {
         location: location ?? this.location,
         now: now,
         today: today,
+        daily: daily,
         tempMin: tempMin,
         tempMax: tempMax,
         source: source,

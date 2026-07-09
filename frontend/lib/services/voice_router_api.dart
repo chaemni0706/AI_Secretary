@@ -93,6 +93,33 @@ class VoiceRouterApi {
     );
     return VoiceRouteResult.fromJson(data as Map<String, dynamic>);
   }
+
+  /// 의도 분류만(부수효과 없음): `POST /api/v1/voice/classify`.
+  /// 반환 intent: schedule_create | fallback_chat | emotion_schedule_coaching |
+  /// reservation_recommendation | daily_briefing | schedule_query | reminder_setting.
+  /// 챗 화면이 '일정 등록'과 '상담/대화'를 분리하는 게이트로 쓴다.
+  Future<String> classifyIntent(
+    String text, {
+    String userId = 'local-user',
+    String? currentDatetime,
+    String timezone = 'Asia/Seoul',
+    Map<String, dynamic>? context,
+  }) async {
+    final body = <String, dynamic>{
+      'text': text,
+      'user_id': userId,
+      'timezone': timezone,
+    };
+    if (currentDatetime != null) body['current_datetime'] = currentDatetime;
+    if (context != null) body['context'] = context;
+
+    final data = await apiClient.postData(
+      '$apiPrefix/voice/classify',
+      body: body,
+    );
+    final m = (data as Map).cast<String, dynamic>();
+    return (m['intent'] ?? 'fallback_chat').toString();
+  }
 }
 
 final voiceRouterApi = VoiceRouterApi();

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/api_client.dart';
+import '../services/chat_api.dart';
 import '../services/schedule_api.dart';
+import '../services/voice_router_api.dart';
 import '../services/preference_store.dart';
 import '../services/todo_api.dart';
 import '../services/dashboard_api.dart';
@@ -187,9 +189,46 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     try {
       await preferenceStore.ensureLoaded();
+      final now = DateTime.now().toIso8601String();
+
+      // 1) 먼저 의도를 분류한다(부수효과 없는 /voice/classify 게이트).
+      //    명백한 대화/상담 의도만 상담으로 보내고, 나머지(일정 등록·예약·조회 등)는
+      //    기존 일정 파싱 흐름을 유지한다. → 잡담/고민이 일정 카드로 잘못 뜨는 문제 해결.
+      String intent;
+      try {
+        intent = await voiceRouterApi.classifyIntent(text, currentDatetime: now);
+      } catch (_) {
+        intent = 'schedule_create'; // 분류 실패 시 기존 동작(일정 파싱)으로 안전 폴백
+      }
+      const consultIntents = {'fallback_chat', 'emotion_schedule_coaching'};
+
+      // 2) 상담/대화 계열 → 일정 카드 대신 대화 답변.
+      if (consultIntents.contains(intent)) {
+        final chat = await chatApi.respond(text);
+        if (!mounted) return;
+        setState(() {
+          _lastParse = null;
+          _parsing = false;
+          _voiceStatus = null;
+        });
+        final answer = chat.answer.trim().isNotEmpty
+            ? chat.answer
+            : '무엇을 도와드릴까요? 일정을 등록하려면 날짜·시간과 함께 말씀해 주세요.';
+        _addMessage(answer, isUser: false);
+        if (_fromVoice) {
+          await _speak(
+            (chat.ttsText != null && chat.ttsText!.trim().isNotEmpty)
+                ? chat.ttsText!
+                : answer,
+          );
+        }
+        return;
+      }
+
+      // 3) 일정/할 일 등록 → 기존 파싱 + 확인 카드 흐름.
       final result = await scheduleApi.parse(
         text,
-        currentDatetime: DateTime.now().toIso8601String(),
+        currentDatetime: now,
         inputType: fromVoice ? 'voice' : 'text',
         assistantTone: preferenceStore.assistantTone,
         responseLength: preferenceStore.responseLength,

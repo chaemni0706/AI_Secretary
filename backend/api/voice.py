@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from backend.core.response import success_response
 from backend.database.schema.voice_route_schema import VoiceRouteRequest, VoiceRouteResponse
 from backend.database.session import get_db
-from backend.services import voice_route_orchestrator
+from backend.services import voice_intent_router, voice_route_orchestrator
 
 router = APIRouter(tags=["voice"])
 
@@ -81,3 +81,25 @@ def voice_route_endpoint(req: VoiceRouteRequest, db: Session = Depends(get_db)):
     호출만 한다 — 이 엔드포인트가 없어져도 기존 기능은 영향받지 않는다."""
     data = voice_route_orchestrator.route(db, req)
     return success_response(message="음성 입력을 처리했습니다.", data=data.model_dump())
+
+
+@router.post(
+    "/voice/classify",
+    summary="의도 분류만 수행 (부수효과 없음 — 상담/일정 분리 게이트)",
+)
+def voice_classify_endpoint(req: VoiceRouteRequest):
+    """텍스트를 음성 의도(schedule_create / fallback_chat / emotion_schedule_coaching
+    / reservation_recommendation / daily_briefing / schedule_query / reminder_setting)
+    중 하나로 **분류만** 한다. 저장·등록 등 부수효과가 전혀 없다.
+
+    챗 화면이 '일정/할 일 등록'과 '상담/대화'를 분리하는 데 쓴다:
+    intent == 'schedule_create' 이면 일정 파싱/저장 흐름으로, 그 외에는 대화 응답으로.
+    """
+    result = voice_intent_router.select_voice_intent(req.text or "", req.context)
+    return success_response(
+        message="의도를 분류했습니다.",
+        data={
+            "intent": result.get("intent", "fallback_chat"),
+            "matched_keywords": result.get("matched_keywords", {}),
+        },
+    )

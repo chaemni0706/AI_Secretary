@@ -24,30 +24,26 @@ class HotwordService {
       'https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip';
   static const int _sampleRate = 16000; // Vosk 소형 모델 표준 샘플레이트.
 
-  // 웨이크워드 "포비" 의 STT 오인식 변형들(소형 모델 로그 기반: 후비/보비 등).
+  // 웨이크워드 "포비" 변형(오탐 줄이려 흔히 겹치는 음절은 제외).
   static const List<String> _wakeWords = [
-    '포비', '포피', '보비', '보피', '포브', '뽀비', '포뷔',
-    '후비', '부비', '호비', '뽀삐', '포미', '후피',
+    '포비', '포피', '뽀비', '뽀삐', '후비', '보비',
   ];
-  // 브리핑 명령으로 볼 키워드(브리핑 오인식 변형 포함).
-  static const List<String> _briefKeywords = [
-    '브리핑', '프리핑', '브리', '브링', '요약', '하루', '일정',
-  ];
+  // 명령 키워드: 오탐 줄이려 흔한 단어(일정/하루/브리 등)를 빼고 구별력 높은
+  // '브리핑' 만 쓴다. (웨이크워드와 같은 발화에 함께 있어야 실행)
+  static const List<String> _briefKeywords = ['브리핑'];
 
   // grammar(문법 제한) 후보: Vosk 가 이 단어들만 후보로 인식하고 나머지는
   // '[unk]' 로 흘린다 → 헛인식↓, 목표 단어 적중률↑. 모델 사전에 있는(로그에서
   // 실제로 출력된) 단어 위주로 구성한다. '포비' 는 사전에 없을 수 있어(OOV)
   // 오인식 실단어(후비/보비 등)를 넣는다.
   static const List<String> _grammar = [
-    '후비', '보비', // 웨이크워드 후보: 로그에서 모델이 '포비'를 실제로 출력한 실단어
-    '브리핑', '오늘', '요약', '하루', '일정', // 명령/공통
+    '후비', '보비', // 웨이크워드 후보(모델이 '포비'를 이렇게 출력)
+    '오늘', '내일', '모레', '브리핑', // 상대 날짜 + 명령
     '[unk]',
   ];
 
-  // 웨이크워드만 들린 뒤 명령을 기다리는 시간.
-  static const Duration _armWindow = Duration(seconds: 6);
-  // 직전 트리거 후 이 시간 안엔 재트리거 안 함(중복 낭독 방지).
-  static const Duration _triggerCooldown = Duration(seconds: 10);
+  // 브리핑 종료 후 이 시간 안엔 재트리거 안 함(잔향/에코 중복 낭독 방지).
+  static const Duration _triggerCooldown = Duration(seconds: 15);
 
   final VoiceSttService _mic = VoiceSttService(); // 마이크 권한 확보용 재사용.
   final VoiceTtsService _tts = VoiceTtsService();
@@ -60,7 +56,6 @@ class HotwordService {
 
   bool _running = false;
   bool _busy = false; // 명령 처리/TTS 중 — 인식 결과 무시.
-  DateTime? _armedUntil;
   DateTime? _lastTriggerAt;
 
   bool get isRunning => _running;
@@ -112,7 +107,6 @@ class HotwordService {
   /// 상시 대기 종료 + 리소스 해제.
   Future<void> stop() async {
     _running = false;
-    _armedUntil = null;
     await _cleanup();
     await _stopForegroundService();
     debugPrint('Hotword(Vosk): 대기 종료');
@@ -200,18 +194,19 @@ class HotwordService {
     final hasBrief = _briefKeywords.any(t.contains);
     final canTrigger = !_inCooldown();
 
+    // 오탐 방지: 웨이크워드와 '브리핑' 이 같은 발화에 함께 있을 때만 실행.
+    // (단독 "포비" 나 "브리핑" 은 무시 → 일상 대화 중 오작동 방지)
     if (hasWake && hasBrief && canTrigger) {
-      _trigger();
-    } else if (hasWake) {
-      _armedUntil = DateTime.now().add(_armWindow); // 명령 대기 시작.
-      debugPrint('Hotword: "포비" 감지 → 명령 대기');
-    } else if (hasBrief && _isArmed() && canTrigger) {
-      _trigger();
+      _trigger(_parseDayOffset(t));
     }
   }
 
-  bool _isArmed() =>
-      _armedUntil != null && DateTime.now().isBefore(_armedUntil!);
+  /// 명령에서 상대 날짜 오프셋 추출(모레=2, 내일=1, 그 외/오늘=0).
+  int _parseDayOffset(String t) {
+    if (t.contains('모레')) return 2;
+    if (t.contains('내일')) return 1;
+    return 0;
+  }
 
   /// 직전 트리거 후 쿨다운 안이면 true (중복 낭독 방지).
   bool _inCooldown() =>
@@ -229,14 +224,15 @@ class HotwordService {
   }
 
   /// 브리핑 실행: 인식 일시정지 → 브리핑 TTS → 대기 재개.
-  Future<void> _trigger() async {
+  Future<void> _trigger(int dayOffset) async {
     _busy = true;
-    _armedUntil = null;
-    _lastTriggerAt = DateTime.now();
     try {
       await _speech?.stop(); // TTS 소리를 되받아 인식하지 않도록 정지.
-      await _speakBriefing();
+      await _speakBriefing(dayOffset);
     } finally {
+      // 쿨다운은 "브리핑이 끝난 시점"부터 카운트 → 낭독 직후 잔향/에코가
+      // "브리핑 보비" 등으로 재인식돼 중복 낭독되는 것을 막는다.
+      _lastTriggerAt = DateTime.now();
       if (_running) {
         try {
           await _speech?.start();
@@ -249,10 +245,23 @@ class HotwordService {
   }
 
   /// 오늘 브리핑을 받아 음성으로 읽는다(BriefingScreen 과 동일한 텍스트 규칙).
-  Future<void> _speakBriefing() async {
-    // 브리핑 요청(네트워크/LLM)을 먼저 시작하고, 그동안 짧은 응답을 재생한다(병렬).
-    final briefingFuture = briefingApi.getDailyBriefing();
-    await _tts.speak('네, 오늘 브리핑 확인할게요.');
+  Future<void> _speakBriefing(int dayOffset) async {
+    final target = DateTime.now().add(Duration(days: dayOffset));
+    final label = dayOffset == 0
+        ? '오늘'
+        : dayOffset == 1
+            ? '내일'
+            : dayOffset == 2
+                ? '모레'
+                : '${target.month}월 ${target.day}일';
+    // 오늘이면 서버 기준 today(null), 그 외엔 계산한 날짜(YYYY-MM-DD) 전달.
+    final date = dayOffset == 0
+        ? null
+        : '${target.year}-${_two(target.month)}-${_two(target.day)}';
+
+    // 해당 날짜 브리핑 요청을 먼저 시작하고, 그동안 짧은 응답을 재생(병렬).
+    final briefingFuture = briefingApi.getDailyBriefing(date: date);
+    await _tts.speak('네, $label 브리핑 확인할게요.');
     try {
       final b = await briefingFuture;
       final fromPoints = [b.summary, ...b.keyPoints]
@@ -261,14 +270,16 @@ class HotwordService {
       final raw = (b.ttsText != null && b.ttsText!.trim().isNotEmpty)
           ? b.ttsText!.trim()
           : fromPoints;
-      final text = raw.trim().isEmpty ? '오늘 브리핑을 불러오지 못했습니다.' : raw;
-      // 2) /voice/tts 서버 왕복 생략 → 기기 TTS 로 바로 재생(지연 감소).
-      await _tts.speak(text);
+      final body = raw.trim().isEmpty ? '$label 브리핑을 불러오지 못했습니다.' : raw;
+      // 기기 TTS 로 바로 재생(/voice/tts 왕복 생략).
+      await _tts.speak(body);
     } catch (e) {
       debugPrint('브리핑 재생 실패: $e');
-      await _tts.speak('브리핑을 불러오지 못했어요.');
+      await _tts.speak('$label 브리핑을 불러오지 못했어요.');
     }
   }
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
 }
 
 /// 전역 인스턴스(기존 `*_service` / `*_api` 싱글턴 패턴과 동일).

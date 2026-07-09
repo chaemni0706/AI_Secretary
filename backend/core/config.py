@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     LLM_TIMEOUT_SECONDS: float = 8.0
 
+    # --- Image verification VLM provider (on-device local models) ---
+    # 기본은 OpenAI 없이 로컬 VLM 어댑터로 동작한다. water/exercise/study 는 로컬 모델이
+    # 시각 evidence 만 추출하고, 최종 판정은 항상 Rule Engine 이 수행한다.
+    #   IMAGE_VERIFICATION_VLM_PROVIDER: 1차 provider (smolvlm | qwen_awq | openai | mock 등 adapter key)
+    #   IMAGE_VERIFICATION_STUDY_FALLBACK: study 재판정 fallback provider (없으면 빈 값/None)
+    #   IMAGE_VERIFICATION_USE_OPENAI: true 면 OpenAI vision analyzer 사용(키 필요)
+    IMAGE_VERIFICATION_VLM_PROVIDER: str = "smolvlm"
+    IMAGE_VERIFICATION_STUDY_FALLBACK: str | None = "qwen_awq"
+    IMAGE_VERIFICATION_USE_OPENAI: bool = False
+
     # --- Schedule parsing ---
     # Master switch for the rule-based schedule parser's optional LLM fallback
     # (backend.services.schedule_parser.parse_schedule_with_llm_fallback).

@@ -1,0 +1,19 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "The image presents a simple yet effective exercise equipment setup. Dominating the scene is a treadmill, its surface a stark contrast to the surrounding environment. The treadmill, with its black frame and silver wheels, stands alone in",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "treadmill_present",
+    "exercise_equipment_present"
+  ],
+  "_raw_text": "The image presents a simple yet effective exercise equipment setup. Dominating the scene is a treadmill, its surface a stark contrast to the surrounding environment. The treadmill, with its black frame and silver wheels, stands alone in"
+}

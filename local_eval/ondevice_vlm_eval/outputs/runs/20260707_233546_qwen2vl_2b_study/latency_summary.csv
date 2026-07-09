@@ -1,0 +1,2 @@
+model_name,verification_type,avg_latency_ms,p50_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms
+Qwen2-VL-2B-AWQ,study,1419.443,514.697,7100.325,472.248,7100.325

@@ -1,0 +1,18 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [
+    "non_water_beverage"
+  ],
+  "study_visual_evidence": [],
+  "exercise_visual_evidence": [],
+  "_raw_text": "The image presents a simple yet striking visual of a cup of coffee, rendered in a minimalist style. The cup, the central object in the image, is depicted in a three-dimensional perspective, giving it a sense of depth and"
+}

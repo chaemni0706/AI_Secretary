@@ -1,0 +1,2 @@
+model_name,verification_type,avg_latency_ms,p50_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms
+SmolVLM2-2.2B-Instruct,study,695.872,610.328,1099.598,564.69,1099.598

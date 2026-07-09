@@ -1,0 +1,2 @@
+model_name,verification_type,tp,tn,fp,fn
+SmolVLM-500M,water,10,7,0,1

@@ -1,0 +1,1436 @@
+[
+  {
+    "image_id": "water_001",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1378.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 3.66,
+      "total_time": 1382.0,
+      "latency_ms": 1382.0
+    }
+  },
+  {
+    "image_id": "water_002",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 703.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 703.8,
+      "latency_ms": 703.8
+    }
+  },
+  {
+    "image_id": "water_006",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 714.9,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 715.0,
+      "latency_ms": 715.0
+    }
+  },
+  {
+    "image_id": "water_008",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 555.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 555.8,
+      "latency_ms": 555.8
+    }
+  },
+  {
+    "image_id": "intake_002",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 909.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 909.8,
+      "latency_ms": 909.8
+    }
+  },
+  {
+    "image_id": "intake_005",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 892.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 892.5,
+      "latency_ms": 892.5
+    }
+  },
+  {
+    "image_id": "intake_008",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 909.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 909.1,
+      "latency_ms": 909.1
+    }
+  },
+  {
+    "image_id": "intake_011",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 906.9,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 907.0,
+      "latency_ms": 907.0
+    }
+  },
+  {
+    "image_id": "intake_013",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 919.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 919.9,
+      "latency_ms": 919.9
+    }
+  },
+  {
+    "image_id": "intake_014",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 983.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 4.7,
+      "total_time": 988.5,
+      "latency_ms": 988.5
+    }
+  },
+  {
+    "image_id": "intake_017",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 959.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 959.7,
+      "latency_ms": 959.7
+    }
+  },
+  {
+    "image_id": "intake_018",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 964.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 964.8,
+      "latency_ms": 964.8
+    }
+  },
+  {
+    "image_id": "intake_019",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 940.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 940.4,
+      "latency_ms": 940.4
+    }
+  },
+  {
+    "image_id": "intake_020",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 917.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 917.4,
+      "latency_ms": 917.4
+    }
+  },
+  {
+    "image_id": "intake_025",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 30.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 977.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.11,
+      "total_time": 977.5,
+      "latency_ms": 977.5
+    }
+  },
+  {
+    "image_id": "intake_027",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 35.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "open_textbook"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1067.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 1067.8,
+      "latency_ms": 1067.8
+    }
+  },
+  {
+    "image_id": "intake_028",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "study_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1074.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 1074.5,
+      "latency_ms": 1074.5
+    }
+  },
+  {
+    "image_id": "intake_033",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 35.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "open_textbook"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 947.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 947.7,
+      "latency_ms": 947.7
+    }
+  },
+  {
+    "image_id": "water_012",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 522.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 522.7,
+      "latency_ms": 522.7
+    }
+  },
+  {
+    "image_id": "water_013",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 562.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.08,
+      "total_time": 562.5,
+      "latency_ms": 562.5
+    }
+  },
+  {
+    "image_id": "water_015",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 570.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 570.1,
+      "latency_ms": 570.1
+    }
+  },
+  {
+    "image_id": "exercise_003",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 532.1,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 532.2,
+      "latency_ms": 532.2
+    }
+  },
+  {
+    "image_id": "exercise_004",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 588.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 588.8,
+      "latency_ms": 588.8
+    }
+  },
+  {
+    "image_id": "exercise_005",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 562.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 562.1,
+      "latency_ms": 562.1
+    }
+  },
+  {
+    "image_id": "exercise_006",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 617.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 617.9,
+      "latency_ms": 617.9
+    }
+  },
+  {
+    "image_id": "exercise_007",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 554.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 554.7,
+      "latency_ms": 554.7
+    }
+  },
+  {
+    "image_id": "exercise_008",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 526.9,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 527.0,
+      "latency_ms": 527.0
+    }
+  },
+  {
+    "image_id": "study_002",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 35.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "open_textbook",
+      "uncertain_screen_content"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1016.1,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 1016.2,
+      "latency_ms": 1016.2
+    }
+  },
+  {
+    "image_id": "study_005",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 35.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "open_textbook"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 586.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 586.1,
+      "latency_ms": 586.1
+    }
+  },
+  {
+    "image_id": "study_012",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "uncertain_screen_content"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "study_priority:uncertain_screen_content",
+      "study_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 952.1,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 952.2,
+      "latency_ms": 952.2
+    }
+  },
+  {
+    "image_id": "study_013",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 30.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 639.2,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 639.3,
+      "latency_ms": 639.3
+    }
+  },
+  {
+    "image_id": "exercise_009",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 545.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 545.9,
+      "latency_ms": 545.9
+    }
+  },
+  {
+    "image_id": "exercise_010",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 607.2,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.13,
+      "total_time": 607.3,
+      "latency_ms": 607.3
+    }
+  },
+  {
+    "image_id": "exercise_011",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 590.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 590.4,
+      "latency_ms": 590.4
+    }
+  },
+  {
+    "image_id": "exercise_015",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "uncertain_screen_content"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "study_priority:uncertain_screen_content",
+      "study_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 583.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 583.7,
+      "latency_ms": 583.7
+    }
+  },
+  {
+    "image_id": "study_014",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 30.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 589.5,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 589.6,
+      "latency_ms": 589.6
+    }
+  },
+  {
+    "image_id": "exercise_020",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 529.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 529.5,
+      "latency_ms": 529.5
+    }
+  },
+  {
+    "image_id": "exercise_021",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 554.1,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.08,
+      "total_time": 554.2,
+      "latency_ms": 554.2
+    }
+  },
+  {
+    "image_id": "exercise_022",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 525.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.08,
+      "total_time": 525.9,
+      "latency_ms": 525.9
+    }
+  },
+  {
+    "image_id": "exercise_023",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 560.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 560.1,
+      "latency_ms": 560.1
+    }
+  },
+  {
+    "image_id": "exercise_024",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 586.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 586.5,
+      "latency_ms": 586.5
+    }
+  },
+  {
+    "image_id": "water_026",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 562.5,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.08,
+      "total_time": 562.6,
+      "latency_ms": 562.6
+    }
+  },
+  {
+    "image_id": "exercise_033",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 554.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 554.9,
+      "latency_ms": 554.9
+    }
+  },
+  {
+    "image_id": "exercise_034",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 570.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 570.9,
+      "latency_ms": 570.9
+    }
+  },
+  {
+    "image_id": "exercise_035",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 571.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 571.9,
+      "latency_ms": 571.9
+    }
+  },
+  {
+    "image_id": "exercise_036",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 572.2,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 572.3,
+      "latency_ms": 572.3
+    }
+  },
+  {
+    "image_id": "exercise_037",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 589.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 589.7,
+      "latency_ms": 589.7
+    }
+  },
+  {
+    "image_id": "exercise_038",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 573.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 573.9,
+      "latency_ms": 573.9
+    }
+  },
+  {
+    "image_id": "exercise_039",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 562.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 562.7,
+      "latency_ms": 562.7
+    }
+  },
+  {
+    "image_id": "exercise_040",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "insufficient_exercise_evidence"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_priority:insufficient_exercise_evidence",
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 627.9,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 628.0,
+      "latency_ms": 628.0
+    }
+  },
+  {
+    "image_id": "water_032",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 566.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 566.4,
+      "latency_ms": 566.4
+    }
+  },
+  {
+    "image_id": "exercise_065",
+    "task": "exercise",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "exercise_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 595.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 595.4,
+      "latency_ms": 595.4
+    }
+  },
+  {
+    "image_id": "water_036",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 587.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 587.1,
+      "latency_ms": 587.1
+    }
+  },
+  {
+    "image_id": "water_040",
+    "task": "water",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "water_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 713.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 713.5,
+      "latency_ms": 713.5
+    }
+  },
+  {
+    "image_id": "study_pass_05",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "study_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 914.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 914.8,
+      "latency_ms": 914.8
+    }
+  },
+  {
+    "image_id": "study_pass_06",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 30.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 429.9,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 430.0,
+      "latency_ms": 430.0
+    }
+  },
+  {
+    "image_id": "study_pass_07",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 35.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "open_textbook"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 586.8,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 586.9,
+      "latency_ms": 586.9
+    }
+  },
+  {
+    "image_id": "study_pass_08",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 30.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 937.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 937.5,
+      "latency_ms": 937.5
+    }
+  },
+  {
+    "image_id": "study_pass_10",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 30.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 552.1,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 552.2,
+      "latency_ms": 552.2
+    }
+  },
+  {
+    "image_id": "study_pass_11",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "retake_required",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [
+      "uncertain_screen_content"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "study_priority:uncertain_screen_content",
+      "study_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 594.9,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 595.0,
+      "latency_ms": 595.0
+    }
+  },
+  {
+    "image_id": "study_pass_13",
+    "task": "study",
+    "ground_truth": "PASS",
+    "pred_result": "rejected",
+    "verified": false,
+    "score": 0.0,
+    "mandatory_passed": false,
+    "got_evidence": [],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "study_pattern_missing"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 785.2,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 785.3,
+      "latency_ms": 785.3
+    }
+  }
+]

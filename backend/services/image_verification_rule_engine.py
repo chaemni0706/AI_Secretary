@@ -511,6 +511,27 @@ def _exercise_mandatory_passed(analysis: VisionAnalysis, context: ImageVerificat
             or "yoga_pose_visible" in exercise_evidence
             or {"yoga_environment", "yoga_mat_present"}.issubset(exercise_evidence)
         )
+    if activity == "home_workout":
+        # 홈트는 기구가 없을 수 있다. 다음이면 통과:
+        #  - 홈 기구(매트/밴드/덤벨/케틀벨/풀업바) 존재, 또는
+        #  - 홈 운동 자세(home_exercise_pose_visible), 또는
+        #  - 홈 운동 환경 + 자세(일반/홈) 조합.
+        # 환경 단독(home_workout_environment only)은 위 상단 가드에서 이미 False → 자세 단독 PASS 금지 유지.
+        home_core = exercise_evidence & _EXERCISE_CORE_EQUIPMENT.get("home_workout", set())
+        if home_core or "home_exercise_pose_visible" in exercise_evidence:
+            return True
+        if "home_workout_environment" in exercise_evidence and (
+            exercise_evidence & _EXERCISE_POSE_EVIDENCE
+        ):
+            return True
+        return False
+    # 핵심 기구/장소 단서(예: gym treadmill_present)는 해당 운동 환경을 함의한다.
+    # 로컬 VLM 이 gym_environment 같은 환경 라벨을 별도로 내지 않고 treadmill_present 만 내는
+    # 매핑 누락을 보완: 해당 activity 의 핵심 근거가 있으면 필수 조건을 통과로 본다.
+    # (핵심 라벨은 실제 기구/장소만 포함 → food/bedroom/office/water/shoes 등 부정 케이스는
+    #  이 라벨을 얻지 못하므로 FP 가 생기지 않는다. 자세(pose)는 기존대로 보너스로만 취급.)
+    if exercise_evidence.intersection(_EXERCISE_CORE_EQUIPMENT.get(activity, set())):
+        return True
     return all(bool(exercise_evidence.intersection(group)) for group in _EXERCISE_REQUIRED[activity])
 
 

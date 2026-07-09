@@ -1,0 +1,2 @@
+model_name,verification_type,avg_latency_ms,p50_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms
+SmolVLM-500M,water,748.853,722.917,1355.546,563.548,1355.546

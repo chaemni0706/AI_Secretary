@@ -1,0 +1,18 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "A person doing a squat in a bedroom.",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "exercise_pose_visible"
+  ],
+  "_raw_text": "A person doing a squat in a bedroom."
+}

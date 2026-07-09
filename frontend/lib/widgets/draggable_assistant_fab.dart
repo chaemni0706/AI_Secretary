@@ -37,12 +37,27 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
     if (_open) setState(() => _open = false);
   }
 
+  static const double _margin = 12;
+  static const double _bottomMargin = 88;
+
+  /// FAB 를 화면 안으로 보정한다. 초기 프레임처럼 크기가 0이거나 FAB 가 들어갈
+  /// 공간이 없으면(upper < lower) clamp 예외가 나므로, 안전한 기본 위치를 돌려준다.
   Offset _clamp(Offset position, Size size) {
+    final double maxX = size.width - _buttonSize - _margin;
+    final double maxY = size.height - _buttonSize - _bottomMargin;
+    if (size.width <= 0 || size.height <= 0 || maxX < _margin || maxY < _margin) {
+      return const Offset(_margin, _margin);
+    }
     return Offset(
-      position.dx.clamp(12, size.width - _buttonSize - 12),
-      position.dy.clamp(12, size.height - _buttonSize - 88),
+      position.dx.clamp(_margin, maxX).toDouble(),
+      position.dy.clamp(_margin, maxY).toDouble(),
     );
   }
+
+  /// FAB 를 배치할 만큼 레이아웃 크기가 확보됐는지(초기 0크기 프레임 배제).
+  bool _hasUsableBounds(Size size) =>
+      size.width > _buttonSize + 2 * _margin &&
+      size.height > _buttonSize + _bottomMargin + _margin;
 
   List<Offset> _menuOffsets(Size size) {
     final position = _position ?? Offset(size.width - 82, size.height - 146);
@@ -69,7 +84,10 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
         final position =
             _position ?? Offset(size.width - 82, size.height - 146);
         final safePosition = _clamp(position, size);
-        if (_position == null || safePosition != position) {
+        // 유효한 레이아웃 프레임에서만 위치를 확정한다. 초기 0크기 프레임에서 확정하면
+        // FAB 가 좌상단(_margin,_margin)에 고정되어 기본 우하단 위치로 못 가기 때문.
+        if (_hasUsableBounds(size) &&
+            (_position == null || safePosition != position)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _position = safePosition);
           });

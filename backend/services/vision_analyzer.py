@@ -158,4 +158,36 @@ def _unavailable_analysis(issue: str) -> VisionAnalysis:
 
 
 def get_default_vision_analyzer() -> VisionAnalyzer:
-    return OpenAIVisionAnalyzer()
+    """1차 VisionAnalyzer 선택.
+
+    기본은 OpenAI 없이 로컬 온디바이스 VLM(IMAGE_VERIFICATION_VLM_PROVIDER, 기본 smolvlm).
+    IMAGE_VERIFICATION_USE_OPENAI=true 이거나 provider 가 'openai' 면 OpenAIVisionAnalyzer.
+    로컬 provider 로딩이 불가하면 OpenAIVisionAnalyzer 로 폴백(키 없으면 unusable 로 안전 처리).
+    """
+    provider = (settings.IMAGE_VERIFICATION_VLM_PROVIDER or "smolvlm").strip().lower()
+    if settings.IMAGE_VERIFICATION_USE_OPENAI or provider == "openai":
+        return OpenAIVisionAnalyzer()
+    try:
+        from backend.services.local_vlm_analyzer import get_local_vlm_analyzer
+
+        return get_local_vlm_analyzer(provider)
+    except Exception:  # noqa: BLE001 - 로컬 provider import/로딩 실패 시 OpenAI 경로로 폴백
+        return OpenAIVisionAnalyzer()
+
+
+def get_study_fallback_analyzer() -> VisionAnalyzer | None:
+    """study 재판정용 fallback analyzer(IMAGE_VERIFICATION_STUDY_FALLBACK, 기본 qwen_awq).
+
+    비활성(빈 값/none)이거나 로딩 불가하면 None → 상위에서 fallback 을 건너뛴다.
+    """
+    key = (settings.IMAGE_VERIFICATION_STUDY_FALLBACK or "").strip().lower()
+    if not key or key in {"none", "off", "disabled"}:
+        return None
+    if key == "openai":
+        return OpenAIVisionAnalyzer()
+    try:
+        from backend.services.local_vlm_analyzer import get_local_vlm_analyzer
+
+        return get_local_vlm_analyzer(key)
+    except Exception:  # noqa: BLE001
+        return None

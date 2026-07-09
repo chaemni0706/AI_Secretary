@@ -502,6 +502,13 @@ def run_experiment(models_only: list[str] | None, types: list[str], simulate: bo
     for candidate in candidates:
         rows += evaluate_model(candidate, items, fixture_lookup, simulate, run_ctx=run_ctx)
 
+    metrics = _finalize(rows, run_ctx, model_meta, [c["model_name"] for c in candidates], types, simulate)
+    return {"run_id": run_id, "run_dir": run_dir, "rows": rows, "metrics": metrics}
+
+
+def _finalize(rows: list[dict], run_ctx: RunContext, model_meta: dict[str, dict],
+              model_names: list[str], types: list[str], simulate: bool) -> list[dict]:
+    """rows → 지표 계산 + 모든 산출물 파일 저장. run_experiment 와 run_from_dump 가 공유."""
     metrics = compute_metrics(rows, model_meta)
     confusion = [{k: m[k] for k in CONFUSION_FIELDS}
                  for m in metrics if m["verification_type"] != "ALL"]
@@ -512,10 +519,10 @@ def run_experiment(models_only: list[str] | None, types: list[str], simulate: bo
             continue
         vt_rows = [r for r in classified
                    if r["model_name"] == m["model_name"] and r["verification_type"] == m["verification_type"]]
-        lat = _latency_stats(vt_rows)
-        latency.append({"model_name": m["model_name"], "verification_type": m["verification_type"], **lat})
+        latency.append({"model_name": m["model_name"], "verification_type": m["verification_type"],
+                        **_latency_stats(vt_rows)})
 
-    # 파일 저장
+    run_dir = run_ctx.run_dir
     write_report(rows, run_dir / "per_image_report.csv")
     write_predictions_jsonl(rows, run_dir / "predictions.jsonl")
     _write_csv(metrics, METRICS_FIELDS, run_dir / "metrics_summary.csv")
@@ -524,8 +531,100 @@ def run_experiment(models_only: list[str] | None, types: list[str], simulate: bo
     _write_csv(confusion, CONFUSION_FIELDS, run_dir / "confusion_matrix.csv")
     _write_csv(latency, LATENCY_FIELDS, run_dir / "latency_summary.csv")
     write_error_cases(rows, run_dir / "error_cases.csv")
-    write_experiment_report(rows, metrics, run_ctx, [c["model_name"] for c in candidates], types, simulate)
+    write_experiment_report(rows, metrics, run_ctx, model_names, types, simulate)
+    return metrics
 
+
+def run_from_dump(dump_path: str, base_dir: Path | None = None, now: datetime | None = None,
+                  reparse: bool = False) -> dict:
+    """stage 2: infer_dump.py 가 만든 JSONL(추론 결과)을 읽어 Rule Engine 판정 + 지표 저장.
+
+    pydantic-v2 환경(base/qwen-vlm)에서 실행한다. 모델 로드/추론은 하지 않는다.
+    reparse=True 면 저장된 raw_text 를 현재 파서(to_vision_analysis)로 다시 정규화한다
+    (파서 개선을 재추론 없이 반영).
+    """
+    recs = [json.loads(x) for x in Path(dump_path).read_text(encoding="utf-8").splitlines() if x.strip()]
+    if reparse:
+        from adapters.smolvlm_adapter import to_vision_analysis
+        for rec in recs:
+            if not rec.get("error") and rec.get("raw_text"):
+                rec["normalized"] = to_vision_analysis(
+                    rec["raw_text"], rec["verification_type"],
+                    {"verification_type": rec["verification_type"],
+                     "exercise_activity_type": rec.get("exercise_activity_type")},
+                )
+    if not recs:
+        raise ValueError(f"빈 dump: {dump_path}")
+
+    stamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
+    adapters_slug = _slug(list(dict.fromkeys(r.get("adapter", "m") for r in recs)))
+    types = list(dict.fromkeys(r["verification_type"] for r in recs))
+    run_id = f"{stamp}_{adapters_slug}_{_slug(types)}_fromdump"
+    base = base_dir or RUNS_DIR
+    run_dir = base / run_id
+    raw_dir = run_dir / "raw_outputs"
+    normalized_dir = run_dir / "normalized_outputs"
+    for d in (run_dir, raw_dir, normalized_dir):
+        d.mkdir(parents=True, exist_ok=True)
+    run_ctx = RunContext(run_id=run_id, timestamp=stamp, run_dir=run_dir,
+                         raw_dir=raw_dir, normalized_dir=normalized_dir, write_outputs=True)
+
+    model_meta: dict[str, dict] = {}
+    rows: list[dict] = []
+    for rec in recs:
+        vt = rec["verification_type"]
+        stem = Path(rec["filename"]).stem
+        adapter_key = rec.get("adapter", "model")
+        model_meta.setdefault(rec["model_name"], {
+            "model_size_mb": rec.get("model_size_mb", ""),
+            "runtime_target": rec.get("runtime_target", ""),
+            "android_feasibility": rec.get("android_feasibility", ""),
+        })
+        row = {
+            "run_id": run_id, "timestamp": stamp, "model_name": rec["model_name"],
+            "model_path": rec.get("model_path", ""), "verification_type": vt,
+            "filename": rec["filename"], "expected_label": rec.get("expected_label", ""),
+            "model_load_time_ms": rec.get("model_load_time_ms", ""), "peak_gpu_memory_mb": "",
+            "model_size_mb": rec.get("model_size_mb", ""), "runtime_target": rec.get("runtime_target", ""),
+        }
+        normalized = rec.get("normalized")
+        if rec.get("error") or normalized is None:
+            row.update({"predicted_label": "ERROR", "engine_result": rec.get("error") or "no_output",
+                        "ok": False, "false_positive": False, "false_negative": False,
+                        "latency_ms": rec.get("latency_ms", ""), "visual_evidence": "", "objects": "",
+                        "raw_output_path": "", "normalized_output_path": "", "error": rec.get("error", "")})
+            rows.append(row)
+            continue
+
+        raw_text = rec.get("raw_text") or (normalized.get("_raw_text", "") if isinstance(normalized, dict) else "")
+        raw_path = ""
+        if raw_text:
+            rp = raw_dir / f"{adapter_key}__{stem}.txt"
+            rp.write_text(str(raw_text), encoding="utf-8")
+            raw_path = _rel(rp)
+        np_ = normalized_dir / f"{adapter_key}__{stem}.json"
+        np_.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        analysis = VisionAnalysis.model_validate(normalized)
+        ctx = (ImageVerificationContext(exercise_activity_type=rec.get("exercise_activity_type"))
+               if vt == "exercise" else ImageVerificationContext())
+        result = evaluate_image_verification(vt, analysis, ctx)
+        predicted = ENGINE_TO_PREDICTED.get(result.result, "UNKNOWN")
+        expected = rec.get("expected_label", "")
+        ok = _label_ok(expected, predicted)
+        row.update({
+            "predicted_label": predicted, "engine_result": result.result,
+            "score": result.score, "mandatory_passed": result.mandatory_passed, "ok": ok,
+            "false_positive": predicted == "PASS" and expected != "PASS",
+            "false_negative": predicted != "PASS" and expected == "PASS",
+            "latency_ms": rec.get("latency_ms", ""),
+            "visual_evidence": ";".join(getattr(analysis, EVIDENCE_FIELD[vt])),
+            "objects": ";".join(o.label for o in analysis.objects),
+            "raw_output_path": raw_path, "normalized_output_path": _rel(np_), "error": "",
+        })
+        rows.append(row)
+
+    metrics = _finalize(rows, run_ctx, model_meta, list(model_meta.keys()), types, simulate=False)
     return {"run_id": run_id, "run_dir": run_dir, "rows": rows, "metrics": metrics}
 
 
@@ -552,14 +651,20 @@ def main() -> None:
     parser.add_argument("--no-simulate", dest="simulate", action="store_false",
                         help="시뮬레이션 끄기 (실제 어댑터만 사용, 없으면 SKIPPED)")
     parser.add_argument("--output-dir", default=None, help="run 폴더의 base 경로 (기본: outputs/runs)")
+    parser.add_argument("--from-dump", default=None,
+                        help="infer_dump.py 가 만든 JSONL 경로. 지정 시 모델 로드 없이 판정+지표만 계산(stage 2).")
+    parser.add_argument("--reparse", action="store_true",
+                        help="--from-dump 와 함께: 저장된 raw_text 를 현재 파서로 다시 정규화(재추론 없이 파서 개선 반영).")
     args = parser.parse_args()
 
-    types = [t.strip() for t in args.verification_types.split(",") if t.strip()]
-    only = [m.strip() for m in args.models.split(",")] if args.models else None
-
+    base_dir = Path(args.output_dir) if args.output_dir else None
     try:
-        result = run_experiment(only, types, args.simulate,
-                                base_dir=Path(args.output_dir) if args.output_dir else None)
+        if args.from_dump:
+            result = run_from_dump(args.from_dump, base_dir=base_dir, reparse=args.reparse)
+        else:
+            types = [t.strip() for t in args.verification_types.split(",") if t.strip()]
+            only = [m.strip() for m in args.models.split(",")] if args.models else None
+            result = run_experiment(only, types, args.simulate, base_dir=base_dir)
     except ValueError as exc:
         raise SystemExit(str(exc))
 

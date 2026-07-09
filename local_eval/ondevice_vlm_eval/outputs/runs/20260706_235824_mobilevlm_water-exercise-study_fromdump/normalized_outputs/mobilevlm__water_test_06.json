@@ -1,0 +1,25 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container"
+  ],
+  "study_visual_evidence": [],
+  "exercise_visual_evidence": [],
+  "_raw_text": "The image captures a moment of someone about to fill a glass of water. The glass, filled with water, is held by a hand, which is positioned on the left side of the image. The hand is holding the glass with"
+}

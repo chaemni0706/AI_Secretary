@@ -12,6 +12,8 @@ wakeup은 VLM/Rule Engine을 사용하지 않고 서버 수신 시각/세션/이
 
 from typing import Optional
 
+import json
+
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from backend.core.response import success_response
@@ -62,7 +64,11 @@ async def verify_image_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    return success_response(message="인증사진 판정이 완료되었습니다.", data=data.model_dump())
+    response_data = data.model_dump()
+    print("========== IMAGE VERIFICATION RESPONSE ==========")
+    print(json.dumps(response_data, ensure_ascii=False, indent=2, default=str))
+    print("=================================================")
+    return success_response(message="인증사진 판정이 완료되었습니다.", data=response_data)
 
 
 @router.post(

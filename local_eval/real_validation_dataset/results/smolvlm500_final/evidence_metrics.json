@@ -1,0 +1,4 @@
+{
+  "available": false,
+  "note": "manifest 에 expected_evidence 컬럼이 없어 evidence 정밀도/재현율 미산출"
+}

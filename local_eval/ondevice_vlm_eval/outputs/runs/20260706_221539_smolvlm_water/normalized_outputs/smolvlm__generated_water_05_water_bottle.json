@@ -1,0 +1,25 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "water_bottle",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container"
+  ],
+  "study_visual_evidence": [],
+  "exercise_visual_evidence": [],
+  "_raw_text": "transparent bottle with water."
+}

@@ -1,0 +1,19 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "A blue exercise mat on a white surface.",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "exercise_mat_present",
+    "home_workout_environment"
+  ],
+  "_raw_text": "A blue exercise mat on a white surface."
+}

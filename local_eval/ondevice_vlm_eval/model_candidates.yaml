@@ -7,23 +7,72 @@
 # runtime_target: 온디바이스 실행 런타임 계획. android_feasibility: Z Flip3 기준 대략 평가.
 
 candidates:
-  - model_name: MiniCPM-V-4.6
+  - model_name: MiniCPM-V-2.6
     adapter: minicpm_v
     family: MiniCPM-V
-    parameter_size: "~8B"
-    quantization_plan: "int4 GGUF (llama.cpp) / MLC"
-    model_size_mb: 4800
-    expected_runtime: "high-end / server; on-device는 공격적 양자화 필요"
-    runtime_target: "llama.cpp-int4"
+    parameter_size: "8B"                        # Qwen2-7B + SigLIP 기반
+    model_id: openbmb/MiniCPM-V-2_6             # 로컬 model_path 있으면 우선 사용
+    model_path: /data/models/MiniCPM-V-2_6
+    # int4 체크포인트: openbmb/MiniCPM-V-2_6-int4 / GGUF: openbmb/MiniCPM-V-2_6-gguf
+    max_new_tokens: 128
+    license: "MiniCPM Model License (연구 자유, 상업은 등록 필요) — 다운로드 시 재확인"
+    quantization_plan: "int4 (bnb) / GGUF int4 (llama.cpp) / MLC"
+    # TODO: 다운로드 후 실측. bf16 원본 ~16GB, int4 ~6GB 수준(추정)
+    model_size_mb: 6000
+    expected_runtime: "server bf16; on-device는 int4 GGUF 필요"
+    runtime_target: "llama.cpp-int4 / mlc"
     android_feasibility: "low-medium"
     notes: >
-      정확도는 후보 중 최상위권으로 기대되나 파라미터가 커 Z Flip3(8GB)에서는
-      메모리/지연이 부담. 정확도 상한선(레퍼런스) 용도로 우선 평가.
+      MiniCPM-V 2.6(8B)은 정확도 상한선(레퍼런스) 용도. 커스텀 model.chat() API(trust_remote_code).
+      llama.cpp GGUF 공식 지원으로 int4 온디바이스 경로는 있으나 8B라 Z Flip3(8GB) 부담.
+      "정확도 대비 온디바이스 가능성" 관점에서 SmolVLM 대체보다는 study 상한/서버 후보로 평가.
+
+  - model_name: MiniCPM-V-2.0
+    adapter: minicpm_v2
+    family: MiniCPM-V
+    parameter_size: "2.8B"                       # MiniCPM-2.4B + SigLIP-400M
+    model_id: openbmb/MiniCPM-V-2                # 로컬 model_path 있으면 우선 사용
+    model_path: /data/models/MiniCPM-V-2
+    # GGUF int4 온디바이스: openbmb/MiniCPM-V-2-gguf
+    max_new_tokens: 128
+    license: "MiniCPM Model License (연구 자유, 상업 등록) — 다운로드 시 재확인"
+    quantization_plan: "GGUF int4 (llama.cpp) / int4 bnb"
+    # TODO: 다운로드 후 실측(du -sh). fp16 ~5.5GB, GGUF int4 ~1.9GB 추정 → 실측으로 교체
+    model_size_mb: 1900
+    expected_runtime: "server fp16; on-device는 GGUF int4(llama.cpp)"
+    runtime_target: "llama.cpp-int4 / mlc"
+    android_feasibility: "medium"
+    notes: >
+      MiniCPM-V 2.0(2.8B)은 2.6(8B)보다 작은 variant. GGUF int4 공식 배포로 Android(llama.cpp)
+      온디바이스 경로가 상대적으로 명확하고 OCR/문서 인식이 강해 SmolVLM study 약점 보완 기대.
+      custom chat() API(2.0 시그니처). 프롬프트/파서/판정은 SmolVLM 과 동일 재사용(어댑터 key minicpm_v2).
+      "정확도(FP=0, study) 대비 온디바이스 실행성" 기준으로 채택 판단.
+
+  - model_name: MagicVL-2B
+    adapter: magicvl_2b
+    family: MagicVL
+    parameter_size: "2B"
+    model_id: MagicVL-2B                        # UNVERIFIED — 정확한 공식 id 확인 후 교체
+    model_path: /data/models/MagicVL-2B
+    max_new_tokens: 128
+    license: "UNVERIFIED — 다운로드 전 확인"
+    quantization_plan: "int4/int8 (검증 후 확정)"
+    model_size_mb: unknown_until_verified
+    expected_runtime: "검증 필요"
+    runtime_target: "MLC/llama.cpp (검증 후)"
+    android_feasibility: "unknown"
+    notes: >
+      UNVERIFIED 후보: 정확한 HF model id/추론 API/라이선스/양자화 checkpoint 존재를 아직 확인하지
+      못함. 어댑터는 trust_remote_code + MiniCPM류 .chat() API 를 가정한 스캐폴드이며, 런북의
+      존재확인 명령으로 실제 id/API 를 확정한 뒤 magicvl_adapter._infer 를 조정해야 한다.
 
   - model_name: MobileVLM-V2-1.7B
     adapter: mobilevlm
     family: MobileVLM
     parameter_size: "1.7B"
+    model_id: mtgv/MobileVLM_V2-1.7B          # 로컬 /data/models/MobileVLM_V2-1.7B 있으면 우선 사용
+    model_path: /data/models/MobileVLM_V2-1.7B
+    max_new_tokens: 48
     quantization_plan: "int4/int8 (llama.cpp / MLC / NNAPI)"
     model_size_mb: 1100
     expected_runtime: "mobile 최적화 설계"
@@ -37,6 +86,9 @@ candidates:
     adapter: smolvlm
     family: SmolVLM
     parameter_size: "0.5B (대안: 2.2B)"
+    model_id: /data/models/SmolVLM-500M-Instruct   # 로컬 가중치 (없으면 HF: HuggingFaceTB/SmolVLM-500M-Instruct)
+    model_path: /data/models/SmolVLM-500M-Instruct
+    max_new_tokens: 32                             # 단답 label 이므로 짧게
     quantization_plan: "int8/int4 (ONNX Runtime / llama.cpp / MLC)"
     model_size_mb: 600
     expected_runtime: "mobile / edge"
@@ -46,15 +98,57 @@ candidates:
       초경량. 500M은 크기/속도에서 매우 유리하나 세밀한 시각 근거(빈 컵 vs 물, 학습 콘텐츠 등)
       정확도가 낮을 위험. 필요 시 SmolVLM-2.2B로 정확도-크기 트레이드오프 비교.
 
+  - model_name: SmolVLM2-2.2B-Instruct
+    adapter: smolvlm2_2b
+    family: SmolVLM2
+    parameter_size: "2.2B"
+    model_id: HuggingFaceTB/SmolVLM2-2.2B-Instruct  # 로컬 model_path 있으면 어댑터가 우선 사용
+    model_path: /data/models/SmolVLM2-2.2B-Instruct
+    max_new_tokens: 128                             # 2.2B 서술 출력이 더 길어 여유를 둠
+    # TODO: 다운로드 후 실제 디스크 크기로 갱신 (bf16 체크포인트 약 8.4GB / 추정 4400MB@fp16)
+    model_size_mb: 4400
+    expected_runtime: "transformers fp16 desktop, ONNX/MLC later"
+    quantization_plan: "fp16 desktop first, int8/int4 later"
+    runtime_target: "transformers-fp16 / onnx-int8 / mlc"
+    android_feasibility: "medium"
+    notes: >
+      SmolVLM-500M 대비 study recall 개선 가능성 검증용 후보. 프롬프트/파서는 SmolVLM-500M과
+      동일하게 재사용(raw text + parser)하며 로딩 경로/dtype 만 분리. 모델은 시각 근거만 추출하고
+      최종 판정은 Rule Engine이 수행. FP=0 유지가 채택 전제.
+
+  - model_name: Qwen2-VL-2B-AWQ
+    adapter: qwen2vl_2b
+    family: Qwen2-VL
+    parameter_size: "2B"
+    model_id: Qwen/Qwen2-VL-2B-Instruct-AWQ     # 로컬 model_path 있으면 어댑터가 우선 사용
+    model_path: /data/models/Qwen2-VL-2B-Instruct-AWQ
+    max_new_tokens: 128
+    quantization_plan: "AWQ 4bit (int4)"
+    # TODO: 다운로드 후 실제 디스크 크기로 갱신 (AWQ 4bit 추정 ~1800MB; fp16 원본은 ~4.4GB)
+    model_size_mb: 1800
+    expected_runtime: "transformers/autoawq desktop, MLC/llama.cpp int4 later"
+    runtime_target: "transformers-awq / mlc-int4 / llama.cpp"
+    android_feasibility: "medium"
+    notes: >
+      SmolVLM-500M(600MB, study 약함)과 Qwen2.5-VL-3B-AWQ(2.3GB, study 최고) 사이의 절충 후보.
+      2B AWQ 는 3B 대비 작아 Z Flip3 온디바이스 가능성이 더 높고, SmolVLM 대비 study 개선 기대.
+      프롬프트/파서/판정은 SmolVLM 과 동일 재사용(어댑터 key qwen2vl_2b), 모델 클래스만
+      Qwen2VLForConditionalGeneration. "정확도 대비 온디바이스 가능성" 기준으로 채택 판단.
+
   - model_name: Qwen2.5-VL-3B-AWQ
     adapter: qwen_awq
     family: Qwen2.5-VL
     parameter_size: "3B"
+    model_id: Qwen/Qwen2.5-VL-3B-Instruct-AWQ   # 로컬 model_path 있으면 어댑터가 우선 사용
+    model_path: /data/models/Qwen2.5-VL-3B-Instruct-AWQ
+    max_new_tokens: 128
     quantization_plan: "AWQ 4bit"
     model_size_mb: 2300
-    expected_runtime: "medium; on-device via MLC, server via vLLM"
-    runtime_target: "mlc-awq"
-    android_feasibility: "medium"
+    expected_runtime: "transformers/vllm/autoawq desktop, MLC later"
+    runtime_target: "transformers-awq / vllm / autoawq (MLC later)"
+    android_feasibility: "low-medium"
     notes: >
-      기존 파이프라인이 Qwen2.5-VL-3B(비양자화) 기준으로 검증됨. AWQ 4bit로 크기/지연을 낮춰
-      온디바이스 가능성을 본다. 기존 결과와의 정확도 비교 기준(anchor)으로 유용.
+      study anchor and server fallback candidate. 기존 파이프라인이 Qwen2.5-VL-3B(비양자화)로
+      검증됨. AWQ 4bit로 크기/지연을 낮춰 정확도-크기 트레이드오프를 본다. 소형 모델(500M/1.7B/2.2B)이
+      모두 study recall 0.286 에 머물러, 상위 모델에서 study 가 개선되는지(상한 확인)와 서버 fallback
+      가치를 평가한다. 온디바이스 1순위 후보라기보다 anchor/fallback/study 한계 분석용.

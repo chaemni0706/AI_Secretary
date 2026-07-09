@@ -105,13 +105,19 @@ def list_by_date(
 
 
 def list_pending(db: Session, *, user_id: str) -> List[LedgerTransaction]:
+    """사용자 확인이 필요한 거래 목록.
+
+    PENDING(신규 대기) + NEEDS_REVIEW(저신뢰/확인필요)를 함께 반환한다.
+    둘 다 자동감지 카드에서 '확정/수정/삭제' 대상이므로 노출되어야 한다.
+    """
     stmt = (
         select(LedgerTransaction)
         .where(
             LedgerTransaction.user_id == user_id,
-            LedgerTransaction.status == "PENDING",
+            LedgerTransaction.status.in_(("PENDING", "NEEDS_REVIEW")),
         )
-        .order_by(LedgerTransaction.occurred_at)
+        # 최신 거래가 먼저 오도록 내림차순(occurred_at 은 ISO 문자열이라 사전식=시간순).
+        .order_by(LedgerTransaction.occurred_at.desc())
     )
     return list(db.execute(stmt).scalars().all())
 
@@ -137,3 +143,4 @@ def delete_all_for_user(db: Session, *, user_id: str) -> int:
         count += 1
     db.flush()
     return count
+# ledger_repository: pending 조회는 PENDING + NEEDS_REVIEW 포함(occurred_at desc).

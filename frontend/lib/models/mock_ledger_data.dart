@@ -5,12 +5,13 @@ import 'ledger_models.dart';
 class MockLedgerData {
   MockLedgerData._();
 
-  /// 기준 연/월 (달력 · 리포트 공통).
-  static const int year = 2025;
-  static const int month = 12;
+  /// 데모(오프라인 fallback) 기준 연/월. 실제 화면은 DateTime.now() 를 쓴다.
+  /// 이 값들은 서버 미도달 시 demo 데이터셋의 원래 월을 나타낼 뿐이다.
+  static const int demoYear = 2025;
+  static const int demoMonth = 12;
 
-  /// 기본 선택 날짜.
-  static const int defaultSelectedDay = 20;
+  /// 데모 기본 선택 날짜.
+  static const int demoSelectedDay = 20;
 
   /// 월 요약 합계.
   static const int monthSpend = 1625560;

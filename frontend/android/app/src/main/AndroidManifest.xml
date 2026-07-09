@@ -70,6 +70,19 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="microphone"
             android:exported="false" />
+
+        <!-- AI 가계부: 결제/입금 알림 수신용 NotificationListenerService.
+             사용자가 '알림 접근' 설정에서 직접 허용해야 동작한다. 시스템이
+             BIND_NOTIFICATION_LISTENER_SERVICE 권한으로 바인딩한다. -->
+        <service
+            android:name=".LedgerNotificationListenerService"
+            android:label="AI 가계부 알림 감지"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -9,10 +9,20 @@ class LedgerCalendarGrid extends StatelessWidget {
   final int selectedDay;
   final ValueChanged<int> onSelect;
 
+  /// 표시할 연/월. null 이면 Mock 기준(하위호환).
+  final int? year;
+  final int? month;
+
+  /// 일(day)별 합계. null 이면 Mock 데이터(하위호환).
+  final Map<int, DayInfo>? dayData;
+
   const LedgerCalendarGrid({
     super.key,
     required this.selectedDay,
     required this.onSelect,
+    this.year,
+    this.month,
+    this.dayData,
   });
 
   static const _dowLabels = ['일', '월', '화', '수', '목', '금', '토'];
@@ -20,10 +30,12 @@ class LedgerCalendarGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstDow =
-        DateTime(MockLedgerData.year, MockLedgerData.month, 1).weekday % 7; // 0=일
-    final daysInMonth =
-        DateTime(MockLedgerData.year, MockLedgerData.month + 1, 0).day;
+    final y = year ?? MockLedgerData.demoYear;
+    final m = month ?? MockLedgerData.demoMonth;
+    final data = dayData ?? MockLedgerData.dayData;
+
+    final firstDow = DateTime(y, m, 1).weekday % 7; // 0=일
+    final daysInMonth = DateTime(y, m + 1, 0).day;
 
     final cells = <Widget>[];
     for (int i = 0; i < firstDow; i++) {
@@ -32,7 +44,7 @@ class LedgerCalendarGrid extends StatelessWidget {
     for (int d = 1; d <= daysInMonth; d++) {
       cells.add(_DayCell(
         day: d,
-        info: MockLedgerData.dayData[d],
+        info: data[d],
         selected: d == selectedDay,
         weekday: (firstDow + d - 1) % 7,
         onTap: () => onSelect(d),

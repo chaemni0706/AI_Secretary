@@ -19,7 +19,7 @@ String _resolveBaseUrl() {
     final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
     return 'http://$host:8000';
   }
-  return 'http://192.168.0.73:8000';
+  return 'http://192.168.0.61:8000';
 }
 
 /// API 공통 prefix (`/health` 제외).

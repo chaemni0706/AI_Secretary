@@ -20,10 +20,11 @@ Dedup design:
 
 from __future__ import annotations
 
+import calendar
 import hashlib
 import json
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -307,30 +308,52 @@ def get(db: Session, transaction_id: str) -> Optional[Dict[str, Any]]:
 
 
 # --- Idempotent seed --------------------------------------------------------
-_SEED_ROWS = [
-    {"merchant": "스타벅스 강남역점", "amount": 5800, "transaction_type": "expense",
-     "category": "카페", "occurred_at": "2026-12-31T14:20:00",
-     "category_source": "rule_based"},
-    {"merchant": "홍콩반점0410 강남역점", "amount": 9500, "transaction_type": "expense",
-     "category": "식비", "occurred_at": "2026-12-31T12:30:00",
-     "category_source": "mock_place_search"},
-    {"merchant": "카카오T", "amount": 12000, "transaction_type": "expense",
-     "category": "교통", "occurred_at": "2026-12-31T09:10:00",
-     "category_source": "rule_based"},
-    {"merchant": "NETFLIX", "amount": 17000, "transaction_type": "expense",
-     "category": "구독_콘텐츠", "occurred_at": "2026-12-01T08:00:00",
-     "category_source": "rule_based", "is_recurring": True},
-    {"merchant": "KT 통신비", "amount": 69000, "transaction_type": "expense",
-     "category": "통신_공과금", "occurred_at": "2026-12-15T08:00:00",
-     "category_source": "mock_place_search", "is_recurring": True},
-    {"merchant": "급여", "amount": 500000, "transaction_type": "income",
-     "category": "수입", "occurred_at": "2026-12-25T09:00:00",
-     "category_source": "notification_rule"},
-    {"merchant": "더현대서울", "amount": 18000, "transaction_type": "expense",
-     "category": "쇼핑", "occurred_at": "2026-12-30T16:30:00",
-     "category_source": "mock_place_search", "confidence": 0.68,
-     "needs_user_confirmation": True},
-]
+def _day_in_month(base: date, day: int) -> date:
+    """Return ``day`` within base's month, clamped to the month's last day.
+
+    Non-existent days (e.g. Feb 30) are corrected via ``calendar.monthrange``.
+    """
+    last = calendar.monthrange(base.year, base.month)[1]
+    return date(base.year, base.month, min(day, last))
+
+
+def build_seed_rows(base_date: Optional[date] = None) -> List[Dict[str, Any]]:
+    """Build the sample seed rows relative to ``base_date`` (default today).
+
+    Dates are distributed naturally within the current month (plus 'yesterday'),
+    so the demo always matches the month being viewed. Field shape is identical
+    to the previous static rows; only ``occurred_at`` is computed.
+    """
+    base = base_date or date.today()
+    yesterday = base - timedelta(days=1)
+
+    def iso(d: date, hhmm: str) -> str:
+        return f"{d.isoformat()}T{hhmm}:00"
+
+    return [
+        {"merchant": "스타벅스 강남역점", "amount": 5800, "transaction_type": "expense",
+         "category": "카페", "occurred_at": iso(base, "14:20"),
+         "category_source": "rule_based"},
+        {"merchant": "홍콩반점0410 강남역점", "amount": 9500, "transaction_type": "expense",
+         "category": "식비", "occurred_at": iso(yesterday, "12:30"),
+         "category_source": "mock_place_search"},
+        {"merchant": "카카오T", "amount": 12000, "transaction_type": "expense",
+         "category": "교통", "occurred_at": iso(_day_in_month(base, 3), "09:10"),
+         "category_source": "rule_based"},
+        {"merchant": "더현대서울", "amount": 18000, "transaction_type": "expense",
+         "category": "쇼핑", "occurred_at": iso(_day_in_month(base, 8), "16:30"),
+         "category_source": "mock_place_search", "confidence": 0.68,
+         "needs_user_confirmation": True},
+        {"merchant": "NETFLIX", "amount": 17000, "transaction_type": "expense",
+         "category": "구독_콘텐츠", "occurred_at": iso(_day_in_month(base, 10), "08:00"),
+         "category_source": "rule_based", "is_recurring": True},
+        {"merchant": "KT 통신비", "amount": 69000, "transaction_type": "expense",
+         "category": "통신_공과금", "occurred_at": iso(_day_in_month(base, 15), "08:00"),
+         "category_source": "mock_place_search", "is_recurring": True},
+        {"merchant": "급여", "amount": 500000, "transaction_type": "income",
+         "category": "수입", "occurred_at": iso(_day_in_month(base, 20), "09:00"),
+         "category_source": "notification_rule"},
+    ]
 
 
 def seed(db: Session, *, user_id: str) -> List[Dict[str, Any]]:
@@ -339,7 +362,7 @@ def seed(db: Session, *, user_id: str) -> List[Dict[str, Any]]:
     repo.delete_all_for_user(db, user_id=user_id)
     ts = _now_iso()
     out: List[Dict[str, Any]] = []
-    for row in _SEED_ROWS:
+    for row in build_seed_rows():
         occurred = row["occurred_at"]
         dt = _parse_dt(occurred)
         date = dt.strftime("%Y-%m-%d") if dt else None

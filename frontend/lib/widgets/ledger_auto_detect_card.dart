@@ -8,10 +8,17 @@ import 'ledger_transaction_row.dart';
 /// 각 대기 거래를 [확정]/[수정]/[삭제] 할 수 있다.
 class LedgerAutoDetectCard extends StatelessWidget {
   final List<PendingTx> pending;
+
+  /// "금융 알림 보내기" 버튼 콜백(작성 다이얼로그 열기).
   final VoidCallback onSimulate;
-  final ValueChanged<int> onConfirm;
-  final ValueChanged<int> onEdit;
-  final ValueChanged<int> onRemove;
+
+  /// 등록 진행 중이면 버튼을 비활성화(중복 클릭 방지).
+  final bool submitting;
+
+  /// 콜백은 백엔드 transactionId 접근을 위해 PendingTx 전체를 넘긴다.
+  final ValueChanged<PendingTx> onConfirm;
+  final ValueChanged<PendingTx> onEdit;
+  final ValueChanged<PendingTx> onRemove;
 
   const LedgerAutoDetectCard({
     super.key,
@@ -20,10 +27,17 @@ class LedgerAutoDetectCard extends StatelessWidget {
     required this.onConfirm,
     required this.onEdit,
     required this.onRemove,
+    this.submitting = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    // status 기반 안내 문구: 확인 필요 거래가 하나라도 있으면 그 문구를 우선한다.
+    final hasReview = pending.any((p) => p.isNeedsReview);
+    final statusMessage = pending.isEmpty
+        ? null
+        : (hasReview ? '확인이 필요한 거래예요' : '새 결제 내역을 감지했어요');
+
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.blue.withValues(alpha: 0.06),
@@ -71,21 +85,32 @@ class LedgerAutoDetectCard extends StatelessWidget {
               ),
               const Spacer(),
               GestureDetector(
-                onTap: onSimulate,
+                onTap: submitting ? null : onSimulate,
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.blue,
+                    color: AppTheme.blue.withValues(alpha: submitting ? 0.4 : 1),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.bolt, size: 14, color: Colors.white),
-                      SizedBox(width: 3),
-                      Text(
-                        '시뮬레이션',
+                      if (submitting)
+                        const SizedBox(
+                          width: 13,
+                          height: 13,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      else
+                        const Icon(Icons.bolt, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      const Text(
+                        '알림 보내기',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -110,14 +135,31 @@ class LedgerAutoDetectCard extends StatelessWidget {
                 ),
               ),
             )
-          else
+          else ...[
+            if (statusMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    statusMessage,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: hasReview ? AppTheme.orange : AppTheme.blue,
+                    ),
+                  ),
+                ),
+              ),
             for (final p in pending)
               _PendingRow(
                 pending: p,
-                onConfirm: () => onConfirm(p.id),
-                onEdit: () => onEdit(p.id),
-                onRemove: () => onRemove(p.id),
+                enabled: !submitting,
+                onConfirm: () => onConfirm(p),
+                onEdit: () => onEdit(p),
+                onRemove: () => onRemove(p),
               ),
+          ],
         ],
       ),
     );
@@ -126,6 +168,7 @@ class LedgerAutoDetectCard extends StatelessWidget {
 
 class _PendingRow extends StatelessWidget {
   final PendingTx pending;
+  final bool enabled;
   final VoidCallback onConfirm;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
@@ -135,6 +178,7 @@ class _PendingRow extends StatelessWidget {
     required this.onConfirm,
     required this.onEdit,
     required this.onRemove,
+    this.enabled = true,
   });
 
   @override
@@ -219,11 +263,19 @@ class _PendingRow extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  _MiniButton(label: '확정', filled: true, onTap: onConfirm),
+                  _MiniButton(
+                      label: '확정',
+                      filled: true,
+                      enabled: enabled,
+                      onTap: onConfirm),
                   const SizedBox(width: 5),
-                  _MiniButton(label: '수정', onTap: onEdit),
+                  _MiniButton(label: '수정', enabled: enabled, onTap: onEdit),
                   const SizedBox(width: 5),
-                  _MiniButton(label: '삭제', muted: true, onTap: onRemove),
+                  _MiniButton(
+                      label: '삭제',
+                      muted: true,
+                      enabled: enabled,
+                      onTap: onRemove),
                 ],
               ),
             ],
@@ -238,37 +290,41 @@ class _MiniButton extends StatelessWidget {
   final String label;
   final bool filled;
   final bool muted;
+  final bool enabled;
   final VoidCallback onTap;
 
   const _MiniButton({
     required this.label,
     this.filled = false,
     this.muted = false,
+    this.enabled = true,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: filled ? 11 : 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: filled ? AppTheme.blue : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: filled
-              ? null
-              : Border.all(color: AppTheme.separator),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
-            color: filled
-                ? Colors.white
-                : (muted ? AppTheme.textSecondary : AppTheme.textPrimary),
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding:
+              EdgeInsets.symmetric(horizontal: filled ? 11 : 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: filled ? AppTheme.blue : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: filled ? null : Border.all(color: AppTheme.separator),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: filled ? FontWeight.w700 : FontWeight.w600,
+              color: filled
+                  ? Colors.white
+                  : (muted ? AppTheme.textSecondary : AppTheme.textPrimary),
+            ),
           ),
         ),
       ),

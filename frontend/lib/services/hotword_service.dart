@@ -42,8 +42,9 @@ class HotwordService {
     '[unk]',
   ];
 
-  // 브리핑 종료 후 이 시간 안엔 재트리거 안 함(잔향/에코 중복 낭독 방지).
-  static const Duration _triggerCooldown = Duration(seconds: 15);
+  // 인식 재개 직후 이 시간 안엔 재트리거 안 함(스피커 잔향 오인식 방지).
+  // 짧게 유지해 "오늘 브리핑 → 바로 내일 브리핑" 연속 요청이 가능하게 한다.
+  static const Duration _triggerCooldown = Duration(seconds: 2);
 
   final VoiceSttService _mic = VoiceSttService(); // 마이크 권한 확보용 재사용.
   final VoiceTtsService _tts = VoiceTtsService();
@@ -230,9 +231,10 @@ class HotwordService {
       await _speech?.stop(); // TTS 소리를 되받아 인식하지 않도록 정지.
       await _speakBriefing(dayOffset);
     } finally {
-      // 쿨다운은 "브리핑이 끝난 시점"부터 카운트 → 낭독 직후 잔향/에코가
-      // "브리핑 보비" 등으로 재인식돼 중복 낭독되는 것을 막는다.
-      _lastTriggerAt = DateTime.now();
+      // 낭독 직후 스피커 잔향이 마이크로 되들어와 재트리거되는 걸 막기 위해,
+      // 인식 재개 전 잠깐 대기(에코가 지나가는 창을 인식 OFF 로 흘려보냄).
+      await Future.delayed(const Duration(milliseconds: 800));
+      _lastTriggerAt = DateTime.now(); // 재개 시점부터 짧은 쿨다운 시작.
       if (_running) {
         try {
           await _speech?.start();

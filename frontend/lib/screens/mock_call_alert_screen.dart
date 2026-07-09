@@ -182,13 +182,13 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
                 end: Alignment.bottomRight,
                 colors: [AppTheme.purple, AppTheme.blue],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.purple.withOpacity(0.5),
-                  blurRadius: 40,
-                  spreadRadius: 6,
-                ),
-              ],
+              boxShadow: TossShadow.glow(
+                AppTheme.purple,
+                alpha: 0.5,
+                blur: 40,
+                offset: Offset.zero,
+                spreadRadius: 6,
+              ),
             ),
             child: const Icon(Icons.assistant_rounded,
                 color: Colors.white, size: 64),

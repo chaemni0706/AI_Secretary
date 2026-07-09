@@ -191,7 +191,6 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
       await scheduleApi.createFromDraft(
         result.scheduleDraft,
         intent: result.intent,
-        inputType: 'voice',
       );
       // 홈/캘린더 대시보드 새로고침 트리거(다른 저장 경로와 동일하게).
       triggerDashboardRefresh();

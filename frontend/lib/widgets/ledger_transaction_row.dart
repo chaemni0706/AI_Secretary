@@ -3,7 +3,31 @@ import '../models/ledger_models.dart';
 import '../theme/app_theme.dart';
 import '../theme/ledger_styles.dart';
 
-/// 카테고리 색 배경 + 한글 이니셜 아바타. (상점 로고 대체)
+/// 거래 카테고리를 보여주는 세로 컬러 바.
+class TransactionCategoryBar extends StatelessWidget {
+  final Color color;
+  final double height;
+
+  const TransactionCategoryBar({
+    super.key,
+    required this.color,
+    this.height = 48,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 4,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+  }
+}
+
+/// 카테고리 색 배경 + 한글 이니셜 아바타. 대기 거래/반복 결제에서 사용한다.
 class LedgerInitialAvatar extends StatelessWidget {
   final String text;
   final Color color;
@@ -70,7 +94,7 @@ class LedgerCategoryTag extends StatelessWidget {
   }
 }
 
-/// 확정 거래 한 줄 (아바타 + 상호명 + 메타 + 금액).
+/// 확정 거래 한 줄 (카테고리 바 + 상호명 + 메타 + 금액).
 class LedgerTransactionRow extends StatelessWidget {
   final LedgerTx tx;
   final bool showDivider;
@@ -86,18 +110,16 @@ class LedgerTransactionRow extends StatelessWidget {
     final color = LedgerStyles.categoryColor(tx.catKey);
     return Container(
       decoration: showDivider
-          ? BoxDecoration(
+          ? const BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: AppTheme.separator.withValues(alpha: 0.7),
-                ),
+                bottom: BorderSide(color: TossColors.grey100),
               ),
             )
           : null,
-      padding: const EdgeInsets.symmetric(vertical: 13),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
-          LedgerInitialAvatar(text: tx.initial, color: color),
+          TransactionCategoryBar(color: color),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

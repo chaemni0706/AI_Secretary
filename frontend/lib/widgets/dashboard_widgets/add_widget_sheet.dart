@@ -25,8 +25,8 @@ class _AddWidgetSheet extends StatelessWidget {
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: const BoxDecoration(
-        color: Color(0xFFF6F7FC),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: TossColors.bgWhite,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(TossRadius.xl)),
       ),
       child: SafeArea(
         top: false,
@@ -89,16 +89,8 @@ class _CatalogTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: spec.accent.withValues(alpha: 0.14)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: TossColors.grey50,
+          borderRadius: BorderRadius.circular(TossRadius.lg),
         ),
         child: Row(
           children: [

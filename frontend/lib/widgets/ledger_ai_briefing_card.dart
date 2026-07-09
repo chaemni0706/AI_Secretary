@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../theme/ledger_styles.dart';
 
 /// 시그니처 AI 브리핑 카드 (딥네이비/블루 그라디언트).
@@ -21,13 +22,12 @@ class LedgerAiBriefingCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LedgerStyles.briefingGradient,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E2A54).withValues(alpha: 0.28),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: TossShadow.glow(
+          TossColors.blue700,
+          alpha: 0.25,
+          blur: 20,
+          offset: const Offset(0, 6),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(18, 17, 18, 16),
       child: Column(

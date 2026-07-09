@@ -3,8 +3,8 @@ import '../../models/dashboard_widget_model.dart';
 import '../../theme/app_theme.dart';
 
 /// 모든 대시보드 위젯이 공유하는 카드 컨테이너.
-/// 둥근 모서리 + 파스텔 글래스 배경 + 기능별 포인트색 + 편집 오버레이(삭제/크기변경).
-class DashboardWidgetCard extends StatelessWidget {
+/// 토스식: 불투명 화이트 + 부드러운 무채색 그림자. 편집 모드에서만 액센트 보더.
+class DashboardWidgetCard extends StatefulWidget {
   final Color accent;
   final Widget child;
   final bool editing;
@@ -27,33 +27,30 @@ class DashboardWidgetCard extends StatelessWidget {
   });
 
   @override
+  State<DashboardWidgetCard> createState() => _DashboardWidgetCardState();
+}
+
+class _DashboardWidgetCardState extends State<DashboardWidgetCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final editing = widget.editing;
     final card = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: TossMotion.fast,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: editing
-              ? accent.withValues(alpha: 0.55)
-              : accent.withValues(alpha: 0.16),
-          width: editing ? 1.2 : 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: TossColors.bgWhite,
+        borderRadius: BorderRadius.circular(TossRadius.xl),
+        border: editing
+            ? Border.all(
+                color: widget.accent.withValues(alpha: 0.5),
+                width: 1.2,
+              )
+            : null,
+        boxShadow: TossShadow.weak,
       ),
-      padding: const EdgeInsets.all(14),
-      child: child,
+      padding: const EdgeInsets.all(TossSpacing.lg),
+      child: widget.child,
     );
 
     return Stack(
@@ -61,9 +58,18 @@ class DashboardWidgetCard extends StatelessWidget {
       children: [
         Positioned.fill(
           child: GestureDetector(
-            onTap: editing ? null : onTap,
+            onTap: editing ? null : widget.onTap,
+            onTapDown: editing ? null : (_) => setState(() => _pressed = true),
+            onTapUp: editing ? null : (_) => setState(() => _pressed = false),
+            onTapCancel:
+                editing ? null : () => setState(() => _pressed = false),
             behavior: HitTestBehavior.opaque,
-            child: card,
+            child: AnimatedScale(
+              scale: _pressed ? TossMotion.pressedScale : 1.0,
+              duration: TossMotion.fast,
+              curve: TossMotion.easeOut,
+              child: card,
+            ),
           ),
         ),
         // 편집 모드에서만 콘텐츠를 흐리게 눌러 편집 상태임을 표시.
@@ -71,17 +77,17 @@ class DashboardWidgetCard extends StatelessWidget {
           Positioned(
             top: -6,
             right: -6,
-            child: _DeleteButton(onTap: onDelete),
+            child: _DeleteButton(onTap: widget.onDelete),
           ),
-          if (supportedSizes.length > 1)
+          if (widget.supportedSizes.length > 1)
             Positioned(
               left: 10,
               bottom: 10,
               child: _SizeSelector(
-                accent: accent,
-                current: currentSize,
-                sizes: supportedSizes,
-                onResize: onResize,
+                accent: widget.accent,
+                current: widget.currentSize,
+                sizes: widget.supportedSizes,
+                onResize: widget.onResize,
               ),
             ),
         ],
@@ -106,13 +112,7 @@ class _DeleteButton extends StatelessWidget {
           color: AppTheme.red,
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: TossShadow.tiny,
         ),
         child: const Icon(Icons.remove, size: 16, color: Colors.white),
       ),
@@ -140,13 +140,7 @@ class _SizeSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: TossShadow.tiny,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

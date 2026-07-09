@@ -88,24 +88,10 @@ class AppHeaderIconButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
+        child: SizedBox(
           width: AppSpacing.iconButton,
           height: AppSpacing.iconButton,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppTheme.separator.withValues(alpha: 0.8),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: AppTheme.textPrimary, size: 20),
+          child: Icon(icon, color: TossColors.grey700, size: 22),
         ),
       ),
     );

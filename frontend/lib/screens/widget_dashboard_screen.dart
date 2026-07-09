@@ -12,6 +12,8 @@ import '../services/schedule_api.dart';
 import '../services/todo_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
+import '../widgets/toss_button.dart';
+import '../widgets/toss_motion_widgets.dart';
 import '../widgets/dashboard_widgets/add_widget_sheet.dart';
 import '../widgets/dashboard_widgets/ai_recommendation_widget.dart';
 import '../widgets/dashboard_widgets/briefing_widget.dart';
@@ -24,6 +26,7 @@ import '../widgets/dashboard_widgets/reservation_candidate_widget.dart';
 import '../widgets/dashboard_widgets/spending_analysis_widget.dart';
 import '../widgets/dashboard_widgets/todo_dashboard_widget.dart';
 import '../widgets/dashboard_widgets/weather_widget.dart';
+import '../widgets/dashboard_widgets/widget_edit_jiggle_wrapper.dart';
 import '../widgets/dashboard_widgets/weekly_calendar_widget.dart';
 import 'ai_chat_screen.dart';
 import 'booking_recommend_screen.dart';
@@ -82,7 +85,8 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
   Future<void> _loadData() async {
     final types = _items.map((e) => e.type).toSet();
     final needTodos = types.contains(DashboardWidgetType.todo);
-    final needSchedules = types.contains(DashboardWidgetType.monthlyCalendar) ||
+    final needSchedules =
+        types.contains(DashboardWidgetType.monthlyCalendar) ||
         types.contains(DashboardWidgetType.weeklyCalendar);
     final needDashboard = types.contains(DashboardWidgetType.briefing);
     if (!needTodos && !needSchedules && !needDashboard) return;
@@ -155,11 +159,13 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
     final result = await showAddWidgetSheet(context);
     if (result == null || !mounted) return;
     setState(() {
-      _items.add(DashboardWidgetItem(
-        id: widgetLayoutStore.newId(result.type),
-        type: result.type,
-        size: result.size,
-      ));
+      _items.add(
+        DashboardWidgetItem(
+          id: widgetLayoutStore.newId(result.type),
+          type: result.type,
+          size: result.size,
+        ),
+      );
       _editing = true;
     });
     _persist();
@@ -194,8 +200,10 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
   }
 
   void _push(Widget screen) {
-    Navigator.of(context, rootNavigator: true)
-        .push(MaterialPageRoute(builder: (_) => screen));
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   void _snack(String message) {
@@ -272,8 +280,8 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
           ),
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
           children: [
-            for (final row in rows) ...[
-              _buildRow(row, cellW),
+            for (final (i, row) in rows.indexed) ...[
+              TossFadeSlideIn(index: i, child: _buildRow(row, cellW)),
               const SizedBox(height: _gap),
             ],
             if (_editing) _buildEditFooter(),
@@ -345,13 +353,18 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
       child: _buildContent(item),
     );
 
-    final sized = SizedBox(width: width, height: height, child: card);
+    final sized = SizedBox(
+      width: width,
+      height: height,
+      child: WidgetEditJiggleWrapper(
+        isEditing: _editing,
+        index: index,
+        child: card,
+      ),
+    );
 
     if (!_editing) {
-      return GestureDetector(
-        onLongPress: _enterEdit,
-        child: sized,
-      );
+      return GestureDetector(onLongPress: _enterEdit, child: sized);
     }
 
     // 편집 모드: 길게 눌러 드래그로 순서 변경.
@@ -369,10 +382,7 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
               child: SizedBox(width: width, height: height, child: card),
             ),
           ),
-          childWhenDragging: Opacity(
-            opacity: 0.3,
-            child: sized,
-          ),
+          childWhenDragging: Opacity(opacity: 0.3, child: sized),
           child: AnimatedScale(
             scale: highlighted ? 1.03 : 1.0,
             duration: const Duration(milliseconds: 150),
@@ -419,17 +429,7 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
       children: [
         _AddWidgetButton(onTap: _addWidget),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: _finishEdit,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.blue,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: const Text('편집 완료'),
-          ),
-        ),
+        TossButton.cta(label: '편집 완료', onPressed: _finishEdit),
       ],
     );
   }
@@ -477,23 +477,13 @@ class _EditToggleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
+      child: AnimatedContainer(
+        duration: TossMotion.fast,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         decoration: BoxDecoration(
-          color: editing ? AppTheme.blue : Colors.white.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: editing
-                ? AppTheme.blue
-                : AppTheme.separator.withValues(alpha: 0.8),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: editing ? TossColors.blue500 : TossColors.bgWhite,
+          borderRadius: BorderRadius.circular(TossRadius.full),
+          boxShadow: TossShadow.tiny,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -501,15 +491,15 @@ class _EditToggleButton extends StatelessWidget {
             Icon(
               editing ? Icons.check : Icons.tune,
               size: 16,
-              color: editing ? Colors.white : AppTheme.textPrimary,
+              color: editing ? Colors.white : TossColors.grey700,
             ),
             const SizedBox(width: 5),
             Text(
               editing ? '완료' : '편집',
               style: TextStyle(
                 fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: editing ? Colors.white : AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+                color: editing ? Colors.white : TossColors.grey700,
               ),
             ),
           ],
@@ -533,24 +523,20 @@ class _AddWidgetButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppTheme.blue.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: AppTheme.blue.withValues(alpha: 0.35),
-            width: 1.2,
-          ),
+          color: TossColors.blueWeak,
+          borderRadius: BorderRadius.circular(TossRadius.lg),
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, size: 20, color: AppTheme.blue),
+            Icon(Icons.add, size: 20, color: TossColors.blue600),
             SizedBox(width: 6),
             Text(
               '위젯 추가',
               style: TextStyle(
                 fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.blue,
+                fontWeight: FontWeight.w600,
+                color: TossColors.blue600,
               ),
             ),
           ],

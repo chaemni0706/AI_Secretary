@@ -5,8 +5,9 @@ import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/schedule_model.dart';
-import 'schedule_add_screen.dart';
-import 'todo_add_screen.dart';
+import 'schedule_form_screen.dart';
+import 'todo_form_screen.dart';
+import 'voice_schedule_screen.dart';
 
 class AddItemChoiceScreen extends StatelessWidget {
   const AddItemChoiceScreen({super.key});
@@ -14,17 +15,23 @@ class AddItemChoiceScreen extends StatelessWidget {
   Future<void> _openSchedule(BuildContext context) async {
     final saved = await Navigator.push<ScheduleModel>(
       context,
-      MaterialPageRoute(builder: (_) => const ScheduleAddScreen()),
+      MaterialPageRoute(builder: (_) => const ScheduleFormScreen()),
     );
     if (saved == null || !context.mounted) return;
-    triggerDashboardRefresh();
     Navigator.pop(context);
+  }
+
+  void _openVoiceSchedule(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const VoiceScheduleScreen()),
+    );
   }
 
   Future<void> _openTodo(BuildContext context) async {
     final saved = await Navigator.push<TodoModel>(
       context,
-      MaterialPageRoute(builder: (_) => const TodoAddScreen()),
+      MaterialPageRoute(builder: (_) => const TodoFormScreen()),
     );
     if (saved == null || !context.mounted) return;
     triggerDashboardRefresh();
@@ -48,8 +55,15 @@ class AddItemChoiceScreen extends StatelessWidget {
                 icon: Icons.event_available_outlined,
                 color: AppTheme.blue,
                 title: '일정 추가',
-                subtitle: '날짜·시간을 입력해 일정을 등록해요',
+                subtitle: '제목, 날짜, 시간, 장소를 직접 입력해요',
                 onTap: () => _openSchedule(context),
+              ),
+              _ChoiceCard(
+                icon: Icons.mic_none_rounded,
+                color: AppTheme.purple,
+                title: '음성으로 일정 추가',
+                subtitle: 'AI 음성 인식은 보조 옵션으로 유지해요',
+                onTap: () => _openVoiceSchedule(context),
               ),
               _ChoiceCard(
                 icon: Icons.checklist_outlined,

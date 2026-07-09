@@ -3,6 +3,7 @@ import '../../data/widget_catalog.dart';
 import '../../data/widget_mock_data.dart';
 import '../../models/dashboard_widget_model.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/illustrations.dart';
 
 /// OCR 인증 위젯 (Small).
 /// 카메라 아이콘 + 오늘 인증 필요 건수. 실제 OCR API 는 연결하지 않고,
@@ -28,8 +29,11 @@ class OcrVerificationWidget extends StatelessWidget {
                 color: spec.accent.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(Icons.photo_camera_outlined,
-                  size: 19, color: spec.accent),
+              child: Image.asset(
+                count > 0 ? AppIllustrations.camera : AppIllustrations.check,
+                width: 22,
+                height: 22,
+              ),
             ),
             const Spacer(),
             if (count > 0)

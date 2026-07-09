@@ -6,17 +6,17 @@ import 'app_theme.dart';
 class LedgerStyles {
   LedgerStyles._();
 
-  /// 시그니처 AI 브리핑 카드 그라디언트 (딥네이비 → 블루).
+  /// 시그니처 AI 브리핑 카드 그라디언트 (토스 블루 톤).
   static const LinearGradient briefingGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E2A54), Color(0xFF2E3E7E), Color(0xFF3A4FA0)],
+    colors: [TossColors.blue700, TossColors.blue600, TossColors.blue500],
     stops: [0.0, 0.55, 1.0],
   );
 
-  static const Color briefingTitle = Color(0xFFEAF0FF);
-  static const Color briefingBody = Color(0xFFF4F7FF);
-  static const Color briefingIcon = Color(0xFFBFD0FF);
+  static const Color briefingTitle = Colors.white;
+  static const Color briefingBody = Color(0xFFEFF5FF);
+  static const Color briefingIcon = Color(0xFFBFDBFF);
 
   /// 카테고리 키 → 대표 색.
   static const Map<String, Color> _categoryColors = {

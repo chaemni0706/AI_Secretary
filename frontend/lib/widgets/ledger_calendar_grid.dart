@@ -16,7 +16,7 @@ class LedgerCalendarGrid extends StatelessWidget {
   });
 
   static const _dowLabels = ['일', '월', '화', '수', '목', '금', '토'];
-  static const _saturday = Color(0xFF7BA0E8);
+  static const _saturday = TossColors.blue500;
 
   @override
   Widget build(BuildContext context) {

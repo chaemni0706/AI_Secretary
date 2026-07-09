@@ -5,11 +5,13 @@ import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../theme/ledger_styles.dart';
 import '../widgets/app_top_actions.dart';
+import '../widgets/budget_segmented_control.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/ledger_ai_briefing_card.dart';
 import '../widgets/ledger_auto_detect_card.dart';
 import '../widgets/ledger_calendar_grid.dart';
 import '../widgets/ledger_transaction_row.dart';
+import '../widgets/toss_motion_widgets.dart';
 import 'ledger_report_screen.dart';
 
 /// AI 가계부 메인 화면 — 소비 달력 홈.
@@ -25,11 +27,23 @@ class _LedgerScreenState extends State<LedgerScreen> {
   static const _dow = ['일', '월', '화', '수', '목', '금', '토'];
 
   int _selectedDay = MockLedgerData.defaultSelectedDay;
-  int _topTab = 0; // 0 달력 · 1 거래 내역 (2 소비 분석은 push)
+  int _topTab = 0;
   int _simIndex = 0;
   int _nextPendingId = 100;
-  late final List<PendingTx> _pending =
-      List.of(MockLedgerData.initialPending);
+  late final List<PendingTx> _pending = List.of(MockLedgerData.initialPending);
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _topTab);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _selectDay(int day) => setState(() => _selectedDay = day);
 
@@ -79,11 +93,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     });
   }
 
-  void _openReport() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LedgerReportScreen()),
-    );
-  }
+  void _openReport() => _onTabTap(2);
 
   void _snack(String message) {
     if (!mounted) return;
@@ -97,19 +107,34 @@ class _LedgerScreenState extends State<LedgerScreen> {
     return Container(
       decoration: AppTheme.screenBackground,
       child: SafeArea(
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        child: Column(
           children: [
-            _buildHeader(),
-            const SizedBox(height: 14),
-            _TopTabs(current: _topTab, onTap: _onTabTap),
-            const SizedBox(height: 14),
-            _buildMonthSummary(),
-            const SizedBox(height: 14),
-            if (_topTab == 0) ..._buildCalendarView() else ..._buildListView(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: _buildHeader(),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: BudgetSegmentedControl(
+                selectedIndex: _topTab,
+                labels: const ['달력', '거래내역', '소비 리포트'],
+                onChanged: _onTabTap,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) => setState(() => _topTab = index),
+                children: [
+                  _LedgerPage(children: _buildCalendarView()),
+                  _LedgerPage(children: _buildListView()),
+                  const LedgerReportContent(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -117,11 +142,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   void _onTabTap(int index) {
-    if (index == 2) {
-      _openReport();
-    } else {
-      setState(() => _topTab = index);
-    }
+    setState(() => _topTab = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Widget _buildHeader() {
@@ -153,7 +179,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   Widget _buildMonthSummary() {
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       onTap: _openReport,
       child: Row(
         children: [
@@ -161,21 +187,37 @@ class _LedgerScreenState extends State<LedgerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SummaryLine(
-                  label: '지출',
-                  value: LedgerStyles.formatWon(MockLedgerData.monthSpend),
-                  color: AppTheme.textPrimary,
+                Text(
+                  '${MockLedgerData.month}월에 쓴 돈',
+                  style: TossTypography.caption,
                 ),
-                const SizedBox(height: 9),
-                _SummaryLine(
-                  label: '수입',
-                  value: LedgerStyles.formatWon(MockLedgerData.monthIncome),
-                  color: AppTheme.blue,
+                const SizedBox(height: 4),
+                TossCountUpText(
+                  value: MockLedgerData.monthSpend,
+                  formatter: (v) => '${LedgerStyles.formatWon(v)}원',
+                  style: TossTypography.display.copyWith(fontSize: 26),
+                ),
+                const SizedBox(height: 6),
+                Text.rich(
+                  TextSpan(
+                    style: TossTypography.caption,
+                    children: [
+                      const TextSpan(text: '수입 '),
+                      TextSpan(
+                        text:
+                            '${LedgerStyles.formatWon(MockLedgerData.monthIncome)}원',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: TossColors.blue600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+          const Icon(Icons.chevron_right, color: TossColors.grey400),
         ],
       ),
     );
@@ -185,15 +227,25 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final info = MockLedgerData.dayData[_selectedDay] ?? const DayInfo();
     final txs = MockLedgerData.txByDay[_selectedDay] ?? const <LedgerTx>[];
     final weekday =
-        DateTime(MockLedgerData.year, MockLedgerData.month, _selectedDay)
-                .weekday %
-            7;
+        DateTime(
+          MockLedgerData.year,
+          MockLedgerData.month,
+          _selectedDay,
+        ).weekday %
+        7;
     final selectedLabel =
         '${MockLedgerData.month}월 $_selectedDay일 · ${_dow[weekday]}요일';
-    final briefing = MockLedgerData.briefingByDay[_selectedDay] ??
+    final briefing =
+        MockLedgerData.briefingByDay[_selectedDay] ??
         MockLedgerData.fallbackBriefing(_selectedDay, info);
 
     return [
+      LedgerAiBriefingCard(
+        title: 'AI 소비 브리핑',
+        trailing: '${MockLedgerData.month}월 $_selectedDay일',
+        body: briefing,
+      ),
+      const SizedBox(height: 14),
       GlassCard(
         padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
         child: LedgerCalendarGrid(
@@ -202,11 +254,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         ),
       ),
       const SizedBox(height: 14),
-      LedgerAiBriefingCard(
-        title: 'AI 소비 브리핑',
-        trailing: '${MockLedgerData.month}월 $_selectedDay일',
-        body: briefing,
-      ),
+      _buildMonthSummary(),
       const SizedBox(height: 14),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -324,110 +372,19 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 }
 
-class _SummaryLine extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
+class _LedgerPage extends StatelessWidget {
+  final List<Widget> children;
 
-  const _SummaryLine({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _LedgerPage({required this.children});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        SizedBox(
-          width: 30,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textTertiary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: value,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                  color: color,
-                ),
-              ),
-              TextSpan(
-                text: ' 원',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TopTabs extends StatelessWidget {
-  final int current;
-  final ValueChanged<int> onTap;
-
-  const _TopTabs({required this.current, required this.onTap});
-
-  static const _labels = ['달력', '거래 내역', '소비 분석'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppTheme.separator.withValues(alpha: 0.8)),
-        ),
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
       ),
-      child: Row(
-        children: List.generate(3, (i) {
-          final active = i == current;
-          return Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onTap(i),
-              child: Container(
-                padding: const EdgeInsets.only(top: 10, bottom: 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: active ? AppTheme.blue : Colors.transparent,
-                      width: 2.5,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  _labels[i],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    color: active ? AppTheme.textPrimary : AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      children: children,
     );
   }
 }
@@ -444,9 +401,8 @@ class _BudgetAlertBanner extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.orange.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.orange.withValues(alpha: 0.28)),
+          color: TossColors.orangeWeak,
+          borderRadius: BorderRadius.circular(TossRadius.lg),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
@@ -456,7 +412,7 @@ class _BudgetAlertBanner extends StatelessWidget {
               height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppTheme.orange.withValues(alpha: 0.18),
+                color: AppTheme.orange.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(9),
               ),
               child: const Icon(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/add_item_choice_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/todo_screen.dart';
@@ -60,6 +61,13 @@ class MyApp extends StatelessWidget {
       title: 'AI 비서',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      // CupertinoDatePicker(시간 휠 선택) 등 Cupertino 위젯이 필요로 함.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ko', 'KR')],
       home: const MainNavigator(),
     );
   }
@@ -129,6 +137,13 @@ class _MainNavigatorState extends State<MainNavigator> {
             ),
           ),
           DraggableAssistantFab(
+            onLongPress: () {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (_) => const AiChatScreen(autoStartVoice: true),
+                ),
+              );
+            },
             actions: [
               AssistantMenuAction(
                 icon: Icons.photo_camera_outlined,
@@ -198,14 +213,13 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        border: Border(top: BorderSide(color: AppTheme.separator, width: 0.5)),
+      decoration: const BoxDecoration(
+        color: TossColors.bgWhite,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, -2),
+            color: Color(0x0A191F28),
+            blurRadius: 16,
+            offset: Offset(0, -2),
           ),
         ],
       ),

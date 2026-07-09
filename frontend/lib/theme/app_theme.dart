@@ -1,86 +1,98 @@
 import 'package:flutter/material.dart';
 
-class AppTheme {
-  static const Color blue = Color(0xFF007AFF);
-  static const Color background = Color(0xFFEEF0FB);
-  static const Color textPrimary = Color(0xFF1C1C1E);
-  static const Color textSecondary = Color(0xFF8A8F97);
-  static const Color textTertiary = Color(0xFF6B6F76);
-  static const Color teal = Color(0xFF30B0C7);
-  static const Color purple = Color(0xFF5E5CE6);
-  static const Color orange = Color(0xFFFF9F0A);
-  static const Color green = Color(0xFF34C759);
-  static const Color red = Color(0xFFFF3B30);
-  static const Color separator = Color(0xFFE6E9F1);
-  static const Color dark = Color(0xFF1A1A1C);
+import 'toss_tokens.dart';
 
-  static final Color cardBg = Colors.white.withOpacity(0.75);
+export 'toss_tokens.dart';
+
+/// 앱 전역 테마 — 토스(TDS) 토큰([TossColors] 등)을 단일 진실 소스로 사용한다.
+///
+/// 기존 화면들이 참조하던 `AppTheme.*` 이름은 하위 호환을 위해 유지하고,
+/// 값만 토스 토큰으로 매핑했다. 새 코드는 가급적 Toss* 토큰을 직접 참조할 것.
+class AppTheme {
+  static const Color blue = TossColors.blue500;
+  static const Color background = TossColors.bgGrey;
+  static const Color textPrimary = TossColors.textPrimary;
+  static const Color textSecondary = TossColors.textAssistive;
+  static const Color textTertiary = TossColors.textSecondary;
+  static const Color teal = TossColors.teal;
+  static const Color purple = TossColors.purple;
+  static const Color orange = TossColors.orange;
+  static const Color green = TossColors.green;
+  static const Color red = TossColors.red;
+  static const Color separator = TossColors.grey200;
+  static const Color dark = TossColors.grey900;
+
+  static const Color cardBg = TossColors.bgWhite;
 
   static ThemeData get lightTheme => ThemeData(
         useMaterial3: true,
+        fontFamily: TossTypography.fontFamily,
         scaffoldBackgroundColor: background,
         colorScheme: const ColorScheme.light(
           primary: blue,
           secondary: teal,
-          surface: Colors.white,
+          surface: TossColors.bgWhite,
+          error: red,
         ),
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: TossColors.pressedGrey,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
           foregroundColor: textPrimary,
           titleTextStyle: TextStyle(
+            fontFamily: TossTypography.fontFamily,
             color: textPrimary,
             fontSize: 17,
             fontWeight: FontWeight.w600,
           ),
         ),
         textTheme: const TextTheme(
-          displaySmall: TextStyle(
-            color: textPrimary,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-          titleLarge: TextStyle(
-            color: textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
-          ),
-          titleMedium: TextStyle(
-            color: textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
+          displaySmall: TossTypography.display,
+          titleLarge: TossTypography.title1,
+          titleMedium: TossTypography.title3,
           titleSmall: TextStyle(
+            fontFamily: TossTypography.fontFamily,
             color: textPrimary,
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
-          bodyLarge: TextStyle(color: textPrimary, fontSize: 16),
-          bodyMedium: TextStyle(color: textTertiary, fontSize: 14),
-          bodySmall: TextStyle(color: textSecondary, fontSize: 12),
+          bodyLarge: TossTypography.body,
+          bodyMedium: TextStyle(
+            fontFamily: TossTypography.fontFamily,
+            color: TossColors.textSecondary,
+            fontSize: 14,
+            height: 1.45,
+          ),
+          bodySmall: TossTypography.caption,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: TossColors.bgWhite,
+          modalBackgroundColor: TossColors.bgWhite,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(TossRadius.xl),
+            ),
+          ),
+        ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: TossColors.bgWhite,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(TossRadius.xl)),
+          ),
         ),
       );
 
+  /// 화면 배경 — 토스식 단색 연회색.
+  /// (과거 그라데이션 API 호환을 위해 LinearGradient 형태 유지)
   static LinearGradient get screenGradient => const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFE9F2FF), Color(0xFFEEF0FB), Color(0xFFFCEEF4)],
-        stops: [0.0, 0.5, 1.0],
+        colors: [TossColors.bgGrey, TossColors.bgGrey],
       );
 
-  static BoxDecoration get screenBackground => BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFE9F2FF),
-            const Color(0xFFEEF0FB),
-            const Color(0xFFFCEEF4).withOpacity(0.8),
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ),
+  static BoxDecoration get screenBackground => const BoxDecoration(
+        color: TossColors.bgGrey,
       );
 }

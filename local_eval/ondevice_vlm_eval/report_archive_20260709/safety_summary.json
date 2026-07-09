@@ -1,0 +1,36 @@
+{
+  "positive_definition": "ground_truth==PASS ; pred positive = RuleEngine verified",
+  "borderline_mode_for_safety": "as_fail",
+  "FP_count": 9,
+  "verified_on_fail_count": 8,
+  "fail_open_rate": 0.1,
+  "FP_by_task": {
+    "water": 6,
+    "study": 3
+  },
+  "FP_by_rule_evidence": {
+    "object:glass": 6,
+    "water_evidence:visible_liquid": 6,
+    "water_evidence:filled_container": 6,
+    "object:pen": 3,
+    "object:desk": 3,
+    "similar_group_cap": 3,
+    "study_evidence:handwritten_notes": 1,
+    "study_evidence:open_textbook": 3,
+    "object:monitor": 1,
+    "object:laptop": 1,
+    "study_evidence:code_editor": 1,
+    "study_evidence:highlighted_text": 1
+  },
+  "FP_by_evidence_code": {
+    "visible_water": 6,
+    "filled_container": 6,
+    "handwritten_notes": 1,
+    "open_textbook": 3,
+    "code_editor": 1,
+    "uncertain_screen_content": 1,
+    "highlighted_text": 1
+  },
+  "borderline_as_fail_FP": 9,
+  "borderline_excluded_FP": 8
+}

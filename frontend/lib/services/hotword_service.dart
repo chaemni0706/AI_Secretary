@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:vosk_flutter_2/vosk_flutter_2.dart';
 
-import 'briefing_api.dart';
+import 'dashboard_api.dart';
 import 'voice_stt_service.dart' show VoiceSttService;
 import 'voice_tts_service.dart';
 
@@ -259,27 +259,59 @@ class HotwordService {
         ? null
         : '${target.year}-${_two(target.month)}-${_two(target.day)}';
 
-    // 해당 날짜 브리핑 요청을 먼저 시작하고, 그동안 짧은 응답을 재생(병렬).
-    final briefingFuture = briefingApi.getDailyBriefing(date: date);
-    await _tts.speak('네, $label 브리핑 확인할게요.');
+    // 해당 날짜 대시보드(일정)를 먼저 요청하고, 그동안 짧은 응답을 재생(병렬).
+    final dashFuture = dashboardApi.getTodayDashboard(date: date);
+    await _tts.speak('네, $label 일정 확인할게요.');
     try {
-      final b = await briefingFuture;
-      final fromPoints = [b.summary, ...b.keyPoints]
-          .where((s) => s.trim().isNotEmpty)
-          .join('. ');
-      final raw = (b.ttsText != null && b.ttsText!.trim().isNotEmpty)
-          ? b.ttsText!.trim()
-          : fromPoints;
-      final body = raw.trim().isEmpty ? '$label 브리핑을 불러오지 못했습니다.' : raw;
+      final dash = await dashFuture;
+      final now = _nowHm();
+      // 오늘이면 "현재 시각 이후" 일정만, 미래 날짜면 그날 전체. 시간순 정렬.
+      final items = dash.schedules.where((s) {
+        if (dayOffset != 0) return true;
+        final st = s.startTime;
+        return st == null || st.isEmpty || st.compareTo(now) >= 0;
+      }).toList()
+        ..sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
+
+      if (items.isEmpty) {
+        await _tts.speak(
+            dayOffset == 0 ? '오늘 남은 일정이 없어요.' : '$label 일정이 없어요.');
+        return;
+      }
+
+      final sb = StringBuffer();
+      sb.write(dayOffset == 0
+          ? '오늘 남은 일정은 ${items.length}건이에요. '
+          : '$label 일정은 ${items.length}건이에요. ');
+      for (final s in items) {
+        final t = _spokenTime(s.startTime);
+        sb.write(t.isEmpty ? '${s.title}. ' : '$t ${s.title}. ');
+      }
       // 기기 TTS 로 바로 재생(/voice/tts 왕복 생략).
-      await _tts.speak(body);
+      await _tts.speak(sb.toString());
     } catch (e) {
-      debugPrint('브리핑 재생 실패: $e');
-      await _tts.speak('$label 브리핑을 불러오지 못했어요.');
+      debugPrint('일정 브리핑 실패: $e');
+      await _tts.speak('$label 일정을 불러오지 못했어요.');
     }
   }
 
   static String _two(int n) => n.toString().padLeft(2, '0');
+
+  String _nowHm() {
+    final n = DateTime.now();
+    return '${_two(n.hour)}:${_two(n.minute)}';
+  }
+
+  /// 'HH:mm' → '오전/오후 h시 m분'(0분이면 분 생략). 값이 없으면 빈 문자열.
+  String _spokenTime(String? hhmm) {
+    if (hhmm == null || !hhmm.contains(':')) return '';
+    final p = hhmm.split(':');
+    final h = int.tryParse(p[0]) ?? 0;
+    final m = int.tryParse(p[1]) ?? 0;
+    final ampm = h < 12 ? '오전' : '오후';
+    final h12 = (h % 12 == 0) ? 12 : h % 12;
+    return m == 0 ? '$ampm $h12시' : '$ampm $h12시 $m분';
+  }
 }
 
 /// 전역 인스턴스(기존 `*_service` / `*_api` 싱글턴 패턴과 동일).

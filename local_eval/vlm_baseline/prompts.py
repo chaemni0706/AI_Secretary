@@ -20,8 +20,12 @@ _SCHEMA = (
 _COMMON = (
     "You are an image EVIDENCE EXTRACTOR that replaces the object/scene reading engine. "
     "Do NOT decide pass/fail/verified/rejected — a separate rule engine makes the final decision. "
-    "Report ONLY what is visible, using the allowed evidence tokens below. Do not guess. "
-    "If unsure, set uncertainty=high and use the *_unclear token. Put disqualifying findings in 'blockers'. "
+    "CRITICAL: populate each array ONLY with items ACTUALLY visible in THIS image. If a category has "
+    "nothing, use an empty array []. NEVER copy or enumerate the allowed-token list; include a token only "
+    "when that thing is truly present. "
+    "Put any DISQUALIFYING finding ONLY in 'blockers' (it must be actually visible); leave 'negative_evidence' "
+    "empty unless noting a concretely visible non-target item. "
+    "If unsure, set uncertainty=high and use the *_unclear token. Do not guess. "
     "Record visible Korean/English text in reason or visible_objects. "
     "Return ONLY one JSON object matching this schema (no extra text): " + _SCHEMA + " "
 )

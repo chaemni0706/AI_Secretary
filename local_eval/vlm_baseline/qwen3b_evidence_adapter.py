@@ -42,72 +42,94 @@ except Exception as _exc:  # 기존 Rule Engine 위치/의존성 문제 시 최�
 # ---------------------------------------------------------------------------
 _WATER_POS = {"visible_water": "visible_water", "clear_liquid_visible": "visible_clear_liquid",
               "waterline_visible": "visible_water"}
-_WATER_CONTAINER = {"transparent_container", "cup_visible", "bottle_visible"}
-_WATER_BLOCK = {"empty_cup": "empty_container", "empty_bottle": "empty_container",
-                "colored_beverage": "non_water_beverage", "coffee": "non_water_beverage",
-                "juice": "non_water_beverage", "milk": "non_water_beverage", "tea": "non_water_beverage",
-                "soda": "non_water_beverage", "opaque_container": "opaque_closed_container",
-                "liquid_unclear": "uncertain_liquid"}
-_STUDY_POS = {"open_book": "open_textbook", "textbook": "open_textbook", "notes": "handwritten_notes",
-              "writing_or_solving": "problem_solving_material", "study_document": "educational_document",
-              "code_screen": "code_editor", "lecture_material": "lecture_video",
-              "study_related_text": "study_content_on_screen"}
-_STUDY_BLOCK = {"game": "gaming_content", "youtube": "entertainment_video", "video": "entertainment_video",
-                "movie": "entertainment_video", "shopping": "shopping_content", "sns": "social_media",
-                "empty_desk": "closed_study_materials", "laptop_only": "non_study_screen",
-                "closed_book_only": "closed_study_materials", "screen_unclear": "uncertain_screen_content"}
-# Qwen 운동 positive → (기존 Rule Engine 이 요구하는) activity-consistent 코드 묶음.
-# 기존 exercise 규칙은 context.exercise_activity_type + 해당 activity 의 core 근거(자세/기구/환경)를 함께 요구.
-_EX_POS = {
-    "active_exercise_pose": ["home_exercise_pose_visible", "home_workout_environment"],
-    "person_exercising": ["home_exercise_pose_visible", "home_workout_environment"],
-    "workout_action": ["home_exercise_pose_visible", "home_workout_environment"],
-    "stretching": ["home_exercise_pose_visible", "home_workout_environment"],
-    "yoga_pose": ["yoga_pose_visible", "yoga_environment"],
-    "lifting_weight": ["exercise_pose_visible", "dumbbell_present"],
-    "person_using_equipment": ["exercise_pose_visible", "exercise_equipment_present", "gym_environment"],
-}
-_EX_BLOCK = {"equipment_only": "exercise_equipment_present", "gym_background_only": "gym_environment",
-             "workout_clothes_only": "unrelated_environment", "sitting": "insufficient_exercise_evidence",
-             "resting": "insufficient_exercise_evidence", "selfie": "unrelated_environment",
-             "folded_mat": "insufficient_exercise_evidence", "pose_unclear": "uncertain_exercise_environment"}
 _UNCERTAIN_CODE = {"water": "uncertain_liquid", "study": "uncertain_screen_content",
                    "exercise": "uncertain_exercise_environment"}
 
 
+def _has(blob, kws):
+    return any(k in blob for k in kws)
+
+
 def _map(task, ev):
-    """returns (schema_codes, objects, has_positive). blocker priority + uncertainty→uncertain code."""
-    pos_tokens = [str(x) for x in (ev.get("positive_evidence") or [])]
-    block_tokens = [str(x) for x in (ev.get("blockers") or [])] + [str(x) for x in (ev.get("negative_evidence") or [])]
+    """returns (schema_codes, objects, has_positive).
+    keyword/substring 매칭(한/영) — Qwen 이 정확 토큰이 아니라 자유서술("cup","clear liquid","덤벨")을 줘도 매핑되고,
+    dry-run 의 정확 토큰(clear_liquid_visible 등)도 substring 으로 함께 매칭된다.
+    하드 disqualifier 는 'blockers' 필드만 사용(스키마 설계; negative_evidence 는 vocabulary-dump 위험으로 reject 근거 제외).
+    blocker priority + uncertainty(high)→uncertain code."""
+    pos_blob = " || ".join(str(x) for x in (
+        (ev.get("positive_evidence") or []) + (ev.get("visible_objects") or []) +
+        (ev.get("visible_actions") or []) + ([ev.get("scene_type")] if ev.get("scene_type") else []))).lower()
+    block_blob = " || ".join(str(x) for x in (ev.get("blockers") or [])).lower()
     unc = str(ev.get("uncertainty", "high")).lower()
     codes, objs, has_pos = [], [], False
+
     if task == "water":
-        for t in pos_tokens:
-            if t in _WATER_POS: codes.append(_WATER_POS[t]); has_pos = True
-        if any(t in _WATER_CONTAINER for t in pos_tokens):
-            if has_pos: codes.append("filled_container")
-            objs.append({"label": "water_bottle" if "bottle_visible" in pos_tokens else "cup", "confidence": 0.6})
-        for t in block_tokens:
-            if t in _WATER_BLOCK: codes.append(_WATER_BLOCK[t])
+        water_word = _has(pos_blob, ("visible_water", "waterline", "water surface", "물", "생수", "맑은 물"))
+        # "water" 단어는 "water bottle"(용기명)만일 수 있어, 액체 문맥일 때만 인정
+        water_liquid = _has(pos_blob, ("water in", "of water", "filled with water", "물이 담", "물을 마", "물이 들어"))
+        clear_liquid = _has(pos_blob, ("clear_liquid", "clear liquid", "transparent liquid", "투명한 액체", "맑은 액체"))
+        container = _has(pos_blob, ("cup", "컵", "glass", "유리", "bottle", "병", "보틀", "transparent_container", "container"))
+        if water_word or water_liquid:
+            codes.append("visible_water"); has_pos = True
+        elif clear_liquid:
+            codes.append("visible_clear_liquid"); has_pos = True
+        if has_pos and container:
+            codes.append("filled_container")
+            objs.append({"label": "water_bottle" if _has(pos_blob, ("bottle", "병", "보틀")) else "cup", "confidence": 0.6})
+        # blockers
+        if _has(block_blob, ("empty", "빈", "비어")): codes.append("empty_container")
+        if _has(block_blob, ("opaque", "불투명", "opaque_container")): codes.append("opaque_closed_container")
+        if _has(block_blob, ("coffee", "juice", "milk", "tea", "soda", "cola", "colored", "beverage",
+                             "커피", "주스", "우유", "차", "탄산", "음료", "색")): codes.append("non_water_beverage")
+        if _has(block_blob, ("unclear", "liquid_unclear", "불명확", "불명")): codes.append("uncertain_liquid")
+
     elif task == "study":
-        for t in pos_tokens:
-            if t in _STUDY_POS: codes.append(_STUDY_POS[t]); has_pos = True
-        for t in block_tokens:
-            if t in _STUDY_BLOCK: codes.append(_STUDY_BLOCK[t])
+        if _has(pos_blob, ("open_book", "textbook", "open book", "책", "교재", "workbook", "워크북")): codes.append("open_textbook"); has_pos = True
+        if _has(pos_blob, ("handwrit", "notes", "note-taking", "필기", "공책", "노트")): codes.append("handwritten_notes"); has_pos = True
+        if _has(pos_blob, ("code", "코드", "programming", "개발환경", "terminal", "터미널", "editor", "에디터")): codes.append("code_editor"); has_pos = True
+        if _has(pos_blob, ("document", "pdf", "문서", "보고서", "study_document", "educational")): codes.append("educational_document"); has_pos = True
+        if _has(pos_blob, ("lecture", "강의", "강의자료")): codes.append("lecture_video"); has_pos = True
+        if _has(pos_blob, ("problem", "문제", "solving", "writing_or_solving")): codes.append("problem_solving_material"); has_pos = True
+        if _has(pos_blob, ("study_related_text", "study content", "study screen", "학습 화면", "공부 화면", "study_content")): codes.append("study_content_on_screen"); has_pos = True
         if has_pos: objs.append({"label": "book", "confidence": 0.6})
+        # blockers
+        if _has(block_blob, ("game", "게임", "gaming")): codes.append("gaming_content")
+        if _has(block_blob, ("youtube", "video", "movie", "drama", "netflix", "유튜브", "영상", "영화", "드라마")): codes.append("entertainment_video")
+        if _has(block_blob, ("sns", "instagram", "인스타", "facebook", "tiktok")): codes.append("social_media")
+        if _has(block_blob, ("shopping", "쇼핑")): codes.append("shopping_content")
+        if _has(block_blob, ("empty_desk", "빈 책상", "closed", "닫힌", "laptop_only", "노트북만")): codes.append("closed_study_materials")
+        if _has(block_blob, ("unclear", "screen_unclear", "불명")): codes.append("uncertain_screen_content")
+
     elif task == "exercise":
-        for t in pos_tokens:
-            if t in _EX_POS:
-                codes.extend(_EX_POS[t]); has_pos = True
-        for t in block_tokens:
-            if t in _EX_BLOCK: codes.append(_EX_BLOCK[t])
-    # uncertainty high → 기존 FP=0 정책 반영: uncertain 코드 추가(최종 판정은 Rule Engine).
+        yoga = _has(pos_blob, ("yoga", "요가"))
+        lift = _has(pos_blob, ("lift", "dumbbell", "weight", "barbell", "덤벨", "바벨", "들어올리", "웨이트"))
+        using = _has(pos_blob, ("using equipment", "using the equipment", "machine being used", "기구 사용", "기구를 사용"))
+        generic = _has(pos_blob, ("push-up", "pushup", "push up", "squat", "run", "jog", "stretch", "exercis",
+                                  "workout", "working out", "plank", "lunge", "푸시업", "팔굽혀", "스쿼트",
+                                  "달리기", "러닝", "스트레칭", "운동 중", "운동하", "active_exercise_pose",
+                                  "person_exercising", "workout_action"))
+        if yoga:
+            codes += ["yoga_pose_visible", "yoga_environment"]; has_pos = True
+        elif lift:
+            codes += ["exercise_pose_visible", "dumbbell_present"]; has_pos = True
+        elif using:
+            codes += ["exercise_pose_visible", "exercise_equipment_present", "gym_environment"]; has_pos = True
+        elif generic:
+            codes += ["home_exercise_pose_visible", "home_workout_environment"]; has_pos = True
+        # blockers
+        if _has(block_blob, ("equipment_only", "equipment only", "장비만")): codes.append("exercise_equipment_present")
+        if _has(block_blob, ("gym_background", "background only", "배경만")): codes.append("gym_environment")
+        if _has(block_blob, ("sitting", "resting", "앉", "쉬", "seated")): codes.append("insufficient_exercise_evidence")
+        if _has(block_blob, ("folded", "stored", "접힌", "보관")): codes.append("insufficient_exercise_evidence")
+        if _has(block_blob, ("clothes_only", "workout_clothes", "운동복만", "selfie", "셀카")): codes.append("unrelated_environment")
+        if _has(block_blob, ("unclear", "pose_unclear", "불명")): codes.append("uncertain_exercise_environment")
+
     if unc == "high":
         codes.append(_UNCERTAIN_CODE[task])
-    # dedupe, 순서 보존
     seen, out = set(), []
     for c in codes:
-        if c not in seen: seen.add(c); out.append(c)
+        if c not in seen:
+            seen.add(c); out.append(c)
     return out, objs, has_pos
 
 

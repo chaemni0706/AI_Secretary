@@ -68,9 +68,38 @@ class HotwordService {
 
   bool _running = false;
   bool _busy = false; // 명령 처리/TTS 중 — 인식 결과 무시.
+  bool _suspended = false; // 일시정지 중(특정 화면에서 마이크 양보) — 트리거 무시.
   DateTime? _lastTriggerAt;
 
   bool get isRunning => _running;
+
+  /// 실행 상태는 유지한 채 인식만 일시정지한다(모델·포그라운드 서비스 유지).
+  /// 자체 음성 입출력을 쓰는 화면(예: AI 챗봇)에서 마이크 충돌·오작동을 막기
+  /// 위해 화면 진입 시 호출하고, 벗어날 때 [resumeListening] 으로 재개한다.
+  Future<void> suspendListening() async {
+    if (!_running || _suspended) return;
+    _suspended = true;
+    try {
+      await _speech?.stop(); // 마이크를 놓아 화면의 STT 가 쓰게 한다.
+    } catch (e) {
+      debugPrint('Hotword 일시정지 실패: $e');
+    }
+    debugPrint('Hotword: 일시정지(마이크 양보)');
+  }
+
+  /// [suspendListening] 으로 멈춘 인식을 재개한다. 실행 중이 아니거나 명령
+  /// 처리 중([_busy])이면 재개하지 않는다(진행 중 흐름의 finally 가 재개함).
+  Future<void> resumeListening() async {
+    if (!_running || !_suspended) return;
+    _suspended = false;
+    if (_busy) return;
+    try {
+      await _speech?.start();
+      debugPrint('Hotword: 재개');
+    } catch (e) {
+      debugPrint('Hotword 재개 실패: $e');
+    }
+  }
 
   /// 상시 대기 시작.
   Future<bool> start() async {
@@ -106,6 +135,7 @@ class HotwordService {
       _resultSub = _speech!.onResult().listen(_onResult);
       await _speech!.start();
       _running = true;
+      _suspended = false;
       debugPrint('Hotword(Vosk): "포비" 대기 시작');
       return true;
     } catch (e) {
@@ -119,6 +149,7 @@ class HotwordService {
   /// 상시 대기 종료 + 리소스 해제.
   Future<void> stop() async {
     _running = false;
+    _suspended = false;
     await _cleanup();
     await _stopForegroundService();
     debugPrint('Hotword(Vosk): 대기 종료');
@@ -195,7 +226,7 @@ class HotwordService {
 
   /// Vosk 최종 발화 결과(JSON 문자열: {"text": "..."}).
   void _onResult(String resultJson) {
-    if (!_running || _busy) return;
+    if (!_running || _busy || _suspended) return;
 
     final text = _extractText(resultJson);
     if (text.isEmpty) return;
@@ -251,7 +282,8 @@ class HotwordService {
       // 인식 재개 전 잠깐 대기(에코가 지나가는 창을 인식 OFF 로 흘려보냄).
       await Future.delayed(const Duration(milliseconds: 800));
       _lastTriggerAt = DateTime.now(); // 재개 시점부터 짧은 쿨다운 시작.
-      if (_running) {
+      // 처리 도중 화면 전환 등으로 일시정지됐으면 재개하지 않는다.
+      if (_running && !_suspended) {
         try {
           await _speech?.start();
         } catch (e) {
@@ -273,7 +305,7 @@ class HotwordService {
     } finally {
       await Future.delayed(const Duration(milliseconds: 800));
       _lastTriggerAt = DateTime.now();
-      if (_running) {
+      if (_running && !_suspended) {
         try {
           await _speech?.start();
         } catch (e) {

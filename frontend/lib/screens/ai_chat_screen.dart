@@ -10,6 +10,7 @@ import '../services/voice_router_api.dart';
 import '../services/preference_store.dart';
 import '../services/todo_api.dart';
 import '../services/dashboard_api.dart';
+import '../services/hotword_service.dart';
 import '../services/voice_stt_service.dart';
 import '../services/voice_tts_service.dart';
 
@@ -92,6 +93,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _tts.init();
+    // 이 화면은 자체 음성 입출력을 쓰므로, 백그라운드 웨이크워드("포비")가
+    // 마이크를 두고 충돌·오작동하지 않도록 화면에 있는 동안 일시정지한다.
+    hotwordService.suspendListening();
     if (widget.autoStartVoice) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _handleMicPressed();
@@ -112,6 +116,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _tts.dispose();
     _inputController.dispose();
     _scrollController.dispose();
+    // 화면을 벗어나면 웨이크워드 대기를 다시 켠다(원래 켜져 있던 경우에만 재개).
+    hotwordService.resumeListening();
     super.dispose();
   }
 

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
@@ -79,7 +78,8 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
 
   /// "알림 듣기" — flutter_tts 로 voice_alert_text(또는 주입된 문구)를 재생한다.
   Future<void> _playAlertVoice() async {
-    final base = widget.overrideTtsText ??
+    final base =
+        widget.overrideTtsText ??
         _data?.alertPlan.voiceAlertText ??
         '${AppStrings.assistantNotifiesPrefix()} 곧 일정이 시작돼요.';
     // reminder_strength 에 따라 알림 문구 강도를 로컬에서 조절(gentle/strong).
@@ -110,7 +110,9 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
   @override
   Widget build(BuildContext context) {
     // 전화 수신 화면 느낌의 어두운 그라데이션 전체 화면.
-    final ready = widget._isOverridden ? !_loading : (!_loading && _data != null);
+    final ready = widget._isOverridden
+        ? !_loading
+        : (!_loading && _data != null);
     return Scaffold(
       backgroundColor: AppTheme.dark,
       body: Container(
@@ -125,7 +127,8 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
           child: ready
               ? _buildContent()
               : const Center(
-                  child: CircularProgressIndicator(color: Colors.white)),
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
         ),
       ),
     );
@@ -141,7 +144,8 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
     // "챔니 전화 알림" 고정값이라 데모용 일정 제목을 별도로 고정 사용했다.
     // 자동 브리핑 등 override 호출은 overrideMessage 를 본문으로 그대로 쓴다.
     final bodyTitle = widget.overrideTitle ?? '팀 회의';
-    final message = widget.overrideMessage ?? reminder?.message ?? '팀 회의가 곧 시작돼요.';
+    final message =
+        widget.overrideMessage ?? reminder?.message ?? '팀 회의가 곧 시작돼요.';
     final checklist = widget.overrideChecklist ?? plan?.checklist ?? const [];
 
     return Padding(
@@ -165,7 +169,7 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
                 'AI 일정 비서',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.65),
+                  color: Colors.white.withValues(alpha: 0.65),
                 ),
               ),
             ],
@@ -190,8 +194,11 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
                 spreadRadius: 6,
               ),
             ),
-            child: const Icon(Icons.assistant_rounded,
-                color: Colors.white, size: 64),
+            child: const Icon(
+              Icons.assistant_rounded,
+              color: Colors.white,
+              size: 64,
+            ),
           ),
           const SizedBox(height: 24),
           Text(
@@ -209,7 +216,7 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
             style: TextStyle(
               fontSize: 16,
               height: 1.4,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           if (checklist.isNotEmpty) ...[
@@ -220,7 +227,7 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
               style: TextStyle(
                 fontSize: 14,
                 height: 1.4,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -243,7 +250,7 @@ class _MockCallAlertScreenState extends State<MockCallAlertScreen> {
           _buildActionButton(
             icon: Icons.snooze_rounded,
             label: '나중에 다시 알림',
-            color: Colors.white.withOpacity(0.18),
+            color: Colors.white.withValues(alpha: 0.18),
             textColor: Colors.white,
             onTap: _snooze,
           ),

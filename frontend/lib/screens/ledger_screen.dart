@@ -98,7 +98,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
         }
         _reloadAfterMutation();
       },
-      onError: (_) {/* 실시간 감지 실패는 조용히 무시(수동 등록으로 대체 가능) */},
+      onError: (_) {
+        /* 실시간 감지 실패는 조용히 무시(수동 등록으로 대체 가능) */
+      },
     );
   }
 
@@ -239,15 +241,17 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
-                          onPressed: () =>
-                              ledgerNotificationPermission.openPermissionSettings(),
+                          onPressed: () => ledgerNotificationPermission
+                              .openPermissionSettings(),
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 32),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          icon: const Icon(Icons.notifications_active_outlined,
-                              size: 16),
+                          icon: const Icon(
+                            Icons.notifications_active_outlined,
+                            size: 16,
+                          ),
                           label: const Text(
                             '실시간 자동 감지 설정 열기 (Android)',
                             style: TextStyle(fontSize: 12),
@@ -266,9 +270,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                               onSelected: (_) => setLocal(() {
                                 chosen = t.text;
                                 controller.text = t.text;
-                                controller.selection =
-                                    TextSelection.collapsed(
-                                        offset: controller.text.length);
+                                controller.selection = TextSelection.collapsed(
+                                  offset: controller.text.length,
+                                );
                               }),
                             ),
                         ],
@@ -347,9 +351,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       }
       await _reloadAfterMutation();
     } on ApiException catch (e) {
-      _snack(e.isNetworkError
-          ? '서버 연결 후 다시 시도해 주세요'
-          : '등록 실패: ${e.message}');
+      _snack(e.isNetworkError ? '서버 연결 후 다시 시도해 주세요' : '등록 실패: ${e.message}');
     } catch (_) {
       _snack('알림 등록 중 오류가 발생했어요.');
     } finally {
@@ -662,8 +664,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 40, color: AppTheme.textSecondary),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 40,
+              color: AppTheme.textSecondary,
+            ),
             const SizedBox(height: 12),
             Text(
               _errorMessage ?? '데이터를 불러오지 못했어요.',
@@ -738,8 +743,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
               Row(
                 children: [
                   _MonthArrow(
-                      icon: Icons.chevron_left,
-                      onTap: () => _onChangeMonth(-1)),
+                    icon: Icons.chevron_left,
+                    onTap: () => _onChangeMonth(-1),
+                  ),
                   Flexible(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -753,8 +759,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     ),
                   ),
                   _MonthArrow(
-                      icon: Icons.chevron_right,
-                      onTap: () => _onChangeMonth(1)),
+                    icon: Icons.chevron_right,
+                    onTap: () => _onChangeMonth(1),
+                  ),
                 ],
               ),
             ],
@@ -828,16 +835,19 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   List<Widget> _buildCalendarView() {
-    final Map<int, DayInfo> dayData =
-        _usingApi ? _dashboard!.dayInfos() : MockLedgerData.dayData;
+    final Map<int, DayInfo> dayData = _usingApi
+        ? _dashboard!.dayInfos()
+        : MockLedgerData.dayData;
     final info = dayData[_selectedDay] ?? const DayInfo();
     final txs = _usingApi
         ? _dashboard!.selectedDayTransactions()
         : (MockLedgerData.txByDay[_selectedDay] ?? const <LedgerTx>[]);
-    final monthExpense =
-        _usingApi ? _dashboard!.monthExpense : MockLedgerData.monthSpend;
-    final monthIncome =
-        _usingApi ? _dashboard!.monthIncome : MockLedgerData.monthIncome;
+    final monthExpense = _usingApi
+        ? _dashboard!.monthExpense
+        : MockLedgerData.monthSpend;
+    final monthIncome = _usingApi
+        ? _dashboard!.monthIncome
+        : MockLedgerData.monthIncome;
 
     final weekday = DateTime(_year, _month, _selectedDay).weekday % 7;
     final selectedLabel = '$_month월 $_selectedDay일 · ${_dow[weekday]}요일';
@@ -1165,10 +1175,7 @@ class _BudgetAlertBanner extends StatelessWidget {
   final String message;
   final VoidCallback onTap;
 
-  const _BudgetAlertBanner({
-    required this.message,
-    required this.onTap,
-  });
+  const _BudgetAlertBanner({required this.message, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

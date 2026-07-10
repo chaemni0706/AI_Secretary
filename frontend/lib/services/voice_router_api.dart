@@ -87,10 +87,7 @@ class VoiceRouterApi {
     if (responseLength != null) body['response_length'] = responseLength;
     if (reminderStrength != null) body['reminder_strength'] = reminderStrength;
 
-    final data = await apiClient.postData(
-      '$apiPrefix/voice/route',
-      body: body,
-    );
+    final data = await apiClient.postData('$apiPrefix/voice/route', body: body);
     return VoiceRouteResult.fromJson(data as Map<String, dynamic>);
   }
 

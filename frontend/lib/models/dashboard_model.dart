@@ -21,8 +21,8 @@ class DashboardStats {
       scheduleCount: (json['schedule_count'] ?? 0) as int,
       todoCount: (json['todo_count'] ?? 0) as int,
       completedTodoCount: (json['completed_todo_count'] ?? 0) as int,
-      todoCompletionRate:
-          ((json['todo_completion_rate'] ?? 0) as num).toDouble(),
+      todoCompletionRate: ((json['todo_completion_rate'] ?? 0) as num)
+          .toDouble(),
     );
   }
 }
@@ -58,8 +58,8 @@ class DashboardData {
             scheduleCount: (json['total_schedule_count'] ?? 0) as int,
             todoCount: (json['total_todo_count'] ?? 0) as int,
             completedTodoCount: (json['completed_todo_count'] ?? 0) as int,
-            todoCompletionRate:
-                ((json['todo_completion_rate'] ?? 0) as num).toDouble(),
+            todoCompletionRate: ((json['todo_completion_rate'] ?? 0) as num)
+                .toDouble(),
           );
 
     return DashboardData(

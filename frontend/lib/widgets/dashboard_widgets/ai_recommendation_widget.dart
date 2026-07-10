@@ -35,8 +35,11 @@ class AiRecommendationWidget extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.tips_and_updates_outlined,
-                  size: 16, color: spec.accent),
+              Icon(
+                Icons.tips_and_updates_outlined,
+                size: 16,
+                color: spec.accent,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

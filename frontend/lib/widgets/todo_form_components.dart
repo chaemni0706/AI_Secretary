@@ -5,7 +5,8 @@ import '../theme/app_theme.dart';
 import '../theme/todo_styles.dart';
 import 'glass_card.dart';
 // 날짜/시간 인라인 피커는 일정 추가 폼과 공용으로 쓴다(중복 구현 금지).
-import 'schedule_form_components.dart' show InlineCalendarPicker, InlineTimePicker;
+import 'schedule_form_components.dart'
+    show InlineCalendarPicker, InlineTimePicker;
 
 class TodoFormSection extends StatelessWidget {
   final List<Widget> children;

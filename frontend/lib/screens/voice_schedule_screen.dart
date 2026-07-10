@@ -262,10 +262,7 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
                 const SizedBox(height: 12),
                 _buildErrorCard(_errorMessage!),
               ],
-              if (_saved) ...[
-                const SizedBox(height: 12),
-                _buildSavedCard(),
-              ],
+              if (_saved) ...[const SizedBox(height: 12), _buildSavedCard()],
               const SizedBox(height: 20),
               _buildActions(),
             ],
@@ -280,17 +277,15 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
     final busy = _isParsing || _isSaving;
     return Center(
       child: GestureDetector(
-        onTap: busy
-            ? null
-            : (active ? _stopListening : _startListening),
+        onTap: busy ? null : (active ? _stopListening : _startListening),
         child: Container(
           width: 108,
           height: 108,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: active
-                ? AppTheme.red.withOpacity(0.12)
-                : AppTheme.blue.withOpacity(0.12),
+                ? AppTheme.red.withValues(alpha: 0.12)
+                : AppTheme.blue.withValues(alpha: 0.12),
             border: Border.all(
               color: active ? AppTheme.red : AppTheme.blue,
               width: 2,
@@ -316,15 +311,23 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('인식된 문장',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textSecondary)),
+          const Text(
+            '인식된 문장',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textSecondary,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(_recognizedText,
-              style: const TextStyle(
-                  fontSize: 16, color: AppTheme.textPrimary, height: 1.4)),
+          Text(
+            _recognizedText,
+            style: const TextStyle(
+              fontSize: 16,
+              color: AppTheme.textPrimary,
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );
@@ -346,11 +349,14 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
             children: [
               const Icon(Icons.auto_awesome, size: 18, color: AppTheme.purple),
               const SizedBox(width: 6),
-              const Text('AI가 정리한 일정',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary)),
+              const Text(
+                'AI가 정리한 일정',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
               const Spacer(),
               if (r.isTodo) const PillBadge(label: '할 일', color: AppTheme.teal),
             ],
@@ -395,16 +401,23 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
         children: [
           SizedBox(
             width: 64,
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 13, color: AppTheme.textSecondary)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -413,14 +426,16 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
 
   Widget _buildErrorCard(String message) {
     return GlassCard(
-      color: AppTheme.red.withOpacity(0.08),
+      color: AppTheme.red.withValues(alpha: 0.08),
       child: Row(
         children: [
           const Icon(Icons.error_outline, color: AppTheme.red, size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(message,
-                style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary)),
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+            ),
           ),
         ],
       ),
@@ -429,16 +444,19 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
 
   Widget _buildSavedCard() {
     return GlassCard(
-      color: AppTheme.green.withOpacity(0.10),
+      color: AppTheme.green.withValues(alpha: 0.10),
       child: Row(
         children: const [
           Icon(Icons.check_circle, color: AppTheme.green, size: 20),
           SizedBox(width: 10),
-          Text('일정이 등록됐어요.',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
+          Text(
+            '일정이 등록됐어요.',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -461,7 +479,8 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),
@@ -476,7 +495,8 @@ class _VoiceScheduleScreenState extends State<VoiceScheduleScreen> {
               side: const BorderSide(color: AppTheme.blue),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),

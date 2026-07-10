@@ -12,10 +12,7 @@ class WeatherApi {
   Future<WeatherModel> fetch({double? lat, double? lon}) async {
     final data = await apiClient.getData(
       '$apiPrefix/weather',
-      query: {
-        if (lat != null) 'lat': lat,
-        if (lon != null) 'lon': lon,
-      },
+      query: {if (lat != null) 'lat': lat, if (lon != null) 'lon': lon},
     );
     return WeatherModel.fromJson(data as Map<String, dynamic>);
   }

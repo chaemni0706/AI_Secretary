@@ -96,9 +96,7 @@ int? _dayOf(dynamic value) {
 extension LedgerTransactionMapper on LedgerTransactionDto {
   /// 대기(확정 필요) 성격의 거래인지. (pending / needs_review / 확인 필요)
   bool get isPendingLike =>
-      status == 'pending' ||
-      status == 'needs_review' ||
-      needsUserConfirmation;
+      status == 'pending' || status == 'needs_review' || needsUserConfirmation;
 
   /// 자동 감지 카드에 보여줄 대기 거래로 변환.
   /// 백엔드 String id 는 [PendingTx.transactionId] 로 보존한다.
@@ -142,16 +140,20 @@ extension LedgerTransactionMapper on LedgerTransactionDto {
 
 extension LedgerDashboardMapper on LedgerDashboardDto {
   /// 이번 달 총 지출.
-  int get monthExpense => _readIntKeys(
-        summary,
-        ['month_expense', 'total_expense', 'monthly_expense', 'expense'],
-      );
+  int get monthExpense => _readIntKeys(summary, [
+    'month_expense',
+    'total_expense',
+    'monthly_expense',
+    'expense',
+  ]);
 
   /// 이번 달 총 수입.
-  int get monthIncome => _readIntKeys(
-        summary,
-        ['month_income', 'total_income', 'monthly_income', 'income'],
-      );
+  int get monthIncome => _readIntKeys(summary, [
+    'month_income',
+    'total_income',
+    'monthly_income',
+    'income',
+  ]);
 
   /// 잔액(수입-지출). summary 에 없으면 계산으로 보정.
   int get balance {
@@ -213,9 +215,11 @@ extension LedgerDashboardMapper on LedgerDashboardDto {
       if (v is List && v.isNotEmpty) {
         return v
             .whereType<Map>()
-            .map((m) => LedgerTransactionDto.fromJson(
-                  m.map((k, val) => MapEntry(k.toString(), val)),
-                ).toLedgerTx())
+            .map(
+              (m) => LedgerTransactionDto.fromJson(
+                m.map((k, val) => MapEntry(k.toString(), val)),
+              ).toLedgerTx(),
+            )
             .toList();
       }
     }
@@ -263,15 +267,19 @@ class LedgerDayGroup {
 }
 
 extension LedgerMonthTransactionsMapper on LedgerMonthTransactionsDto {
-  int get monthExpense => _readIntKeys(
-        summary,
-        ['month_expense', 'total_expense', 'monthly_expense', 'expense'],
-      );
+  int get monthExpense => _readIntKeys(summary, [
+    'month_expense',
+    'total_expense',
+    'monthly_expense',
+    'expense',
+  ]);
 
-  int get monthIncome => _readIntKeys(
-        summary,
-        ['month_income', 'total_income', 'monthly_income', 'income'],
-      );
+  int get monthIncome => _readIntKeys(summary, [
+    'month_income',
+    'total_income',
+    'monthly_income',
+    'income',
+  ]);
 
   int get transactionCount {
     final n = _readIntKeys(summary, ['transaction_count', 'count']);
@@ -286,14 +294,16 @@ extension LedgerMonthTransactionsMapper on LedgerMonthTransactionsDto {
       final parts = g.date.split('-');
       final m = parts.length >= 2 ? int.tryParse(parts[1]) ?? 0 : 0;
       final d = parts.length >= 3 ? int.tryParse(parts[2]) ?? 0 : 0;
-      groups.add(LedgerDayGroup(
-        date: g.date,
-        month: m,
-        day: d,
-        expenseTotal: g.expenseTotal,
-        incomeTotal: g.incomeTotal,
-        transactions: g.transactions.map((t) => t.toLedgerTx()).toList(),
-      ));
+      groups.add(
+        LedgerDayGroup(
+          date: g.date,
+          month: m,
+          day: d,
+          expenseTotal: g.expenseTotal,
+          incomeTotal: g.incomeTotal,
+          transactions: g.transactions.map((t) => t.toLedgerTx()).toList(),
+        ),
+      );
     }
     groups.sort((a, b) => b.date.compareTo(a.date));
     return groups;
@@ -315,15 +325,19 @@ String _comma(int n) {
 }
 
 extension LedgerReportMapper on LedgerReportDto {
-  int get totalExpense => _readIntKeys(
-        summary,
-        ['month_expense', 'total_expense', 'monthly_expense', 'expense'],
-      );
+  int get totalExpense => _readIntKeys(summary, [
+    'month_expense',
+    'total_expense',
+    'monthly_expense',
+    'expense',
+  ]);
 
-  int get totalIncome => _readIntKeys(
-        summary,
-        ['month_income', 'total_income', 'monthly_income', 'income'],
-      );
+  int get totalIncome => _readIntKeys(summary, [
+    'month_income',
+    'total_income',
+    'monthly_income',
+    'income',
+  ]);
 
   int get balance {
     for (final k in ['balance', 'remaining', 'net']) {
@@ -360,8 +374,7 @@ extension LedgerReportMapper on LedgerReportDto {
     return out;
   }
 
-  int get categoryTotal =>
-      categoryStats().fold(0, (sum, c) => sum + c.amount);
+  int get categoryTotal => categoryStats().fold(0, (sum, c) => sum + c.amount);
 
   /// budget_usage → 기존 BudgetStat 목록.
   List<BudgetStat> budgetStats() {
@@ -375,7 +388,9 @@ extension LedgerReportMapper on LedgerReportDto {
       final budget = _readIntKeys(m, ['budget', 'limit', 'total']);
       final status = readString(m['status']);
       final over = status == 'exceeded' || pct >= 100;
-      out.add(BudgetStat(name, pct, '${_comma(spent)} / ${_comma(budget)}', over));
+      out.add(
+        BudgetStat(name, pct, '${_comma(spent)} / ${_comma(budget)}', over),
+      );
     }
     return out;
   }
@@ -391,8 +406,16 @@ extension LedgerReportMapper on LedgerReportDto {
       final cat = readString(m['category']) ?? '';
       final expectedDay = _pick(m, ['expected_day', 'day']);
       final cycle = expectedDay != null ? '매월 ${readInt(expectedDay)}일' : '매월';
-      out.add(RecurringPayment(
-          name, _initialOf(name), amount, cycle, cat, _catKeyOf(cat)));
+      out.add(
+        RecurringPayment(
+          name,
+          _initialOf(name),
+          amount,
+          cycle,
+          cat,
+          _catKeyOf(cat),
+        ),
+      );
     }
     return out;
   }

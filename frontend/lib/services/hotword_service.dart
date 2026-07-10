@@ -25,9 +25,7 @@ class HotwordService {
   static const int _sampleRate = 16000; // Vosk 소형 모델 표준 샘플레이트.
 
   // 웨이크워드 "포비" 변형(오탐 줄이려 흔히 겹치는 음절은 제외).
-  static const List<String> _wakeWords = [
-    '포비', '포피', '뽀비', '뽀삐', '후비', '보비',
-  ];
+  static const List<String> _wakeWords = ['포비', '포피', '뽀비', '뽀삐', '후비', '보비'];
   // 명령 키워드: 오탐 줄이려 흔한 단어(일정/하루/브리 등)를 빼고 구별력 높은
   // '브리핑' 만 쓴다. (웨이크워드와 같은 발화에 함께 있어야 실행)
   static const List<String> _briefKeywords = ['브리핑'];
@@ -252,10 +250,10 @@ class HotwordService {
     final label = dayOffset == 0
         ? '오늘'
         : dayOffset == 1
-            ? '내일'
-            : dayOffset == 2
-                ? '모레'
-                : '${target.month}월 ${target.day}일';
+        ? '내일'
+        : dayOffset == 2
+        ? '모레'
+        : '${target.month}월 ${target.day}일';
     // 오늘이면 서버 기준 today(null), 그 외엔 계산한 날짜(YYYY-MM-DD) 전달.
     final date = dayOffset == 0
         ? null
@@ -268,23 +266,25 @@ class HotwordService {
       final dash = await dashFuture;
       final now = _nowHm();
       // 오늘이면 "현재 시각 이후" 일정만, 미래 날짜면 그날 전체. 시간순 정렬.
-      final items = dash.schedules.where((s) {
-        if (dayOffset != 0) return true;
-        final st = s.startTime;
-        return st == null || st.isEmpty || st.compareTo(now) >= 0;
-      }).toList()
-        ..sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
+      final items =
+          dash.schedules.where((s) {
+              if (dayOffset != 0) return true;
+              final st = s.startTime;
+              return st == null || st.isEmpty || st.compareTo(now) >= 0;
+            }).toList()
+            ..sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
 
       if (items.isEmpty) {
-        await _tts.speak(
-            dayOffset == 0 ? '오늘 남은 일정이 없어요.' : '$label 일정이 없어요.');
+        await _tts.speak(dayOffset == 0 ? '오늘 남은 일정이 없어요.' : '$label 일정이 없어요.');
         return;
       }
 
       final sb = StringBuffer();
-      sb.write(dayOffset == 0
-          ? '오늘 남은 일정은 ${items.length}건이에요. '
-          : '$label 일정은 ${items.length}건이에요. ');
+      sb.write(
+        dayOffset == 0
+            ? '오늘 남은 일정은 ${items.length}건이에요. '
+            : '$label 일정은 ${items.length}건이에요. ',
+      );
       for (final s in items) {
         final t = _spokenTime(s.startTime);
         sb.write(t.isEmpty ? '${s.title}. ' : '$t ${s.title}. ');

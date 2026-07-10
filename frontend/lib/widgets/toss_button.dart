@@ -32,9 +32,9 @@ class TossButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     this.leading,
-  })  : size = TossButtonSize.xl,
-        style = TossButtonStyle.primaryFill,
-        expanded = true;
+  }) : size = TossButtonSize.xl,
+       style = TossButtonStyle.primaryFill,
+       expanded = true;
 
   @override
   State<TossButton> createState() => _TossButtonState();
@@ -46,25 +46,25 @@ class _TossButtonState extends State<TossButton> {
   bool get _enabled => widget.onPressed != null;
 
   double get _height => switch (widget.size) {
-        TossButtonSize.s => 32,
-        TossButtonSize.m => 38,
-        TossButtonSize.l => 48,
-        TossButtonSize.xl => 56,
-      };
+    TossButtonSize.s => 32,
+    TossButtonSize.m => 38,
+    TossButtonSize.l => 48,
+    TossButtonSize.xl => 56,
+  };
 
   double get _fontSize => switch (widget.size) {
-        TossButtonSize.s => 13,
-        TossButtonSize.m => 14,
-        TossButtonSize.l => 16,
-        TossButtonSize.xl => 17,
-      };
+    TossButtonSize.s => 13,
+    TossButtonSize.m => 14,
+    TossButtonSize.l => 16,
+    TossButtonSize.xl => 17,
+  };
 
   double get _radius => switch (widget.size) {
-        TossButtonSize.s => 8,
-        TossButtonSize.m => 10,
-        TossButtonSize.l => 12,
-        TossButtonSize.xl => 14,
-      };
+    TossButtonSize.s => 8,
+    TossButtonSize.m => 10,
+    TossButtonSize.l => 12,
+    TossButtonSize.xl => 14,
+  };
 
   Color get _background {
     if (!_enabled) return TossColors.grey200;

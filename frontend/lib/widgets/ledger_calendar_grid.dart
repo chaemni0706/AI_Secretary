@@ -42,13 +42,15 @@ class LedgerCalendarGrid extends StatelessWidget {
       cells.add(const SizedBox.shrink());
     }
     for (int d = 1; d <= daysInMonth; d++) {
-      cells.add(_DayCell(
-        day: d,
-        info: data[d],
-        selected: d == selectedDay,
-        weekday: (firstDow + d - 1) % 7,
-        onTap: () => onSelect(d),
-      ));
+      cells.add(
+        _DayCell(
+          day: d,
+          info: data[d],
+          selected: d == selectedDay,
+          weekday: (firstDow + d - 1) % 7,
+          onTap: () => onSelect(d),
+        ),
+      );
     }
 
     return Column(

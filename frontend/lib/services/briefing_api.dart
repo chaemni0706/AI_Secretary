@@ -13,26 +13,32 @@ class BriefingApi {
   /// [date] : "YYYY-MM-DD" (미지정 시 서버 오늘)
   Future<BriefingModel> getDailyBriefing({String? date, String? userId}) async {
     // 1) 오늘 일정/할 일 확보.
-    final DashboardData dash =
-        await dashboardApi.getTodayDashboard(date: date, userId: userId);
+    final DashboardData dash = await dashboardApi.getTodayDashboard(
+      date: date,
+      userId: userId,
+    );
     final targetDate = date ?? dash.date;
 
     // 2) 브리핑 request body 구성 (백엔드 스키마 필드명 그대로).
     final schedules = dash.schedules
-        .map((s) => {
-              'title': s.title,
-              'category': s.category ?? 'etc',
-              'start_time': s.startTime,
-              'end_time': s.endTime,
-              'priority': s.priority,
-            })
+        .map(
+          (s) => {
+            'title': s.title,
+            'category': s.category ?? 'etc',
+            'start_time': s.startTime,
+            'end_time': s.endTime,
+            'priority': s.priority,
+          },
+        )
         .toList();
     final todos = dash.todos
-        .map((t) => {
-              'title': t.title,
-              'priority': t.priority,
-              'is_done': t.completed,
-            })
+        .map(
+          (t) => {
+            'title': t.title,
+            'priority': t.priority,
+            'is_done': t.completed,
+          },
+        )
         .toList();
 
     // 3) 브리핑 생성 요청.
@@ -80,9 +86,19 @@ class BriefingApi {
 
     final priorityOrder = <PriorityOrderItem>[
       for (final s in dash.schedules.where((s) => s.priority == 'high'))
-        PriorityOrderItem(title: s.title, priority: 'high', reason: '우선순위 높은 일정'),
-      for (final t in dash.todos.where((t) => !t.completed && t.priority == 'high'))
-        PriorityOrderItem(title: t.title, priority: 'high', reason: '우선순위 높은 할 일'),
+        PriorityOrderItem(
+          title: s.title,
+          priority: 'high',
+          reason: '우선순위 높은 일정',
+        ),
+      for (final t in dash.todos.where(
+        (t) => !t.completed && t.priority == 'high',
+      ))
+        PriorityOrderItem(
+          title: t.title,
+          priority: 'high',
+          reason: '우선순위 높은 할 일',
+        ),
     ];
 
     return BriefingModel(

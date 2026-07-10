@@ -44,8 +44,9 @@ class _ScheduleEditScreenState extends State<ScheduleEditScreen> {
     _titleController = TextEditingController(text: s.title);
     _locationController = TextEditingController(text: s.location ?? '');
     // memo 는 기계용 end_date 토큰을 제외한 순수 메모만 편집한다.
-    _memoController =
-        TextEditingController(text: ScheduleModel.stripEndDateToken(s.memo));
+    _memoController = TextEditingController(
+      text: ScheduleModel.stripEndDateToken(s.memo),
+    );
     _date = s.date;
     _endDate = s.effectiveEndDate;
     _startTime = s.startTime;
@@ -109,7 +110,9 @@ class _ScheduleEditScreenState extends State<ScheduleEditScreen> {
       return;
     }
     // 시간 유효성: 종료 시간이 있으면 시작 시간보다 뒤여야 한다(같은 날 기준).
-    if (_startTime != null && _endTime != null && _endTime!.compareTo(_startTime!) <= 0) {
+    if (_startTime != null &&
+        _endTime != null &&
+        _endTime!.compareTo(_startTime!) <= 0) {
       _snack('종료 시간은 시작 시간보다 뒤여야 해요.');
       return;
     }
@@ -147,8 +150,9 @@ class _ScheduleEditScreenState extends State<ScheduleEditScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override

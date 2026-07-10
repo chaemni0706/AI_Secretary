@@ -95,6 +95,17 @@ def _vilage_base(now: datetime) -> Tuple[str, str]:
     return now.strftime("%Y%m%d"), f"{chosen:02d}00"
 
 
+def _mid_base(now: datetime) -> str:
+    """중기예보 발표시각(tmFc, 'YYYYMMDDHHMM'). 매일 06:00·18:00 발표.
+    06시 이전이면 전일 1800, 06~18시는 당일 0600, 18시 이후는 당일 1800."""
+    if now.hour < 6:
+        d = now - timedelta(days=1)
+        return d.strftime("%Y%m%d") + "1800"
+    if now.hour < 18:
+        return now.strftime("%Y%m%d") + "0600"
+    return now.strftime("%Y%m%d") + "1800"
+
+
 # --------------------------------------------------------------------------- #
 # HTTP 호출
 # --------------------------------------------------------------------------- #
@@ -111,6 +122,24 @@ def _fetch(url: str, nx: int, ny: int, base_date: str, base_time: str) -> List[d
         "base_time": base_time,
         "nx": nx,
         "ny": ny,
+    }
+    r = httpx.get(url, params=params, timeout=settings.KMA_TIMEOUT_SECONDS)
+    r.raise_for_status()
+    body = r.json()["response"]["body"]
+    return body["items"]["item"]
+
+
+def _fetch_mid(url: str, reg_id: str, tm_fc: str) -> List[dict]:
+    """중기예보(getMidLandFcst/getMidTa) 호출 → item 리스트(보통 1개). 실패 시 예외."""
+    import httpx  # lazy import
+
+    params = {
+        "serviceKey": settings.kma_mid_service_key,
+        "dataType": "JSON",
+        "numOfRows": 10,
+        "pageNo": 1,
+        "regId": reg_id,
+        "tmFc": tm_fc,
     }
     r = httpx.get(url, params=params, timeout=settings.KMA_TIMEOUT_SECONDS)
     r.raise_for_status()
@@ -201,6 +230,87 @@ def _parse_daily(items: List[dict]) -> List[WeatherDay]:
     return out
 
 
+def _parse_wf_text(wf: Optional[str]) -> Tuple[Optional[str], str]:
+    """중기 육상예보 하늘상태 텍스트(예: '구름많고 비', '흐림', '맑음') →
+    (sky, precipitation). 강수 표현이 없으면 precipitation='없음'."""
+    if not wf:
+        return None, "없음"
+    text = str(wf)
+    has_rain, has_snow = "비" in text, "눈" in text
+    if "소나기" in text:
+        precip = "소나기"
+    elif has_rain and has_snow:
+        precip = "비/눈"
+    elif has_snow:
+        precip = "눈"
+    elif has_rain:
+        precip = "비"
+    else:
+        precip = "없음"
+    if "흐" in text:
+        sky = "흐림"
+    elif "구름많" in text:
+        sky = "구름많음"
+    elif "맑음" in text:
+        sky = "맑음"
+    else:
+        sky = None
+    return sky, precip
+
+
+def _parse_mid_land(items: List[dict]) -> Dict[int, Dict[str, object]]:
+    """getMidLandFcst item(1개) → {N: {sky, precip, pop}} (N=3~7, D+N).
+    오후(Pm) 값을 대표로 쓰고 없으면 오전(Am)."""
+    out: Dict[int, Dict[str, object]] = {}
+    if not items:
+        return out
+    it = items[0]
+    for n in range(3, 8):
+        wf = it.get(f"wf{n}Pm") or it.get(f"wf{n}Am")
+        if wf is None:
+            continue
+        sky, precip = _parse_wf_text(wf)
+        pop = _to_int(it.get(f"rnSt{n}Pm"))
+        if pop is None:
+            pop = _to_int(it.get(f"rnSt{n}Am"))
+        out[n] = {"sky": sky, "precip": precip, "pop": pop}
+    return out
+
+
+def _parse_mid_ta(items: List[dict]) -> Dict[int, Tuple[Optional[float], Optional[float]]]:
+    """getMidTa item(1개) → {N: (tmin, tmax)} (N=3~7, D+N)."""
+    out: Dict[int, Tuple[Optional[float], Optional[float]]] = {}
+    if not items:
+        return out
+    it = items[0]
+    for n in range(3, 8):
+        tmn = _to_float(it.get(f"taMin{n}"))
+        tmx = _to_float(it.get(f"taMax{n}"))
+        if tmn is None and tmx is None:
+            continue
+        out[n] = (tmn, tmx)
+    return out
+
+
+def _mid_day(
+    d: datetime,
+    n: int,
+    land: Optional[Dict[int, Dict[str, object]]],
+    ta: Optional[Dict[int, Tuple[Optional[float], Optional[float]]]],
+) -> Optional[WeatherDay]:
+    """D+N(중기) 실측으로 WeatherDay 생성. 해당 일 데이터가 전혀 없으면 None."""
+    l = (land or {}).get(n)
+    t = (ta or {}).get(n)
+    if not l and not t:
+        return None
+    return WeatherDay(
+        date=d.strftime("%Y-%m-%d"), dow=_dow_label(d),
+        temp_min=t[0] if t else None, temp_max=t[1] if t else None,
+        sky=l["sky"] if l else None,  # type: ignore[index]
+        precipitation=l["precip"] if l else None,  # type: ignore[index]
+    )
+
+
 def _synth_day(d: datetime) -> WeatherDay:
     """KMA 단기예보 범위(~3일)를 넘는 날짜의 근사 예보(결정론적, 요일 기반)."""
     wd = d.weekday()
@@ -212,17 +322,35 @@ def _synth_day(d: datetime) -> WeatherDay:
     )
 
 
-def _ensure_week(days: List[WeatherDay], now: datetime, count: int = 7) -> List[WeatherDay]:
-    """일자별 예보를 count 일까지 채운다(실측 이후는 결정론적 근사로 보완)."""
+def _build_week(
+    days: List[WeatherDay],
+    now: datetime,
+    mid_land: Optional[Dict[int, Dict[str, object]]] = None,
+    mid_ta: Optional[Dict[int, Tuple[Optional[float], Optional[float]]]] = None,
+    count: int = 7,
+) -> List[WeatherDay]:
+    """단기(days) 뒤를 count 일까지 채운다.
+
+    남는 날짜는 D+N(오늘 기준) 이 중기예보에 있으면 **중기 실측**으로, 없으면
+    결정론적 근사(``_synth_day``)로 보완한다. 중기 데이터가 None 이면 전부 근사.
+    """
+    today0 = datetime(now.year, now.month, now.day)
     result = list(days[:count])
     if result:
         cursor = datetime.strptime(result[-1].date, "%Y-%m-%d")
     else:
-        cursor = datetime(now.year, now.month, now.day) - timedelta(days=1)
+        cursor = today0 - timedelta(days=1)
     while len(result) < count:
         cursor = cursor + timedelta(days=1)
-        result.append(_synth_day(cursor))
+        n = (cursor - today0).days  # 오늘로부터의 일수(D+N)
+        day = _mid_day(cursor, n, mid_land, mid_ta) if (mid_land or mid_ta) else None
+        result.append(day or _synth_day(cursor))
     return result
+
+
+def _ensure_week(days: List[WeatherDay], now: datetime, count: int = 7) -> List[WeatherDay]:
+    """중기 데이터 없이 근사만으로 채우는 경로(주로 Mock/폴백)."""
+    return _build_week(days, now, None, None, count)
 
 
 def _to_float(v) -> Optional[float]:
@@ -280,6 +408,63 @@ _CITIES = [
     (33.5000, 126.5300, "제주특별자치도 제주시"),
     (33.2500, 126.5600, "제주특별자치도 서귀포시"),
 ]
+
+
+# --------------------------------------------------------------------------- #
+# 중기예보(D+3~) 지역코드(regId) 매핑
+#   - land regId: getMidLandFcst용(도 단위, 매우 안정적)
+#   - ta regId  : getMidTa용(시 단위 기온). 정확 코드가 불확실한 도시는 같은 도의
+#                 대표 도시 코드로 근사(유효 코드라 호출 실패 없음, 값만 인접 도시).
+# _CITIES 의 도시명 문자열을 그대로 키로 사용한다.
+# --------------------------------------------------------------------------- #
+_MID_REG_BY_CITY: Dict[str, Tuple[str, str]] = {
+    "서울특별시": ("11B00000", "11B10101"),
+    "인천광역시": ("11B00000", "11B20201"),
+    "경기도 수원시": ("11B00000", "11B20601"),
+    "경기도 성남시": ("11B00000", "11B20601"),
+    "경기도 고양시": ("11B00000", "11B10101"),
+    "경기도 용인시": ("11B00000", "11B20601"),
+    "경기도 부천시": ("11B00000", "11B20601"),
+    "강원특별자치도 춘천시": ("11D10000", "11D10301"),
+    "강원특별자치도 강릉시": ("11D20000", "11D20501"),
+    "강원특별자치도 원주시": ("11D10000", "11D10401"),
+    "대전광역시": ("11C20000", "11C20401"),
+    "세종특별자치시": ("11C20000", "11C20401"),
+    "충청북도 청주시": ("11C10000", "11C10301"),
+    "충청북도 충주시": ("11C10000", "11C10101"),
+    "충청남도 천안시": ("11C20000", "11C20301"),
+    "충청남도 아산시": ("11C20000", "11C20301"),
+    "전북특별자치도 전주시": ("11F10000", "11F10201"),
+    "전북특별자치도 군산시": ("11F10000", "11F10201"),
+    "전북특별자치도 익산시": ("11F10000", "11F10201"),
+    "광주광역시": ("11F20000", "11F20501"),
+    "전라남도 목포시": ("11F20000", "11F20401"),
+    "전라남도 순천시": ("11F20000", "11F20501"),
+    "전라남도 여수시": ("11F20000", "11F20501"),
+    "대구광역시": ("11H10000", "11H10701"),
+    "경상북도 포항시": ("11H10000", "11H10201"),
+    "경상북도 경주시": ("11H10000", "11H10201"),
+    "경상북도 구미시": ("11H10000", "11H10701"),
+    "경상북도 안동시": ("11H10000", "11H10501"),
+    "부산광역시": ("11H20000", "11H20201"),
+    "울산광역시": ("11H20000", "11H20101"),
+    "경상남도 창원시": ("11H20000", "11H20301"),
+    "경상남도 김해시": ("11H20000", "11H20301"),
+    "경상남도 진주시": ("11H20000", "11H20701"),
+    "제주특별자치도 제주시": ("11G00000", "11G00201"),
+    "제주특별자치도 서귀포시": ("11G00000", "11G00401"),
+}
+
+# 좌표/도시 미상 시 기본(서울·수도권).
+_DEFAULT_MID_REG: Tuple[str, str] = ("11B00000", "11B10101")
+
+
+def _mid_reg_ids(lat: Optional[float], lon: Optional[float]) -> Tuple[str, str]:
+    """좌표 → (육상 regId, 기온 regId). 최근접 도시 매핑, 미상 시 서울 기본값."""
+    city = _region_from_latlon(lat, lon)
+    if city and city in _MID_REG_BY_CITY:
+        return _MID_REG_BY_CITY[city]
+    return _DEFAULT_MID_REG
 
 
 def region_label(lat: Optional[float], lon: Optional[float]) -> Optional[str]:
@@ -346,7 +531,21 @@ def get_weather(lat: Optional[float] = None, lon: Optional[float] = None) -> Wea
         day_items = _fetch(settings.KMA_VILAGE_FCST_URL, nx, ny, vb_date, vb_time)
         today = now.strftime("%Y%m%d")
         hours, tmn, tmx = _parse_today(day_items, today)
-        daily = _ensure_week(_parse_daily(day_items), now)
+
+        # 중기예보(D+3~)로 주간을 실측 보강. 실패해도 근사로 폴백(앱은 항상 동작).
+        mid_land = mid_ta = None
+        try:
+            land_reg, ta_reg = _mid_reg_ids(lat, lon)
+            tm_fc = _mid_base(now)
+            mid_land = _parse_mid_land(
+                _fetch_mid(settings.KMA_MID_LAND_FCST_URL, land_reg, tm_fc)
+            )
+            mid_ta = _parse_mid_ta(
+                _fetch_mid(settings.KMA_MID_TA_URL, ta_reg, tm_fc)
+            )
+        except Exception as exc:
+            logger.warning("KMA 중기예보 실패 → 근사 보완: %s", exc)
+        daily = _build_week(_parse_daily(day_items), now, mid_land, mid_ta)
         return WeatherData(
             location=region or "현재 위치", nx=nx, ny=ny,
             now=_parse_now(now_items), today=hours, daily=daily,

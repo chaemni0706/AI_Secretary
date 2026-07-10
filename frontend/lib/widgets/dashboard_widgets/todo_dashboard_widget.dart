@@ -58,8 +58,8 @@ class TodoDashboardWidget extends StatelessWidget {
           child: today.isEmpty
               ? _EmptyState(loading: loading)
               : (size == WidgetSize.large
-                  ? _buildGrouped(today)
-                  : _buildFlat(today, max: 3)),
+                    ? _buildGrouped(today)
+                    : _buildFlat(today, max: 3)),
         ),
       ],
     );
@@ -170,8 +170,7 @@ class _TodoRow extends StatelessWidget {
                 color: todo.completed
                     ? AppTheme.textSecondary
                     : AppTheme.textPrimary,
-                decoration:
-                    todo.completed ? TextDecoration.lineThrough : null,
+                decoration: todo.completed ? TextDecoration.lineThrough : null,
                 decorationColor: AppTheme.textSecondary,
               ),
             ),

@@ -76,12 +76,14 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     if (d != null && d.isNotEmpty) {
       return d
           .take(7)
-          .map((x) => (
-                day: x.dow,
-                icon: x.icon,
-                high: (x.tempMax ?? 0).round(),
-                low: (x.tempMin ?? 0).round(),
-              ))
+          .map(
+            (x) => (
+              day: x.dow,
+              icon: x.icon,
+              high: (x.tempMax ?? 0).round(),
+              low: (x.tempMin ?? 0).round(),
+            ),
+          )
           .toList();
     }
     return WidgetMockData.weeklyWeather

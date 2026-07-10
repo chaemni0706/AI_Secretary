@@ -42,10 +42,7 @@ class TodoProgressCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                       ],
-                      const Text(
-                        '오늘 진행률',
-                        style: TossTypography.caption,
-                      ),
+                      const Text('오늘 진행률', style: TossTypography.caption),
                     ],
                   ),
                 ),

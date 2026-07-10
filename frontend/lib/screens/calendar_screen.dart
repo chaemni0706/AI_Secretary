@@ -265,7 +265,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadii.card),
+        ),
       ),
       builder: (_) => YearMonthPickerSheet(
         initialYear: _focusedDay.year,
@@ -583,7 +585,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         onPageChanged: (page) {
           // 선택된 요일(오프셋)을 유지한 채 새 주로 이동한다.
           // (예: 수요일 선택 상태로 스와이프하면 다음 주도 수요일이 선택됨)
-          final offset = _selectedDay.difference(_weekStart(_selectedDay)).inDays;
+          final offset = _selectedDay
+              .difference(_weekStart(_selectedDay))
+              .inDays;
           setState(
             () => _selectedDay = _weekStartForPage(
               page,
@@ -616,8 +620,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             children: [
               GestureDetector(
                 onTap: () => setState(
-                  () => _selectedDay =
-                      _selectedDay.subtract(const Duration(days: 1)),
+                  () => _selectedDay = _selectedDay.subtract(
+                    const Duration(days: 1),
+                  ),
                 ),
                 child: const Icon(
                   Icons.chevron_left,
@@ -635,7 +640,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
               GestureDetector(
                 onTap: () => setState(
-                  () => _selectedDay = _selectedDay.add(const Duration(days: 1)),
+                  () =>
+                      _selectedDay = _selectedDay.add(const Duration(days: 1)),
                 ),
                 child: const Icon(
                   Icons.chevron_right,

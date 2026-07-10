@@ -6,10 +6,7 @@ class MockCallAlert {
   final String scheduleId;
   final AlertPlan alertPlan;
 
-  const MockCallAlert({
-    required this.scheduleId,
-    required this.alertPlan,
-  });
+  const MockCallAlert({required this.scheduleId, required this.alertPlan});
 
   factory MockCallAlert.fromJson(Map<String, dynamic> json) {
     return MockCallAlert(

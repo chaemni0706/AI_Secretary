@@ -32,11 +32,14 @@ class PlaceRecommendationScreen extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppTheme.textPrimary, size: 26),
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textPrimary,
+                size: 26,
+              ),
             ),
           ),
           title: const Text('추천 장소'),
@@ -56,15 +59,21 @@ class PlaceRecommendationScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_rounded,
-                size: 48, color: AppTheme.textSecondary),
+            const Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: AppTheme.textSecondary,
+            ),
             const SizedBox(height: 12),
             Text(
               query.isEmpty
                   ? '조건에 맞는 추천 장소를 찾지 못했어요.'
                   : '"$query"에 맞는 추천 장소를 찾지 못했어요.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
@@ -83,7 +92,10 @@ class PlaceRecommendationScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8, left: 4),
             child: Text(
               query.isEmpty ? '추천 결과' : '"$query" 검색 결과',
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
             ),
           );
         }
@@ -116,27 +128,37 @@ class PlaceRecommendationScreen extends StatelessWidget {
                 ),
               ),
               PillBadge(
-                  label: '${place['score'] ?? '-'}점', color: AppTheme.orange),
+                label: '${place['score'] ?? '-'}점',
+                color: AppTheme.orange,
+              ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             (place['reason'] ?? '').toString(),
             style: const TextStyle(
-                fontSize: 13, color: AppTheme.textTertiary, height: 1.4),
+              fontSize: 13,
+              color: AppTheme.textTertiary,
+              height: 1.4,
+            ),
           ),
           if ((place['road_address'] ?? place['address']) != null) ...[
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.place_outlined,
-                    size: 15, color: AppTheme.textSecondary),
+                const Icon(
+                  Icons.place_outlined,
+                  size: 15,
+                  color: AppTheme.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     (place['road_address'] ?? place['address']).toString(),
                     style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textSecondary),
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -147,13 +169,18 @@ class PlaceRecommendationScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.call_outlined,
-                    size: 15, color: AppTheme.textSecondary),
+                const Icon(
+                  Icons.call_outlined,
+                  size: 15,
+                  color: AppTheme.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   place['phone'].toString(),
                   style: const TextStyle(
-                      fontSize: 12, color: AppTheme.textSecondary),
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -164,7 +191,9 @@ class PlaceRecommendationScreen extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: tags
-                  .map((t) => PillBadge(label: t.toString(), color: AppTheme.blue))
+                  .map(
+                    (t) => PillBadge(label: t.toString(), color: AppTheme.blue),
+                  )
                   .toList(),
             ),
           ],

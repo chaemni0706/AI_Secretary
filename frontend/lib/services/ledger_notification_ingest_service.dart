@@ -36,7 +36,9 @@ class LedgerNotificationIngestService {
     if (trimmed.isEmpty) {
       throw ArgumentError('알림 원문이 비어 있습니다.');
     }
-    debugPrint('[LedgerIngest] source=$source pkg=$packageName len=${trimmed.length}');
+    debugPrint(
+      '[LedgerIngest] source=$source pkg=$packageName len=${trimmed.length}',
+    );
 
     // 프론트는 원문만 전달한다. 파싱/분류/중복판정은 백엔드가 수행한다.
     return ledgerApi.simulateNotification(

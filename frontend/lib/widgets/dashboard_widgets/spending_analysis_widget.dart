@@ -28,14 +28,10 @@ class SpendingAnalysisWidget extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            _Chip(
-              label: '최다 ${insight.topCategory}',
-              color: spec.accent,
-            ),
+            _Chip(label: '최다 ${insight.topCategory}', color: spec.accent),
             const SizedBox(width: 6),
             _Chip(
-              label:
-                  '전월 대비 ${up ? '+' : '-'}${insight.changePercent.abs()}%',
+              label: '전월 대비 ${up ? '+' : '-'}${insight.changePercent.abs()}%',
               color: up ? AppTheme.red : AppTheme.green,
               icon: up ? Icons.trending_up : Icons.trending_down,
             ),

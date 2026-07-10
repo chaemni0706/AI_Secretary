@@ -9,8 +9,7 @@ import 'package:frontend/services/schedule_api.dart';
 void main() {
   final base = DateTime(2026, 7, 6); // Monday
 
-  ParseResult run(String s) =>
-      LocalScheduleParser.parse(s, now: base);
+  ParseResult run(String s) => LocalScheduleParser.parse(s, now: base);
 
   String? draft(ParseResult r, String k) => r.scheduleDraft[k] as String?;
 

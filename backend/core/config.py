@@ -112,17 +112,32 @@ class Settings(BaseSettings):
     # --- 기상청(공공데이터포털) 단기예보 조회서비스 ---
     # 키가 없으면 weather_service 가 Mock 을 반환(앱은 정상 동작). 키가 있으면 실측.
     KMA_SERVICE_KEY: str | None = None
+    # 중기예보용 키. data.go.kr에서 중기예보 서비스가 별도 키로 발급된 경우 사용.
+    # 비어 있으면 KMA_SERVICE_KEY 로 폴백(동일 키 계정이면 설정 불필요).
+    KMA_MID_SERVICE_KEY: str | None = None
     KMA_VILAGE_FCST_URL: str = (
         "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
     )
     KMA_ULTRA_NCST_URL: str = (
         "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst"
     )
+    # 중기예보(D+3~D+7 주간): 육상(하늘/강수) + 기온(최저/최고). 격자 대신 regId 사용.
+    KMA_MID_LAND_FCST_URL: str = (
+        "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst"
+    )
+    KMA_MID_TA_URL: str = (
+        "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa"
+    )
     KMA_TIMEOUT_SECONDS: float = 5.0
 
     @property
     def kma_configured(self) -> bool:
         return bool((self.KMA_SERVICE_KEY or "").strip())
+
+    @property
+    def kma_mid_service_key(self) -> str | None:
+        """중기예보 호출용 키. 전용 키가 없으면 단기예보 키로 폴백."""
+        return (self.KMA_MID_SERVICE_KEY or "").strip() or self.KMA_SERVICE_KEY
 
     model_config = SettingsConfigDict(
         env_file=_ENV_FILES,

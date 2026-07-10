@@ -116,10 +116,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
       _voiceStatus = '듣는 중...';
     });
 
-    await _stt.listen(
-      onResult: (r) => recognized = r.text,
-      localeId: 'ko_KR',
-    );
+    await _stt.listen(onResult: (r) => recognized = r.text, localeId: 'ko_KR');
     // 인식 텍스트는 종료 시점에 다시 읽어야 하므로 콜백 스코프 밖의 변수에 보관.
     _lastRecognized = recognized;
   }
@@ -173,11 +170,13 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _messages.add(VoiceChatMessage(
-          role: ChatRole.assistant,
-          text: result.ttsText.isNotEmpty ? result.ttsText : '확인했어요.',
-          route: result,
-        ));
+        _messages.add(
+          VoiceChatMessage(
+            role: ChatRole.assistant,
+            text: result.ttsText.isNotEmpty ? result.ttsText : '확인했어요.',
+            route: result,
+          ),
+        );
         _pendingContext = result.context;
         _sending = false;
       });
@@ -189,10 +188,12 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
       debugPrint('VoiceChatScreen route failed: $e');
       if (!mounted) return;
       setState(() {
-        _messages.add(const VoiceChatMessage(
-          role: ChatRole.assistant,
-          text: '지금은 응답을 받지 못했어요. 잠시 후 다시 시도해주세요.',
-        ));
+        _messages.add(
+          const VoiceChatMessage(
+            role: ChatRole.assistant,
+            text: '지금은 응답을 받지 못했어요. 잠시 후 다시 시도해주세요.',
+          ),
+        );
         _sending = false;
       });
       _scrollToBottom();
@@ -229,11 +230,14 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppTheme.textPrimary, size: 26),
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textPrimary,
+                size: 26,
+              ),
             ),
           ),
           title: const Text('AI 음성 비서'),
@@ -285,8 +289,11 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: const [
-            Icon(Icons.tips_and_updates_outlined,
-                color: AppTheme.purple, size: 20),
+            Icon(
+              Icons.tips_and_updates_outlined,
+              color: AppTheme.purple,
+              size: 20,
+            ),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -310,11 +317,14 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: AppTheme.purple.withOpacity(0.12),
+              color: AppTheme.purple.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome,
-                color: AppTheme.purple, size: 34),
+            child: const Icon(
+              Icons.auto_awesome,
+              color: AppTheme.purple,
+              size: 34,
+            ),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -354,7 +364,10 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
           child: Text(
             m.text,
             style: const TextStyle(
-                fontSize: 14, color: Colors.white, height: 1.4),
+              fontSize: 14,
+              color: Colors.white,
+              height: 1.4,
+            ),
           ),
         ),
       );
@@ -370,7 +383,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
+                color: Colors.white.withValues(alpha: 0.85),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
                   topRight: Radius.circular(16),
@@ -382,24 +395,32 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
               child: Text(
                 m.text,
                 style: const TextStyle(
-                    fontSize: 14, color: AppTheme.textPrimary, height: 1.5),
+                  fontSize: 14,
+                  color: AppTheme.textPrimary,
+                  height: 1.5,
+                ),
               ),
             ),
             const SizedBox(height: 6),
             GestureDetector(
               onTap: () => _playTts(m.text),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: AppTheme.purple.withOpacity(0.12),
+                  color: AppTheme.purple.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.volume_up_rounded,
-                        size: 16, color: AppTheme.purple),
+                    Icon(
+                      Icons.volume_up_rounded,
+                      size: 16,
+                      color: AppTheme.purple,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       '음성으로 듣기',
@@ -430,7 +451,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
         margin: const EdgeInsets.only(top: 6, bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.85),
+          color: Colors.white.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppTheme.separator),
         ),
@@ -438,11 +459,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
           width: 40,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _Dot(),
-              _Dot(),
-              _Dot(),
-            ],
+            children: [_Dot(), _Dot(), _Dot()],
           ),
         ),
       ),
@@ -453,10 +470,8 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        border: Border(
-          top: BorderSide(color: AppTheme.separator, width: 0.5),
-        ),
+        color: Colors.white.withValues(alpha: 0.9),
+        border: Border(top: BorderSide(color: AppTheme.separator, width: 0.5)),
       ),
       child: Row(
         children: [
@@ -468,8 +483,8 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: _isListening
-                    ? AppTheme.red.withOpacity(0.16)
-                    : AppTheme.purple.withOpacity(0.14),
+                    ? AppTheme.red.withValues(alpha: 0.16)
+                    : AppTheme.purple.withValues(alpha: 0.14),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -493,14 +508,20 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (v) => _sendMessage(v),
                 style: const TextStyle(
-                    fontSize: 14, color: AppTheme.textPrimary),
+                  fontSize: 14,
+                  color: AppTheme.textPrimary,
+                ),
                 decoration: const InputDecoration(
                   hintText: '메시지를 입력하세요',
-                  hintStyle:
-                      TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   border: InputBorder.none,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
                 ),
               ),
             ),
@@ -516,8 +537,11 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
                 color: AppTheme.blue,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_upward_rounded,
-                  color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.arrow_upward_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -536,7 +560,7 @@ class _Dot extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: BoxDecoration(
-        color: AppTheme.textSecondary.withOpacity(0.5),
+        color: AppTheme.textSecondary.withValues(alpha: 0.5),
         shape: BoxShape.circle,
       ),
     );

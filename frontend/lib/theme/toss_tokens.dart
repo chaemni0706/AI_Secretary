@@ -83,29 +83,17 @@ class TossShadow {
 
   /// 칩/작은 표면 — 아주 옅게.
   static const List<BoxShadow> tiny = [
-    BoxShadow(
-      color: Color(0x08191F28),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-    ),
+    BoxShadow(color: Color(0x08191F28), blurRadius: 8, offset: Offset(0, 2)),
   ];
 
   /// 카드 기본.
   static const List<BoxShadow> weak = [
-    BoxShadow(
-      color: Color(0x0A191F28),
-      blurRadius: 20,
-      offset: Offset(0, 4),
-    ),
+    BoxShadow(color: Color(0x0A191F28), blurRadius: 20, offset: Offset(0, 4)),
   ];
 
   /// Floated 표면 / 강조 카드.
   static const List<BoxShadow> medium = [
-    BoxShadow(
-      color: Color(0x14191F28),
-      blurRadius: 28,
-      offset: Offset(0, 8),
-    ),
+    BoxShadow(color: Color(0x14191F28), blurRadius: 28, offset: Offset(0, 8)),
   ];
 
   /// 색이 있는 강조 그림자(버튼/칩/아바타 글로우). 무채색 elevation 토큰과 별개로,

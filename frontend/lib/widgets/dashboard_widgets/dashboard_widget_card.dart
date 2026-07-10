@@ -61,8 +61,9 @@ class _DashboardWidgetCardState extends State<DashboardWidgetCard> {
             onTap: editing ? null : widget.onTap,
             onTapDown: editing ? null : (_) => setState(() => _pressed = true),
             onTapUp: editing ? null : (_) => setState(() => _pressed = false),
-            onTapCancel:
-                editing ? null : () => setState(() => _pressed = false),
+            onTapCancel: editing
+                ? null
+                : () => setState(() => _pressed = false),
             behavior: HitTestBehavior.opaque,
             child: AnimatedScale(
               scale: _pressed ? TossMotion.pressedScale : 1.0,

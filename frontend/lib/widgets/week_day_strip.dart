@@ -59,9 +59,7 @@ class WeekDayStrip extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: i == 0
                             ? AppTheme.red
-                            : (i == 6
-                                  ? AppTheme.blue
-                                  : AppTheme.textSecondary),
+                            : (i == 6 ? AppTheme.blue : AppTheme.textSecondary),
                       ),
                     ),
                   ),

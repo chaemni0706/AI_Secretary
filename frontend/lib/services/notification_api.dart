@@ -6,7 +6,8 @@ class NotificationApi {
   Future<NotificationPlan> createPlan({
     required String scheduleId,
     String? userId,
-    String notificationPreference = 'normal', // normal|strong|forgetful|late_prone
+    String notificationPreference =
+        'normal', // normal|strong|forgetful|late_prone
     bool includeChecklist = true,
     bool persist = true,
   }) async {

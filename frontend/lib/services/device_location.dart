@@ -64,13 +64,14 @@ class DeviceLocation {
         return const DeviceLocationResult(LocationStatus.denied);
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings:
-            const LocationSettings(accuracy: LocationAccuracy.low),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+        ),
       );
-      return DeviceLocationResult(
-        LocationStatus.ok,
-        {'latitude': pos.latitude, 'longitude': pos.longitude},
-      );
+      return DeviceLocationResult(LocationStatus.ok, {
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+      });
     } catch (e) {
       debugPrint('DeviceLocation error: $e');
       return const DeviceLocationResult(LocationStatus.error);

@@ -33,7 +33,8 @@ class ScheduleDraftMapper {
     }
 
     // priority: 소문자 정규화 후 화이트리스트 밖이면 medium.
-    var priority = (draft['priority']?.toString().trim().toLowerCase()) ?? 'medium';
+    var priority =
+        (draft['priority']?.toString().trim().toLowerCase()) ?? 'medium';
     if (!_priorities.contains(priority)) priority = 'medium';
 
     // source: draft 값 우선, 없으면 입력 경로로 추론.
@@ -48,8 +49,8 @@ class ScheduleDraftMapper {
     final userMemo = s(draft['memo']);
     final validEndDate =
         (endDate != null && date != null && endDate.compareTo(date) > 0)
-            ? endDate
-            : null;
+        ? endDate
+        : null;
     final memo = ScheduleModel.encodeMemoWithEndDate(userMemo, validEndDate);
 
     // 백엔드 ScheduleDraftInput 필드만 골라 담는다(알 수 없는 키는 버림).

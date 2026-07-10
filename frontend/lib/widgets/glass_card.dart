@@ -107,7 +107,11 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        TossSpacing.screen, TossSpacing.xl, TossSpacing.screen, 10),
+        TossSpacing.screen,
+        TossSpacing.xl,
+        TossSpacing.screen,
+        10,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

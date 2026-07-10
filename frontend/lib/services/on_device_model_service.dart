@@ -25,8 +25,10 @@ class OnDeviceModelService {
   static const bool enableOnDeviceModel = false;
 
   /// 모델 자산 경로(실제 파일이 없어도 됨 — 없으면 자동 fallback).
-  static const String intentModelAsset = 'assets/models/intent_classifier.tflite';
-  static const String emotionModelAsset = 'assets/models/emotion_classifier.tflite';
+  static const String intentModelAsset =
+      'assets/models/intent_classifier.tflite';
+  static const String emotionModelAsset =
+      'assets/models/emotion_classifier.tflite';
 
   /// 모델 결과를 신뢰하기 위한 최소 confidence. 미만이면 rule-based/서버로 fallback.
   static const double minConfidence = 0.60;
@@ -59,7 +61,9 @@ class OnDeviceModelService {
     try {
       final exists = await assetExists(assetPath);
       if (!exists) {
-        debugPrint('[OnDeviceModel] asset 없음 → rule-based fallback: $assetPath');
+        debugPrint(
+          '[OnDeviceModel] asset 없음 → rule-based fallback: $assetPath',
+        );
         return null;
       }
       // TODO(tflite): 실제 Interpreter 반환으로 교체. 지금은 스텁.

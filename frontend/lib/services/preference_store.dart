@@ -71,17 +71,17 @@ class PreferenceStore extends ChangeNotifier {
   /// 서버/로컬 요청에 첨부할 사용자 컨텍스트(설정값 이름 고정).
   /// 백엔드가 아직 소비하지 않아도 무해하며(미지의 필드 무시), 향후 계약 필드.
   Map<String, dynamic> get userContext => {
-        'preferred_tone': assistantTone,
-        'response_length': responseLength,
-        'reminder_strength': reminderStrength,
-      };
+    'preferred_tone': assistantTone,
+    'response_length': responseLength,
+    'reminder_strength': reminderStrength,
+  };
 
   /// TTS/음성 관련 옵션(voice / voice_options 공용).
   Map<String, dynamic> get voice => {
-        'style': voiceStyle,
-        'speed': ttsSpeed,
-        'tone': assistantTone,
-      };
+    'style': voiceStyle,
+    'speed': ttsSpeed,
+    'tone': assistantTone,
+  };
 
   // --------------------------------------------------------------------- //
   // 로드 / 동기화
@@ -108,12 +108,16 @@ class PreferenceStore extends ChangeNotifier {
       briefingTime = (prefs['briefing_time'] as String?) ?? briefingTime;
       _loaded = true;
       await _saveCache();
-      debugPrint('[STYLE] PreferenceStore synced: '
-          'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
-          'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle briefingTime=$briefingTime');
+      debugPrint(
+        '[STYLE] PreferenceStore synced: '
+        'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
+        'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle briefingTime=$briefingTime',
+      );
       notifyListeners();
     } catch (e) {
-      debugPrint('[STYLE] PreferenceStore server sync failed (using cache/defaults): $e');
+      debugPrint(
+        '[STYLE] PreferenceStore server sync failed (using cache/defaults): $e',
+      );
     }
   }
 
@@ -135,10 +139,12 @@ class PreferenceStore extends ChangeNotifier {
     if (briefingTime != null) this.briefingTime = briefingTime;
     if (alertLeadMinutes != null) this.alertLeadMinutes = alertLeadMinutes;
     _loaded = true;
-    debugPrint('[STYLE] PreferenceStore updated: '
-        'tone=${this.assistantTone} length=${this.responseLength} '
-        'nudge=${this.nudgeStrength} ttsSpeed=${this.ttsSpeed} '
-        'voiceStyle=${this.voiceStyle} briefingTime=${this.briefingTime}');
+    debugPrint(
+      '[STYLE] PreferenceStore updated: '
+      'tone=${this.assistantTone} length=${this.responseLength} '
+      'nudge=${this.nudgeStrength} ttsSpeed=${this.ttsSpeed} '
+      'voiceStyle=${this.voiceStyle} briefingTime=${this.briefingTime}',
+    );
     // 캐시는 비동기로 저장(실패해도 앱 흐름 방해 없음).
     _saveCache();
     notifyListeners();
@@ -188,9 +194,11 @@ class PreferenceStore extends ChangeNotifier {
       ttsSpeed = sp.getString(_kTtsSpeed) ?? ttsSpeed;
       voiceStyle = sp.getString(_kVoiceStyle) ?? voiceStyle;
       alertLeadMinutes = sp.getInt(_kAlertLead) ?? alertLeadMinutes;
-      debugPrint('[STYLE] PreferenceStore cache restored: '
-          'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
-          'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle');
+      debugPrint(
+        '[STYLE] PreferenceStore cache restored: '
+        'tone=$assistantTone length=$responseLength nudge=$nudgeStrength '
+        'ttsSpeed=$ttsSpeed voiceStyle=$voiceStyle',
+      );
     } catch (e) {
       debugPrint('[STYLE] PreferenceStore cache load failed: $e');
     }

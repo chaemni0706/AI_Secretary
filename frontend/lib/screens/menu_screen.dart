@@ -242,7 +242,7 @@ class MenuScreen extends StatelessWidget {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.12),
+                              color: color.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(icon, color: color, size: 18),
@@ -264,7 +264,9 @@ class MenuScreen extends StatelessWidget {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.textSecondary.withOpacity(0.1),
+                              color: AppTheme.textSecondary.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -304,9 +306,9 @@ class MenuScreen extends StatelessWidget {
         'AI 음성 스타일',
         AppTheme.blue,
         () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const UserPreferenceScreen()),
-            ),
+          context,
+          MaterialPageRoute(builder: (_) => const UserPreferenceScreen()),
+        ),
       ),
       (Icons.notifications_outlined, '알림 설정', AppTheme.blue, null),
       (Icons.security_outlined, '개인정보 보호', AppTheme.textSecondary, null),

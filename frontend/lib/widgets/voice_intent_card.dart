@@ -26,22 +26,28 @@ void handleVoiceScreenAction(BuildContext context, VoiceRouteResult route) {
     case 'reservation_recommendation':
       final places = (route.data['recommended_places'] as List?) ?? const [];
       final query = (route.data['query'] ?? '').toString();
-      debugPrint('[VoiceIntent] navigate -> PlaceRecommendationScreen '
-          '(query="$query", results=${places.length})');
+      debugPrint(
+        '[VoiceIntent] navigate -> PlaceRecommendationScreen '
+        '(query="$query", results=${places.length})',
+      );
       Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
-          builder: (_) => PlaceRecommendationScreen(query: query, places: places),
+          builder: (_) =>
+              PlaceRecommendationScreen(query: query, places: places),
         ),
       );
       break;
     case 'calendar':
       debugPrint('[VoiceIntent] navigate -> CalendarScreen');
-      Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (_) => const CalendarScreen()),
-      );
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
       break;
     default:
-      debugPrint('[VoiceIntent] navigate target not wired yet: ${action.target}');
+      debugPrint(
+        '[VoiceIntent] navigate target not wired yet: ${action.target}',
+      );
   }
 }
 
@@ -56,7 +62,9 @@ void handleVoiceSideEffects(VoiceRouteResult route) {
   }
   // 음성으로 알림을 설정하면 서버가 만들어 준 reminder_plan 을 실제 OS 알림으로 예약.
   if (route.intent == 'reminder_setting') {
-    debugPrint('[VoiceIntent] reminder_setting -> schedule local notifications');
+    debugPrint(
+      '[VoiceIntent] reminder_setting -> schedule local notifications',
+    );
     briefingSchedulerService.scheduleFromVoiceReminderPlan(route.data);
   }
 }
@@ -72,7 +80,9 @@ Widget buildVoiceIntentCard(
 }) {
   switch (route.intent) {
     case 'reservation_recommendation':
-      final places = RecommendedPlace.listFrom(route.data['recommended_places']);
+      final places = RecommendedPlace.listFrom(
+        route.data['recommended_places'],
+      );
       if (places.isEmpty) return const SizedBox.shrink();
       return PlaceCarouselCard(
         places: places,
@@ -103,20 +113,26 @@ Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
           children: const [
             Icon(Icons.favorite_outline, color: AppTheme.red, size: 18),
             SizedBox(width: 8),
-            Text('감정 기반 일정 코칭',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary)),
+            Text(
+              '감정 기반 일정 코칭',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
           ],
         ),
         if (today.isNotEmpty) ...[
           const SizedBox(height: 10),
-          const Text('오늘 일정',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary)),
+          const Text(
+            '오늘 일정',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
           ...today.map((s) {
             final sched = Map<String, dynamic>.from(s as Map);
@@ -128,11 +144,14 @@ Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
         ],
         if (solutions.isNotEmpty) ...[
           const SizedBox(height: 10),
-          const Text('추천 대처',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary)),
+          const Text(
+            '추천 대처',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
           ...solutions.map((s) {
             final sol = Map<String, dynamic>.from(s as Map);
@@ -141,14 +160,21 @@ Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text((sol['title'] ?? '').toString(),
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary)),
-                  Text((sol['reason'] ?? '').toString(),
-                      style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textTertiary)),
+                  Text(
+                    (sol['title'] ?? '').toString(),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    (sol['reason'] ?? '').toString(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textTertiary,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -160,9 +186,10 @@ Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
           runSpacing: 8,
           children: [
             _actionChip('오늘 일정 보기', () {
-              Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const CalendarScreen()),
-              );
+              Navigator.of(
+                context,
+                rootNavigator: true,
+              ).push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
             }),
             _actionChip('휴식 추가', null),
             _actionChip('일정 미루기', null),
@@ -180,12 +207,17 @@ Widget _actionChip(String label, VoidCallback? onTap) {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.blue.withOpacity(0.12),
+        color: AppTheme.blue.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(label,
-          style: const TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.blue)),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.blue,
+        ),
+      ),
     ),
   );
 }
@@ -202,27 +234,41 @@ Widget _buildBriefingCard(Map<String, dynamic> data) {
           children: const [
             Icon(Icons.wb_sunny_outlined, color: AppTheme.orange, size: 18),
             SizedBox(width: 8),
-            Text('오늘의 브리핑',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary)),
+            Text(
+              '오늘의 브리핑',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
           ],
         ),
         if (summary.isNotEmpty) ...[
           const SizedBox(height: 10),
-          Text(summary,
-              style: const TextStyle(
-                  fontSize: 13, height: 1.4, color: AppTheme.textPrimary)),
+          Text(
+            summary,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: AppTheme.textPrimary,
+            ),
+          ),
         ],
         if (keyPoints.isNotEmpty) ...[
           const SizedBox(height: 8),
-          ...keyPoints.map((k) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• $k',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textTertiary)),
-              )),
+          ...keyPoints.map(
+            (k) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '• $k',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textTertiary,
+                ),
+              ),
+            ),
+          ),
         ],
       ],
     ),
@@ -243,9 +289,10 @@ Widget _buildScheduleCreateCard(Map<String, dynamic> data) {
             '${item['title'] ?? ''} · ${item['date'] ?? ''} ${item['start_time'] ?? ''}'
                 .trim(),
             style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
           ),
         ),
       ],
@@ -271,9 +318,10 @@ Widget _buildReminderCard(Map<String, dynamic> data) {
         Text(
           enabled ? '$minutes분 전 알림 설정됨' : '알림 없음',
           style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
         ),
       ],
     ),

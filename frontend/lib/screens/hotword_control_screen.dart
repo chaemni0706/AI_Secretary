@@ -62,13 +62,16 @@ class _HotwordControlScreenState extends State<HotwordControlScreen> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: (running ? AppTheme.green : AppTheme.textSecondary)
-                            .withValues(alpha: 0.14),
+                        color:
+                            (running ? AppTheme.green : AppTheme.textSecondary)
+                                .withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         running ? Icons.mic : Icons.mic_off,
-                        color: running ? AppTheme.green : AppTheme.textSecondary,
+                        color: running
+                            ? AppTheme.green
+                            : AppTheme.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -89,10 +92,7 @@ class _HotwordControlScreenState extends State<HotwordControlScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     else
-                      Switch(
-                        value: running,
-                        onChanged: (v) => _toggle(v),
-                      ),
+                      Switch(value: running, onChanged: (v) => _toggle(v)),
                   ],
                 ),
               ),

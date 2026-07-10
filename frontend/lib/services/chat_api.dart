@@ -18,12 +18,12 @@ class ChatReply {
   });
 
   factory ChatReply.fromJson(Map<String, dynamic> j) => ChatReply(
-        answer: (j['answer'] ?? '').toString(),
-        ttsText: (j['tts_text']?.toString().trim().isNotEmpty ?? false)
-            ? j['tts_text'].toString()
-            : null,
-        intent: (j['selected_intent'] ?? 'fallback').toString(),
-      );
+    answer: (j['answer'] ?? '').toString(),
+    ttsText: (j['tts_text']?.toString().trim().isNotEmpty ?? false)
+        ? j['tts_text'].toString()
+        : null,
+    intent: (j['selected_intent'] ?? 'fallback').toString(),
+  );
 }
 
 /// AI 상담/대화 API 클라이언트.

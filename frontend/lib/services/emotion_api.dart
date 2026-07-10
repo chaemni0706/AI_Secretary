@@ -44,7 +44,9 @@ class EmotionApi {
       return LocalEmotionClassifier.classify(text);
     } on ApiException catch (e) {
       // 오프라인이든 서버 오류든, 감정 흐름은 크래시 없이 공감 fallback 으로.
-      debugPrint('EmotionApi.analyze fallback (${e.isNetworkError ? "network" : "server ${e.statusCode}"}): ${e.message}');
+      debugPrint(
+        'EmotionApi.analyze fallback (${e.isNetworkError ? "network" : "server ${e.statusCode}"}): ${e.message}',
+      );
       return LocalEmotionClassifier.classify(text);
     } catch (e) {
       debugPrint('EmotionApi.analyze unexpected fallback: $e');
@@ -53,13 +55,18 @@ class EmotionApi {
   }
 
   /// 실제 응답(단순 스키마) → 화면용 리치 [EmotionAnalysis] 매핑.
-  EmotionAnalysis _adapt(Map<String, dynamic> d, {required String fallbackText}) {
+  EmotionAnalysis _adapt(
+    Map<String, dynamic> d, {
+    required String fallbackText,
+  }) {
     final emotionRaw = (d['emotion'] ?? 'neutral').toString();
     final score = ((d['emotion_score'] ?? 0) as num).toDouble();
     final risk = (d['risk_level'] ?? 'low').toString();
     final coaching = (d['coaching'] ?? '').toString().trim();
 
-    final intensity = score >= 0.66 ? 'high' : (score >= 0.33 ? 'medium' : 'low');
+    final intensity = score >= 0.66
+        ? 'high'
+        : (score >= 0.33 ? 'medium' : 'low');
     final reply = coaching.isNotEmpty ? coaching : '이야기해 주셔서 고마워요.';
 
     // risk 가 high 일 때만 비진단적 안전 안내를 덧붙인다.
@@ -68,7 +75,11 @@ class EmotionApi {
         : '';
 
     return EmotionAnalysis(
-      emotion: Emotion(label: _labelKo(emotionRaw), intensity: intensity, confidence: score),
+      emotion: Emotion(
+        label: _labelKo(emotionRaw),
+        intensity: intensity,
+        confidence: score,
+      ),
       burden: Burden(level: risk, reason: ''),
       empathyStrategy: const EmpathyStrategy(type: 'support', description: ''),
       coachingReply: reply,

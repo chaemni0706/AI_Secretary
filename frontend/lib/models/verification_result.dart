@@ -41,7 +41,9 @@ class VerificationResult {
       verificationType: (data['verification_type'] ?? '').toString(),
       result: (data['result'] ?? '').toString(),
       score: data['score'] is num ? (data['score'] as num).toInt() : null,
-      mandatoryPassed: data['mandatory_passed'] is bool ? data['mandatory_passed'] as bool : null,
+      mandatoryPassed: data['mandatory_passed'] is bool
+          ? data['mandatory_passed'] as bool
+          : null,
       reasons: reasons,
       raw: data,
     );

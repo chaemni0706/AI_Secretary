@@ -15,11 +15,7 @@ class VoiceChatMessage {
   /// AI 메시지에 한해 라우팅 결과 전체를 담는다(사용자 메시지는 null).
   final VoiceRouteResult? route;
 
-  const VoiceChatMessage({
-    required this.role,
-    required this.text,
-    this.route,
-  });
+  const VoiceChatMessage({required this.role, required this.text, this.route});
 
   bool get isUser => role == ChatRole.user;
 }

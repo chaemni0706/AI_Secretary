@@ -88,7 +88,8 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
 
     // 1) 부모 월 동기화(달라졌을 때만). _focusedMonth 는 즉시 갱신해 재진입 시 중복 판정.
     final incoming = widget.focusedMonth;
-    final monthChanged = incoming != null &&
+    final monthChanged =
+        incoming != null &&
         (incoming.year != _focusedMonth.year ||
             incoming.month != _focusedMonth.month);
     if (monthChanged) {
@@ -98,7 +99,8 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
     // 2) refreshToken 변경 또는 비활성→활성 전환 시, stale(마지막 로드 토큰과 다름)일 때만 재조회.
     final becameActive = widget.isActive && !oldWidget.isActive;
     final tokenChanged = widget.refreshToken != oldWidget.refreshToken;
-    final needTokenRefresh = widget.isActive &&
+    final needTokenRefresh =
+        widget.isActive &&
         (tokenChanged || becameActive) &&
         widget.refreshToken != _loadedForToken;
 
@@ -243,13 +245,9 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
           const SizedBox(height: 14),
           _BudgetSection(budgets: vm.budgets),
           const SizedBox(height: 14),
-          _RecurringSection(
-              recurring: vm.recurring, total: vm.recurringTotal),
+          _RecurringSection(recurring: vm.recurring, total: vm.recurringTotal),
           const SizedBox(height: 14),
-          LedgerAiBriefingCard(
-            title: vm.briefingTitle,
-            body: vm.briefingBody,
-          ),
+          LedgerAiBriefingCard(title: vm.briefingTitle, body: vm.briefingBody),
         ],
       ),
     );
@@ -262,20 +260,22 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 40, color: AppTheme.textSecondary),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 40,
+              color: AppTheme.textSecondary,
+            ),
             const SizedBox(height: 12),
             Text(
               _errorMessage ?? '리포트를 불러오지 못했어요.',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  fontSize: 14, color: AppTheme.textSecondary),
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadReport,
-              child: const Text('다시 시도'),
-            ),
+            ElevatedButton(onPressed: _loadReport, child: const Text('다시 시도')),
           ],
         ),
       ),
@@ -368,8 +368,11 @@ class _ReportHeader extends StatelessWidget {
           GestureDetector(
             onTap: onPrev,
             behavior: HitTestBehavior.opaque,
-            child: const Icon(Icons.chevron_left,
-                size: 24, color: AppTheme.textSecondary),
+            child: const Icon(
+              Icons.chevron_left,
+              size: 24,
+              color: AppTheme.textSecondary,
+            ),
           ),
           const SizedBox(width: 4),
           Text(
@@ -385,8 +388,11 @@ class _ReportHeader extends StatelessWidget {
           GestureDetector(
             onTap: onNext,
             behavior: HitTestBehavior.opaque,
-            child: const Icon(Icons.chevron_right,
-                size: 24, color: AppTheme.textSecondary),
+            child: const Icon(
+              Icons.chevron_right,
+              size: 24,
+              color: AppTheme.textSecondary,
+            ),
           ),
         ],
       ),

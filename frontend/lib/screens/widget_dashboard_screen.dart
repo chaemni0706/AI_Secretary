@@ -206,13 +206,6 @@ class _WidgetDashboardScreenState extends State<WidgetDashboardScreen> {
     ).push(MaterialPageRoute(builder: (_) => screen));
   }
 
-  void _snack(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(

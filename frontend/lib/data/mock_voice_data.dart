@@ -18,11 +18,7 @@ final Map<String, dynamic> mockEmotionAnalyze = {
   "success": true,
   "message": "감정 기반 생활 코칭 응답을 생성했습니다.",
   "data": {
-    "emotion": {
-      "label": "tired",
-      "intensity": "high",
-      "confidence": 0.88,
-    },
+    "emotion": {"label": "tired", "intensity": "high", "confidence": 0.88},
     "burden": {
       "level": "high",
       "reason": "사용자가 피로감을 표현했고, 오늘 마감인 높은 우선순위 할 일이 있습니다.",
@@ -72,12 +68,9 @@ final Map<String, dynamic> mockCallAlert = {
           "notification_channel": "mock_call",
         },
       ],
-      "checklist": [
-        "노트북",
-        "회의 자료",
-        "필기구",
-      ],
-      "voice_alert_text": "${AppStrings.assistantNotifiesPrefix()} 팀 회의가 30분 후 시작돼요. 노트북과 회의 자료를 챙겨주세요.",
+      "checklist": ["노트북", "회의 자료", "필기구"],
+      "voice_alert_text":
+          "${AppStrings.assistantNotifiesPrefix()} 팀 회의가 30분 후 시작돼요. 노트북과 회의 자료를 챙겨주세요.",
       "save_required_on_frontend": true,
     },
   },

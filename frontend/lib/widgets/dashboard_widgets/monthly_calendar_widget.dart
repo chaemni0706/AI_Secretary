@@ -43,13 +43,15 @@ class MonthlyCalendarWidget extends StatelessWidget {
       final busy = busyDays.contains(d);
       Color numColor = AppTheme.textPrimary;
       if (weekday == 0) numColor = AppTheme.red;
-      cells.add(_DayCell(
-        day: d,
-        isToday: isToday,
-        busy: busy,
-        numberColor: isToday ? Colors.white : numColor,
-        accent: spec.accent,
-      ));
+      cells.add(
+        _DayCell(
+          day: d,
+          isToday: isToday,
+          busy: busy,
+          numberColor: isToday ? Colors.white : numColor,
+          accent: spec.accent,
+        ),
+      );
     }
 
     return Column(
@@ -122,29 +124,29 @@ class _DayCell extends StatelessWidget {
           Container(
             width: 22,
             height: 22,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isToday ? accent : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            '$day',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-              color: numberColor,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isToday ? accent : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$day',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                color: numberColor,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Container(
-          width: 4,
-          height: 4,
-          decoration: BoxDecoration(
-            color: busy && !isToday ? accent : Colors.transparent,
-            shape: BoxShape.circle,
+          const SizedBox(height: 2),
+          Container(
+            width: 4,
+            height: 4,
+            decoration: BoxDecoration(
+              color: busy && !isToday ? accent : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
           ),
-        ),
         ],
       ),
     );

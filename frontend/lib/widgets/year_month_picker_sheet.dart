@@ -46,9 +46,7 @@ class _YearMonthPickerSheetState extends State<YearMonthPickerSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.cardGap,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.cardGap),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

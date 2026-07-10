@@ -70,8 +70,7 @@ class OcrVerificationDetailScreen extends StatelessWidget {
       title: 'OCR 인증',
       icon: Icons.document_scanner_outlined,
       accent: AppTheme.purple,
-      description:
-          '영수증·서류를 촬영해 일정/할 일을 자동 인증하는 화면입니다. 실제 인식 기능은 추후 연결 예정입니다.',
+      description: '영수증·서류를 촬영해 일정/할 일을 자동 인증하는 화면입니다. 실제 인식 기능은 추후 연결 예정입니다.',
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -86,8 +85,10 @@ class OcrVerificationDetailScreen extends StatelessWidget {
                     color: AppTheme.purple.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(13),
                   ),
-                  child: const Icon(Icons.photo_camera_outlined,
-                      color: AppTheme.purple),
+                  child: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: AppTheme.purple,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -146,10 +147,7 @@ class _StubScaffold extends StatelessWidget {
       decoration: AppTheme.screenBackground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text(title),
-          leading: const BackButton(),
-        ),
+        appBar: AppBar(title: Text(title), leading: const BackButton()),
         body: SafeArea(
           top: false,
           child: ListView(

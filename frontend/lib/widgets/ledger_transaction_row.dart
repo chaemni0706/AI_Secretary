@@ -111,9 +111,7 @@ class LedgerTransactionRow extends StatelessWidget {
     return Container(
       decoration: showDivider
           ? const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: TossColors.grey100),
-              ),
+              border: Border(bottom: BorderSide(color: TossColors.grey100)),
             )
           : null,
       padding: const EdgeInsets.symmetric(vertical: 14),

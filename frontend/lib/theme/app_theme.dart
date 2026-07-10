@@ -25,74 +25,73 @@ class AppTheme {
   static const Color cardBg = TossColors.bgWhite;
 
   static ThemeData get lightTheme => ThemeData(
-        useMaterial3: true,
+    useMaterial3: true,
+    fontFamily: TossTypography.fontFamily,
+    scaffoldBackgroundColor: background,
+    colorScheme: const ColorScheme.light(
+      primary: blue,
+      secondary: teal,
+      surface: TossColors.bgWhite,
+      error: red,
+    ),
+    splashFactory: NoSplash.splashFactory,
+    highlightColor: TossColors.pressedGrey,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      foregroundColor: textPrimary,
+      titleTextStyle: TextStyle(
         fontFamily: TossTypography.fontFamily,
-        scaffoldBackgroundColor: background,
-        colorScheme: const ColorScheme.light(
-          primary: blue,
-          secondary: teal,
-          surface: TossColors.bgWhite,
-          error: red,
+        color: textPrimary,
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    textTheme: const TextTheme(
+      displaySmall: TossTypography.display,
+      titleLarge: TossTypography.title1,
+      titleMedium: TossTypography.title3,
+      titleSmall: TextStyle(
+        fontFamily: TossTypography.fontFamily,
+        color: textPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: TossTypography.body,
+      bodyMedium: TextStyle(
+        fontFamily: TossTypography.fontFamily,
+        color: TossColors.textSecondary,
+        fontSize: 14,
+        height: 1.45,
+      ),
+      bodySmall: TossTypography.caption,
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: TossColors.bgWhite,
+      modalBackgroundColor: TossColors.bgWhite,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(TossRadius.xl),
         ),
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: TossColors.pressedGrey,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          foregroundColor: textPrimary,
-          titleTextStyle: TextStyle(
-            fontFamily: TossTypography.fontFamily,
-            color: textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        textTheme: const TextTheme(
-          displaySmall: TossTypography.display,
-          titleLarge: TossTypography.title1,
-          titleMedium: TossTypography.title3,
-          titleSmall: TextStyle(
-            fontFamily: TossTypography.fontFamily,
-            color: textPrimary,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-          bodyLarge: TossTypography.body,
-          bodyMedium: TextStyle(
-            fontFamily: TossTypography.fontFamily,
-            color: TossColors.textSecondary,
-            fontSize: 14,
-            height: 1.45,
-          ),
-          bodySmall: TossTypography.caption,
-        ),
-        bottomSheetTheme: const BottomSheetThemeData(
-          backgroundColor: TossColors.bgWhite,
-          modalBackgroundColor: TossColors.bgWhite,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(TossRadius.xl),
-            ),
-          ),
-        ),
-        dialogTheme: const DialogThemeData(
-          backgroundColor: TossColors.bgWhite,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(TossRadius.xl)),
-          ),
-        ),
-      );
+      ),
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: TossColors.bgWhite,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(TossRadius.xl)),
+      ),
+    ),
+  );
 
   /// 화면 배경 — 토스식 단색 연회색.
   /// (과거 그라데이션 API 호환을 위해 LinearGradient 형태 유지)
   static LinearGradient get screenGradient => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [TossColors.bgGrey, TossColors.bgGrey],
-      );
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [TossColors.bgGrey, TossColors.bgGrey],
+  );
 
-  static BoxDecoration get screenBackground => const BoxDecoration(
-        color: TossColors.bgGrey,
-      );
+  static BoxDecoration get screenBackground =>
+      const BoxDecoration(color: TossColors.bgGrey);
 }

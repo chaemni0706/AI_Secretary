@@ -15,10 +15,12 @@ import 'ledger_notification_ingest_service.dart';
 class LedgerNotificationPermissionService {
   const LedgerNotificationPermissionService();
 
-  static const MethodChannel _control =
-      MethodChannel('ai_secretary/ledger_notifications/control');
-  static const EventChannel _events =
-      EventChannel('ai_secretary/ledger_notifications');
+  static const MethodChannel _control = MethodChannel(
+    'ai_secretary/ledger_notifications/control',
+  );
+  static const EventChannel _events = EventChannel(
+    'ai_secretary/ledger_notifications',
+  );
 
   bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;

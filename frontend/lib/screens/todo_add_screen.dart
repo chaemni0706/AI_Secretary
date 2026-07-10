@@ -161,8 +161,7 @@ class _TodoAddScreenState extends State<TodoAddScreen> {
                       value: _dateController.text,
                       hint: '날짜 선택',
                       onTap: _pickDate,
-                      onClear: () =>
-                          setState(() => _dateController.clear()),
+                      onClear: () => setState(() => _dateController.clear()),
                     ),
                     PickerField(
                       icon: Icons.schedule_outlined,
@@ -170,8 +169,7 @@ class _TodoAddScreenState extends State<TodoAddScreen> {
                       value: _timeController.text,
                       hint: '시간 선택',
                       onTap: _pickTime,
-                      onClear: () =>
-                          setState(() => _timeController.clear()),
+                      onClear: () => setState(() => _timeController.clear()),
                     ),
                     _DropdownField<String>(
                       label: '카테고리',

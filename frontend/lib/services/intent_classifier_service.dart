@@ -32,8 +32,9 @@ class IntentClassifierService {
 
     // 1) 모델 경로(실험). 스텁이라 현재는 항상 null → rule fallback.
     try {
-      final interpreter = await onDeviceModelService
-          .tryLoadInterpreter(OnDeviceModelService.intentModelAsset);
+      final interpreter = await onDeviceModelService.tryLoadInterpreter(
+        OnDeviceModelService.intentModelAsset,
+      );
       if (interpreter != null) {
         // TODO(tflite): 토크나이즈 → 추론 → argmax(label, confidence).
         // final r = _runModel(interpreter, input);
@@ -55,31 +56,71 @@ class IntentClassifierService {
     // 우선순위: 예약 > 브리핑 > 감정 > 할 일 > 일정 > unknown.
     if (_hasAny(t, const ['예약', '예약해', '예약 잡'])) {
       return const ClassifierResult(
-          label: 'reservation_request', confidence: 0.6, source: 'rule');
+        label: 'reservation_request',
+        confidence: 0.6,
+        source: 'rule',
+      );
     }
     if (_hasAny(t, const ['브리핑', '오늘 일정 알려', '오늘 뭐 있', '일정 요약'])) {
       return const ClassifierResult(
-          label: 'ask_briefing', confidence: 0.6, source: 'rule');
+        label: 'ask_briefing',
+        confidence: 0.6,
+        source: 'rule',
+      );
     }
     if (_hasAny(t, const [
-      '힘들', '지쳐', '지쳤', '피곤', '불안', '걱정', '우울', '슬퍼', '짜증', '화나', '번아웃', '스트레스'
+      '힘들',
+      '지쳐',
+      '지쳤',
+      '피곤',
+      '불안',
+      '걱정',
+      '우울',
+      '슬퍼',
+      '짜증',
+      '화나',
+      '번아웃',
+      '스트레스',
     ])) {
       return const ClassifierResult(
-          label: 'emotion_coaching', confidence: 0.55, source: 'rule');
+        label: 'emotion_coaching',
+        confidence: 0.55,
+        source: 'rule',
+      );
     }
     if (_hasAny(t, const ['제출', '과제', '마감', '까지', '장보기', '사와', '작성']) &&
         !_hasAny(t, const ['회의', '약속', '병원', '수업', '예약'])) {
       return const ClassifierResult(
-          label: 'create_todo', confidence: 0.55, source: 'rule');
+        label: 'create_todo',
+        confidence: 0.55,
+        source: 'rule',
+      );
     }
     // 시간/날짜/일정 단서가 있으면 일정 생성으로 본다.
     if (_hasAny(t, const [
-      '시', '오늘', '내일', '모레', '요일', '회의', '미팅', '약속', '병원', '수업', '운동'
+      '시',
+      '오늘',
+      '내일',
+      '모레',
+      '요일',
+      '회의',
+      '미팅',
+      '약속',
+      '병원',
+      '수업',
+      '운동',
     ])) {
       return const ClassifierResult(
-          label: 'create_schedule', confidence: 0.5, source: 'rule');
+        label: 'create_schedule',
+        confidence: 0.5,
+        source: 'rule',
+      );
     }
-    return const ClassifierResult(label: 'unknown', confidence: 0.3, source: 'rule');
+    return const ClassifierResult(
+      label: 'unknown',
+      confidence: 0.3,
+      source: 'rule',
+    );
   }
 
   bool _hasAny(String t, List<String> ks) => ks.any(t.contains);

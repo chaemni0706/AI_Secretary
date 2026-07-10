@@ -29,8 +29,9 @@ class EmotionModelClassifierService {
 
     // 2) (실험) 모델이 있고 신뢰도가 높으면 "감정 라벨"만 정교화.
     try {
-      final interpreter = await onDeviceModelService
-          .tryLoadInterpreter(OnDeviceModelService.emotionModelAsset);
+      final interpreter = await onDeviceModelService.tryLoadInterpreter(
+        OnDeviceModelService.emotionModelAsset,
+      );
       if (interpreter != null) {
         // TODO(tflite): 추론 → (label, confidence).
         //  - confidence < min 이면 ruleResult 유지.

@@ -37,7 +37,8 @@ class WeeklyCalendarWidget extends StatelessWidget {
             final key =
                 '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
             final count = schedules.where((s) => s.date == key).length;
-            final isToday = date.year == now.year &&
+            final isToday =
+                date.year == now.year &&
                 date.month == now.month &&
                 date.day == now.day;
             return _DayColumn(

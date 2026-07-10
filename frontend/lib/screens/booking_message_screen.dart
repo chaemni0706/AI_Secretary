@@ -99,11 +99,14 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppTheme.textPrimary, size: 26),
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textPrimary,
+                size: 26,
+              ),
             ),
           ),
           title: const Text('예약 메시지'),
@@ -143,11 +146,14 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppTheme.teal.withOpacity(0.12),
+              color: AppTheme.teal.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.local_hospital_outlined,
-                color: AppTheme.teal, size: 22),
+            child: const Icon(
+              Icons.local_hospital_outlined,
+              color: AppTheme.teal,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -198,8 +204,7 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
             final isSelected = i == _toneIndex;
             return Expanded(
               child: Padding(
-                padding:
-                    EdgeInsets.only(right: i < _tones.length - 1 ? 8 : 0),
+                padding: EdgeInsets.only(right: i < _tones.length - 1 ? 8 : 0),
                 child: GestureDetector(
                   // 말투 변경 시 새 tone 으로 재생성.
                   onTap: _loading
@@ -213,15 +218,18 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppTheme.blue
-                          : Colors.white.withOpacity(0.65),
+                          : Colors.white.withValues(alpha: 0.65),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected
-                            ? AppTheme.blue
-                            : AppTheme.separator,
+                        color: isSelected ? AppTheme.blue : AppTheme.separator,
                       ),
                       boxShadow: isSelected
-                          ? TossShadow.glow(AppTheme.blue, alpha: 0.25, blur: 8, offset: const Offset(0, 3))
+                          ? TossShadow.glow(
+                              AppTheme.blue,
+                              alpha: 0.25,
+                              blur: 8,
+                              offset: const Offset(0, 3),
+                            )
                           : null,
                     ),
                     child: Text(
@@ -230,8 +238,9 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color:
-                            isSelected ? Colors.white : AppTheme.textSecondary,
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                       ),
                     ),
                   ),
@@ -276,7 +285,9 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppTheme.blue),
+                          strokeWidth: 2,
+                          color: AppTheme.blue,
+                        ),
                       )
                     else
                       const Icon(Icons.refresh, size: 16, color: AppTheme.blue),
@@ -299,7 +310,7 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.background.withOpacity(0.6),
+              color: AppTheme.background.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.separator),
             ),
@@ -311,30 +322,33 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
                     ),
                   )
                 : _error != null
-                    ? Column(
-                        children: [
-                          Text(
-                            _error!,
-                            style: const TextStyle(
-                                fontSize: 13, color: AppTheme.textSecondary),
-                          ),
-                          const SizedBox(height: 8),
-                          FilledButton(
-                            onPressed: _generate,
-                            style: FilledButton.styleFrom(
-                                backgroundColor: AppTheme.blue),
-                            child: const Text('다시 시도'),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        msg,
+                ? Column(
+                    children: [
+                      Text(
+                        _error!,
                         style: const TextStyle(
-                          fontSize: 15,
-                          color: AppTheme.textPrimary,
-                          height: 1.6,
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: _generate,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.blue,
+                        ),
+                        child: const Text('다시 시도'),
+                      ),
+                    ],
+                  )
+                : Text(
+                    msg,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppTheme.textPrimary,
+                      height: 1.6,
+                    ),
+                  ),
           ),
           if (!_loading && _error == null && msg.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -367,33 +381,38 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
             ),
           ),
         ),
-        ...alts.map((a) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        a,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.textPrimary,
-                          height: 1.5,
-                        ),
+        ...alts.map(
+          (a) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GlassCard(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      a,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textPrimary,
+                        height: 1.5,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _copy(a),
-                      child: const Icon(Icons.content_copy,
-                          size: 16, color: AppTheme.textSecondary),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _copy(a),
+                    child: const Icon(
+                      Icons.content_copy,
+                      size: 16,
+                      color: AppTheme.textSecondary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            )),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -408,14 +427,16 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
           child: FilledButton.icon(
             onPressed: canCopy ? () => _copy(msg) : null,
             icon: const Icon(Icons.content_copy, size: 18),
-            label: const Text('복사하기',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            label: const Text(
+              '복사하기',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.blue,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),
@@ -425,9 +446,10 @@ class _BookingMessageScreenState extends State<BookingMessageScreen> {
           child: TextButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('직접 수정하기',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+            label: const Text(
+              '직접 수정하기',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.textSecondary,
               padding: const EdgeInsets.symmetric(vertical: 12),

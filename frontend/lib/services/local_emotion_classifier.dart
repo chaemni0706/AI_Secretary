@@ -19,8 +19,16 @@ class LocalEmotionClassifier {
 
   // 위기 신호(자해/자살 등). 구체적 방법 언급 없이 신호 키워드만.
   static const _crisis = [
-    '자해', '자살', '죽고 싶', '죽고싶', '사라지고 싶', '사라지고싶',
-    '살기 싫', '살기싫', '없어지고 싶', '없어지고싶',
+    '자해',
+    '자살',
+    '죽고 싶',
+    '죽고싶',
+    '사라지고 싶',
+    '사라지고싶',
+    '살기 싫',
+    '살기싫',
+    '없어지고 싶',
+    '없어지고싶',
   ];
 
   // 강한 표현(강도 high 로 승격).
@@ -36,8 +44,15 @@ class LocalEmotionClassifier {
 
   // 일정 부담 표현(burden.level = high).
   static const _burdenHigh = [
-    '하기 싫', '하기싫', '미루고 싶', '미루고싶', '너무 많', '못 하겠', '못하겠',
-    '시간이 없', '시간 없',
+    '하기 싫',
+    '하기싫',
+    '미루고 싶',
+    '미루고싶',
+    '너무 많',
+    '못 하겠',
+    '못하겠',
+    '시간이 없',
+    '시간 없',
   ];
 
   static const Map<String, String> _labelKo = {
@@ -63,14 +78,12 @@ class LocalEmotionClassifier {
   static const Map<String, String> _coaching = {
     'stress':
         '할 일이 많아 마음이 무거우시죠. 지금은 한 번에 다 하려 하기보다, 20분 정도 쉬고 가장 작은 할 일 하나부터 시작해보는 걸 추천해요.',
-    'tired':
-        '많이 지친 상태처럼 느껴져요. 지금은 몰아붙이기보다 잠깐 쉬고, 가장 작은 할 일 하나부터 시작해보는 건 어떨까요?',
+    'tired': '많이 지친 상태처럼 느껴져요. 지금은 몰아붙이기보다 잠깐 쉬고, 가장 작은 할 일 하나부터 시작해보는 건 어떨까요?',
     'anxious':
         '마음이 불안하게 느껴지시는군요. 크게 숨을 한 번 고르고, 지금 할 수 있는 작은 일 하나에만 집중해보는 걸 추천해요.',
     'sad':
         '마음이 많이 가라앉은 것 같아요. 그런 기분이 드는 건 자연스러운 일이에요. 편한 사람과 잠깐 이야기 나눠보는 건 어떨까요?',
-    'angry':
-        '많이 답답하고 화가 나셨군요. 잠시 자리에서 벗어나 숨을 고르며 마음을 가라앉힐 시간을 가져보세요.',
+    'angry': '많이 답답하고 화가 나셨군요. 잠시 자리에서 벗어나 숨을 고르며 마음을 가라앉힐 시간을 가져보세요.',
     'neutral': '이야기해 주셔서 고마워요. 지금 어떤 마음인지 조금 더 편하게 들려주셔도 좋아요.',
   };
 
@@ -114,12 +127,12 @@ class LocalEmotionClassifier {
 
       // 3) 강도.
       final strong = _strong.any(t.contains);
-      final intensity =
-          emo == 'neutral' ? 'low' : (strong ? 'high' : 'medium');
+      final intensity = emo == 'neutral' ? 'low' : (strong ? 'high' : 'medium');
 
       // 4) 부담 수준.
-      final burdenLevel =
-          hasBurden ? 'high' : (emo == 'neutral' ? 'low' : 'medium');
+      final burdenLevel = hasBurden
+          ? 'high'
+          : (emo == 'neutral' ? 'low' : 'medium');
 
       final confidence = strong ? 0.7 : (emo == 'neutral' ? 0.3 : 0.6);
 

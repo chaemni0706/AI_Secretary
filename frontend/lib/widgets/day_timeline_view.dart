@@ -221,10 +221,7 @@ class _TimelineHourRow extends StatelessWidget {
           child: Text(
             '${hour.toString().padLeft(2, '0')}:00',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppTheme.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
           ),
         ),
       ],

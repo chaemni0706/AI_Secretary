@@ -88,9 +88,14 @@ class LedgerAutoDetectCard extends StatelessWidget {
                 onTap: submitting ? null : onSimulate,
                 behavior: HitTestBehavior.opaque,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.blue.withValues(alpha: submitting ? 0.4 : 1),
+                    color: AppTheme.blue.withValues(
+                      alpha: submitting ? 0.4 : 1,
+                    ),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Row(
@@ -102,8 +107,9 @@ class LedgerAutoDetectCard extends StatelessWidget {
                           height: 13,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       else
@@ -264,18 +270,20 @@ class _PendingRow extends StatelessWidget {
               Row(
                 children: [
                   _MiniButton(
-                      label: '확정',
-                      filled: true,
-                      enabled: enabled,
-                      onTap: onConfirm),
+                    label: '확정',
+                    filled: true,
+                    enabled: enabled,
+                    onTap: onConfirm,
+                  ),
                   const SizedBox(width: 5),
                   _MiniButton(label: '수정', enabled: enabled, onTap: onEdit),
                   const SizedBox(width: 5),
                   _MiniButton(
-                      label: '삭제',
-                      muted: true,
-                      enabled: enabled,
-                      onTap: onRemove),
+                    label: '삭제',
+                    muted: true,
+                    enabled: enabled,
+                    onTap: onRemove,
+                  ),
                 ],
               ),
             ],
@@ -309,8 +317,10 @@ class _MiniButton extends StatelessWidget {
         onTap: enabled ? onTap : null,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding:
-              EdgeInsets.symmetric(horizontal: filled ? 11 : 9, vertical: 5),
+          padding: EdgeInsets.symmetric(
+            horizontal: filled ? 11 : 9,
+            vertical: 5,
+          ),
           decoration: BoxDecoration(
             color: filled ? AppTheme.blue : Colors.white,
             borderRadius: BorderRadius.circular(8),

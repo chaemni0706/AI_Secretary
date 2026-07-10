@@ -4,7 +4,6 @@ import '../services/api_client.dart';
 import '../services/weather_api.dart';
 import '../theme/app_theme.dart';
 import '../theme/illustrations.dart';
-import '../theme/toss_tokens.dart';
 
 /// 날씨 상세 — 토스(TDS) 스타일.
 /// 그라디언트 히어로(현재) + 지표 타일 + 오늘 시간별(가로) + 주간 예보(온도 레인지 바).
@@ -92,30 +91,36 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
           child: _loading && _model == null
               ? const Center(child: CircularProgressIndicator())
               : (_error != null && _model == null
-                  ? _buildError(_error!)
-                  : _buildContent(_model!)),
+                    ? _buildError(_error!)
+                    : _buildContent(_model!)),
         ),
       ),
     );
   }
 
   Widget _buildError(String message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(TossSpacing.xxl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cloud_off_rounded,
-                  size: 40, color: TossColors.grey400),
-              const SizedBox(height: 12),
-              Text(message,
-                  textAlign: TextAlign.center, style: TossTypography.caption),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: _load, child: const Text('다시 시도')),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(TossSpacing.xxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 40,
+            color: TossColors.grey400,
           ),
-        ),
-      );
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TossTypography.caption,
+          ),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: _load, child: const Text('다시 시도')),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildContent(WeatherModel m) {
     return RefreshIndicator(
@@ -125,7 +130,11 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
           parent: BouncingScrollPhysics(),
         ),
         padding: const EdgeInsets.fromLTRB(
-            TossSpacing.lg, TossSpacing.sm, TossSpacing.lg, TossSpacing.xxl),
+          TossSpacing.lg,
+          TossSpacing.sm,
+          TossSpacing.lg,
+          TossSpacing.xxl,
+        ),
         children: [
           _HeroCard(model: m, illustration: _illustration),
           const SizedBox(height: 14),
@@ -148,9 +157,9 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
   }
 
   Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(left: 4),
-        child: Text(text, style: TossTypography.title3),
-      );
+    padding: const EdgeInsets.only(left: 4),
+    child: Text(text, style: TossTypography.title3),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -169,10 +178,10 @@ class _HeroCard extends StatelessWidget {
     final temp = now.tempC == null ? '--' : '${now.tempC!.round()}';
     final summary = (now.summary != null && now.summary!.trim().isNotEmpty)
         ? now.summary!
-        : [now.sky, now.precipitation]
-            .whereType<String>()
-            .where((s) => s != '없음')
-            .join(' · ');
+        : [
+            now.sky,
+            now.precipitation,
+          ].whereType<String>().where((s) => s != '없음').join(' · ');
 
     return Container(
       decoration: BoxDecoration(
@@ -183,8 +192,12 @@ class _HeroCard extends StatelessWidget {
           colors: [TossColors.blue700, TossColors.blue600, TossColors.blue500],
           stops: [0.0, 0.55, 1.0],
         ),
-        boxShadow: TossShadow.glow(TossColors.blue700,
-            alpha: 0.28, blur: 22, offset: const Offset(0, 8)),
+        boxShadow: TossShadow.glow(
+          TossColors.blue700,
+          alpha: 0.28,
+          blur: 22,
+          offset: const Offset(0, 8),
+        ),
       ),
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       child: Stack(
@@ -192,21 +205,31 @@ class _HeroCard extends StatelessWidget {
           Positioned(
             right: 0,
             top: 0,
-            child: Image.asset(illustration(icon),
-                width: 76, height: 76, fit: BoxFit.contain),
+            child: Image.asset(
+              illustration(icon),
+              width: 76,
+              height: 76,
+              fit: BoxFit.contain,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.location_on_rounded,
-                      size: 15, color: Color(0xFFBFDBFF)),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    size: 15,
+                    color: Color(0xFFBFDBFF),
+                  ),
                   const SizedBox(width: 4),
-                  Text(model.location,
-                      style: TossTypography.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    model.location,
+                    style: TossTypography.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   if (model.source == 'mock') _heroBadge('예시'),
                 ],
@@ -228,11 +251,14 @@ class _HeroCard extends StatelessWidget {
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
-                    child: Text('°',
-                        style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white)),
+                    child: Text(
+                      '°',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -261,33 +287,42 @@ class _HeroCard extends StatelessWidget {
   }
 
   Widget _heroBadge(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(TossRadius.full),
-        ),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                color: Colors.white)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(TossRadius.full),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 10.5,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+    ),
+  );
 
   Widget _heroTemp(String label, double? v) => Row(
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFFBFDBFF))),
-          const SizedBox(width: 5),
-          Text(v == null ? '--°' : '${v.round()}°',
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white)),
-        ],
-      );
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFFBFDBFF),
+        ),
+      ),
+      const SizedBox(width: 5),
+      Text(
+        v == null ? '--°' : '${v.round()}°',
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    ],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -302,13 +337,19 @@ class _StatTiles extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = model.now;
     final tiles = <Widget>[
-      _tile(Icons.water_drop_outlined, '습도',
-          now.humidity == null ? '--' : '${now.humidity}%'),
+      _tile(
+        Icons.water_drop_outlined,
+        '습도',
+        now.humidity == null ? '--' : '${now.humidity}%',
+      ),
       _tile(Icons.wb_cloudy_outlined, '하늘', now.sky ?? '--'),
-      _tile(Icons.umbrella_outlined, '강수',
-          (now.precipitation == null || now.precipitation == '없음')
-              ? '없음'
-              : now.precipitation!),
+      _tile(
+        Icons.umbrella_outlined,
+        '강수',
+        (now.precipitation == null || now.precipitation == '없음')
+            ? '없음'
+            : now.precipitation!,
+      ),
     ];
     return Row(
       children: [
@@ -321,26 +362,28 @@ class _StatTiles extends StatelessWidget {
   }
 
   Widget _tile(IconData icon, String label, String value) => Container(
-        decoration: BoxDecoration(
-          color: TossColors.bgWhite,
-          borderRadius: BorderRadius.circular(TossRadius.lg),
-          boxShadow: TossShadow.tiny,
+    decoration: BoxDecoration(
+      color: TossColors.bgWhite,
+      borderRadius: BorderRadius.circular(TossRadius.lg),
+      boxShadow: TossShadow.tiny,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: TossColors.blue500),
+        const SizedBox(height: 10),
+        Text(label, style: TossTypography.small),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TossTypography.title3,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 18, color: TossColors.blue500),
-            const SizedBox(height: 10),
-            Text(label, style: TossTypography.small),
-            const SizedBox(height: 2),
-            Text(value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TossTypography.title3),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -364,35 +407,38 @@ class _HourlyStrip extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          children: [
-            for (final h in hours) _hourCell(h),
-          ],
-        ),
+        child: Row(children: [for (final h in hours) _hourCell(h)]),
       ),
     );
   }
 
   Widget _hourCell(WeatherHour h) => SizedBox(
-        width: 60,
-        child: Column(
-          children: [
-            Text(h.time,
-                style: TossTypography.small
-                    .copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 10),
-            Icon(weatherIcon(h.sky, h.precipitation),
-                size: 22, color: TossColors.blue500),
-            const SizedBox(height: 10),
-            Text(h.tempC == null ? '--°' : '${h.tempC!.round()}°',
-                style: TossTypography.label
-                    .copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(h.pop == null ? '' : '${h.pop}%',
-                style: TossTypography.small.copyWith(color: TossColors.blue500)),
-          ],
+    width: 60,
+    child: Column(
+      children: [
+        Text(
+          h.time,
+          style: TossTypography.small.copyWith(fontWeight: FontWeight.w600),
         ),
-      );
+        const SizedBox(height: 10),
+        Icon(
+          weatherIcon(h.sky, h.precipitation),
+          size: 22,
+          color: TossColors.blue500,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          h.tempC == null ? '--°' : '${h.tempC!.round()}°',
+          style: TossTypography.label.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          h.pop == null ? '' : '${h.pop}%',
+          style: TossTypography.small.copyWith(color: TossColors.blue500),
+        ),
+      ],
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -427,30 +473,40 @@ class _WeeklyCard extends StatelessWidget {
     );
   }
 
-  Widget _dayRow(WeatherDay d, double allMin, double allMax,
-      {required bool last}) {
+  Widget _dayRow(
+    WeatherDay d,
+    double allMin,
+    double allMax, {
+    required bool last,
+  }) {
     return Container(
       decoration: last
           ? null
           : const BoxDecoration(
               border: Border(
-                  bottom: BorderSide(color: TossColors.grey100, width: 1)),
+                bottom: BorderSide(color: TossColors.grey100, width: 1),
+              ),
             ),
       padding: const EdgeInsets.symmetric(vertical: 13),
       child: Row(
         children: [
           SizedBox(
             width: 28,
-            child: Text(d.dow,
-                style: TossTypography.label
-                    .copyWith(fontWeight: FontWeight.w700)),
+            child: Text(
+              d.dow,
+              style: TossTypography.label.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
-          Icon(weatherIcon(d.sky, d.precipitation),
-              size: 20, color: TossColors.blue500),
+          Icon(
+            weatherIcon(d.sky, d.precipitation),
+            size: 20,
+            color: TossColors.blue500,
+          ),
           const SizedBox(width: 14),
-          Text(d.tempMin == null ? '--°' : '${d.tempMin!.round()}°',
-              style: TossTypography.caption
-                  .copyWith(color: TossColors.grey500)),
+          Text(
+            d.tempMin == null ? '--°' : '${d.tempMin!.round()}°',
+            style: TossTypography.caption.copyWith(color: TossColors.grey500),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: _RangeBar(
@@ -461,9 +517,10 @@ class _WeeklyCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(d.tempMax == null ? '--°' : '${d.tempMax!.round()}°',
-              style: TossTypography.label
-                  .copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            d.tempMax == null ? '--°' : '${d.tempMax!.round()}°',
+            style: TossTypography.label.copyWith(fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );

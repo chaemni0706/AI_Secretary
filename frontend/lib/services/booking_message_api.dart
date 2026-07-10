@@ -25,7 +25,8 @@ class BookingMessageApi {
     String? length,
     String channel = 'sms',
   }) async {
-    final effLength = length ?? _lengthFromResponseLength(preferenceStore.responseLength);
+    final effLength =
+        length ?? _lengthFromResponseLength(preferenceStore.responseLength);
     final data = await apiClient.postData(
       '$apiPrefix/messages/reservation',
       body: {
@@ -36,11 +37,7 @@ class BookingMessageApi {
           if (preferredTime != null) 'preferred_time': preferredTime,
           if (purpose != null) 'purpose': purpose,
         },
-        'style': {
-          'tone': tone,
-          'length': effLength,
-          'channel': channel,
-        },
+        'style': {'tone': tone, 'length': effLength, 'channel': channel},
         // 말투/길이 계약 필드(서버 미소비여도 무해).
         'user_context': preferenceStore.userContext,
       },

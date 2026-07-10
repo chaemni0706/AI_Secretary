@@ -47,9 +47,10 @@ class _BriefingScreenState extends State<BriefingScreen> {
       return;
     }
 
-    final fromPoints = [d.summary, ...d.keyPoints]
-        .where((s) => s.trim().isNotEmpty)
-        .join('. ');
+    final fromPoints = [
+      d.summary,
+      ...d.keyPoints,
+    ].where((s) => s.trim().isNotEmpty).join('. ');
     final raw = (d.ttsText != null && d.ttsText!.trim().isNotEmpty)
         ? d.ttsText!.trim()
         : fromPoints;
@@ -94,10 +95,10 @@ class _BriefingScreenState extends State<BriefingScreen> {
     return '${n.month}월 ${n.day}일 ${_weekKo[n.weekday]}요일';
   }
 
-  String _prioKo(String p) =>
-      p == 'high' ? '높음' : (p == 'low' ? '낮음' : '보통');
-  Color _prioColor(String p) =>
-      p == 'high' ? AppTheme.red : (p == 'low' ? AppTheme.textSecondary : AppTheme.orange);
+  String _prioKo(String p) => p == 'high' ? '높음' : (p == 'low' ? '낮음' : '보통');
+  Color _prioColor(String p) => p == 'high'
+      ? AppTheme.red
+      : (p == 'low' ? AppTheme.textSecondary : AppTheme.orange);
 
   @override
   Widget build(BuildContext context) {
@@ -112,11 +113,14 @@ class _BriefingScreenState extends State<BriefingScreen> {
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppTheme.textPrimary, size: 26),
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textPrimary,
+                size: 26,
+              ),
             ),
           ),
           title: const Text('오늘의 브리핑'),
@@ -130,8 +134,8 @@ class _BriefingScreenState extends State<BriefingScreen> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _buildError()
-                : _buildContent(),
+            ? _buildError()
+            : _buildContent(),
       ),
     );
   }
@@ -145,27 +149,30 @@ class _BriefingScreenState extends State<BriefingScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off,
-                  color: AppTheme.textSecondary, size: 34),
+              const Icon(
+                Icons.cloud_off,
+                color: AppTheme.textSecondary,
+                size: 34,
+              ),
               const SizedBox(height: 10),
               Text(
                 _error ?? '브리핑을 불러오지 못했습니다.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 14, color: AppTheme.textPrimary),
+                  fontSize: 14,
+                  color: AppTheme.textPrimary,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
                 '백엔드 서버가 실행 중인지 확인하세요.',
                 textAlign: TextAlign.center,
-                style:
-                    TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: _loadBriefing,
-                style:
-                    FilledButton.styleFrom(backgroundColor: AppTheme.blue),
+                style: FilledButton.styleFrom(backgroundColor: AppTheme.blue),
                 child: const Text('다시 시도'),
               ),
             ],
@@ -206,9 +213,9 @@ class _BriefingScreenState extends State<BriefingScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.blue.withOpacity(0.1),
+        color: AppTheme.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.blue.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.blue.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -229,8 +236,9 @@ class _BriefingScreenState extends State<BriefingScreen> {
   }
 
   Widget _buildSummaryCard(BriefingModel data) {
-    final summary =
-        data.summary.isNotEmpty ? data.summary : '오늘은 등록된 일정이 없습니다.';
+    final summary = data.summary.isNotEmpty
+        ? data.summary
+        : '오늘은 등록된 일정이 없습니다.';
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,8 +312,11 @@ class _BriefingScreenState extends State<BriefingScreen> {
                   children: [
                     const Padding(
                       padding: EdgeInsets.only(top: 2),
-                      child: Icon(Icons.check_circle_outline,
-                          color: AppTheme.green, size: 16),
+                      child: Icon(
+                        Icons.check_circle_outline,
+                        color: AppTheme.green,
+                        size: 16,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -333,64 +344,69 @@ class _BriefingScreenState extends State<BriefingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: '우선순위'),
-        ...data.priorityOrder.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _prioColor(item.priority).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.flag_outlined,
-                          color: _prioColor(item.priority), size: 20),
+        ...data.priorityOrder.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GlassCard(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _prioColor(item.priority).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  item.title,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textPrimary,
-                                  ),
+                    child: Icon(
+                      Icons.flag_outlined,
+                      color: _prioColor(item.priority),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimary,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              PillBadge(
-                                label: _prioKo(item.priority),
-                                color: _prioColor(item.priority),
-                              ),
-                            ],
-                          ),
-                          if (item.reason.isNotEmpty) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              item.reason,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary,
-                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            PillBadge(
+                              label: _prioKo(item.priority),
+                              color: _prioColor(item.priority),
                             ),
                           ],
+                        ),
+                        if (item.reason.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            item.reason,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            )),
+            ),
+          ),
+        ),
       ],
     );
   }

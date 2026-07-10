@@ -35,7 +35,9 @@ void main() {
   preferenceStore.ensureLoaded().then((_) async {
     await briefingSchedulerService.init(rootNavigatorKey);
     if (preferenceStore.briefingTime.isNotEmpty) {
-      await briefingSchedulerService.scheduleDailyBriefing(preferenceStore.briefingTime);
+      await briefingSchedulerService.scheduleDailyBriefing(
+        preferenceStore.briefingTime,
+      );
     }
     // 일정 사전(리드타임) 알림: 서버에서 일정을 받아 앞으로의 일정에 미리 예약.
     // 오프라인/실패해도 앱 흐름에 영향 없음.

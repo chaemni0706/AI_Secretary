@@ -164,10 +164,7 @@ class LedgerApi {
 
   /// mock 데이터 시드(idempotent): `POST /ledger/mock/seed`
   Future<void> seedMock({String userId = 'local-user'}) async {
-    await apiClient.postData(
-      '$_base/mock/seed',
-      query: {'user_id': userId},
-    );
+    await apiClient.postData('$_base/mock/seed', query: {'user_id': userId});
   }
 
   // ------------------------------------------------------------------------
@@ -175,8 +172,7 @@ class LedgerApi {
   // ------------------------------------------------------------------------
 
   /// 'YYYY-MM' 형식(백엔드 month 파라미터).
-  String _formatMonth(int year, int month) =>
-      '${_pad4(year)}-${_pad2(month)}';
+  String _formatMonth(int year, int month) => '${_pad4(year)}-${_pad2(month)}';
 
   /// 'YYYY-MM-DD' 형식(백엔드 selected_date 파라미터).
   String _formatDate(DateTime d) =>
@@ -204,9 +200,7 @@ class LedgerApi {
   Map<String, dynamic> _expectMap(dynamic data, String where) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return data.map((k, v) => MapEntry(k.toString(), v));
-    throw FormatException(
-      'ledger $where 응답이 Map 이 아닙니다: ${data.runtimeType}',
-    );
+    throw FormatException('ledger $where 응답이 Map 이 아닙니다: ${data.runtimeType}');
   }
 }
 

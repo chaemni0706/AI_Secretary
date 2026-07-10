@@ -163,7 +163,9 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         SnackBar(
           content: Text(ttsText),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           backgroundColor: AppTheme.dark,
         ),
       );
@@ -174,7 +176,9 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         SnackBar(
           content: Text('저장에 실패했습니다: ${_describeApiError(e)}'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           backgroundColor: AppTheme.red,
         ),
       );
@@ -184,7 +188,9 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         SnackBar(
           content: Text('저장에 실패했습니다. ($e)'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           backgroundColor: AppTheme.red,
         ),
       );
@@ -215,16 +221,18 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
             : '설정한 말투로 이렇게 안내해드릴게요.',
       );
     } on ApiException catch (e) {
-      debugPrint('[UserPreferenceScreen] preview failed: ${_describeApiError(e)}');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('미리듣기에 실패했습니다: ${e.message}')),
+      debugPrint(
+        '[UserPreferenceScreen] preview failed: ${_describeApiError(e)}',
       );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('미리듣기에 실패했습니다: ${e.message}')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('미리듣기에 실패했습니다. ($e)')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('미리듣기에 실패했습니다. ($e)')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -253,16 +261,22 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
               child: GestureDetector(
                 onTap: _saving ? null : _pickBriefingTime,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.65),
+                    color: Colors.white.withValues(alpha: 0.65),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppTheme.separator),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time_outlined,
-                          size: 18, color: AppTheme.textSecondary),
+                      const Icon(
+                        Icons.access_time_outlined,
+                        size: 18,
+                        color: AppTheme.textSecondary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         _briefingTime.isEmpty ? '설정 안 함' : _briefingTime,
@@ -280,7 +294,9 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
             if (_briefingTime.isNotEmpty) ...[
               const SizedBox(width: 8),
               IconButton(
-                onPressed: _saving ? null : () => setState(() => _briefingTime = ''),
+                onPressed: _saving
+                    ? null
+                    : () => setState(() => _briefingTime = ''),
                 icon: const Icon(Icons.close, color: AppTheme.textSecondary),
                 tooltip: '끄기',
               ),
@@ -292,7 +308,8 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
   }
 
   Future<void> _pickBriefingTime() async {
-    final initial = _parseHhmm(_briefingTime) ?? const TimeOfDay(hour: 8, minute: 0);
+    final initial =
+        _parseHhmm(_briefingTime) ?? const TimeOfDay(hour: 8, minute: 0);
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked == null) return;
     setState(() {
@@ -304,7 +321,10 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
   TimeOfDay? _parseHhmm(String value) {
     final m = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(value.trim());
     if (m == null) return null;
-    return TimeOfDay(hour: int.parse(m.group(1)!), minute: int.parse(m.group(2)!));
+    return TimeOfDay(
+      hour: int.parse(m.group(1)!),
+      minute: int.parse(m.group(2)!),
+    );
   }
 
   /// 일정 사전 알림(리드타임) 설정 — 몇 분/시간 전에 전화형 알림을 울릴지 선택.
@@ -341,11 +361,14 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
                   ? null
                   : () => setState(() => _leadMinutes = minutes),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? AppTheme.blue : Colors.white.withOpacity(0.65),
+                  color: isSelected
+                      ? AppTheme.blue
+                      : Colors.white.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected ? AppTheme.blue : AppTheme.separator,
@@ -420,16 +443,25 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
                   ? null
                   : () => setState(() => _selected[category] = code),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.blue : Colors.white.withOpacity(0.65),
+                  color: isSelected
+                      ? AppTheme.blue
+                      : Colors.white.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected ? AppTheme.blue : AppTheme.separator,
                   ),
                   boxShadow: isSelected
-                      ? TossShadow.glow(AppTheme.blue, alpha: 0.25, blur: 8, offset: const Offset(0, 3))
+                      ? TossShadow.glow(
+                          AppTheme.blue,
+                          alpha: 0.25,
+                          blur: 8,
+                          offset: const Offset(0, 3),
+                        )
                       : null,
                 ),
                 child: Text(
@@ -461,11 +493,14 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppTheme.textPrimary, size: 26),
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textPrimary,
+                size: 26,
+              ),
             ),
           ),
           title: const Text('AI 음성 스타일 설정'),
@@ -473,95 +508,97 @@ class _UserPreferenceScreenState extends State<UserPreferenceScreen> {
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: AppTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _load,
+                        child: const Text('다시 시도'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GlassCard(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_error!,
-                              style: const TextStyle(color: AppTheme.textSecondary)),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: _load,
-                            child: const Text('다시 시도'),
-                          ),
+                          _buildOptionSection('assistant_tone'),
+                          const SizedBox(height: 20),
+                          _buildOptionSection('response_length'),
+                          const SizedBox(height: 20),
+                          _buildOptionSection('nudge_strength'),
+                          const SizedBox(height: 20),
+                          _buildBriefingTimeSection(),
+                          const SizedBox(height: 20),
+                          _buildAlertLeadSection(),
                         ],
                       ),
                     ),
-                  )
-                : SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 20),
+                    Row(
                       children: [
-                        GlassCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildOptionSection('assistant_tone'),
-                              const SizedBox(height: 20),
-                              _buildOptionSection('response_length'),
-                              const SizedBox(height: 20),
-                              _buildOptionSection('nudge_strength'),
-                              const SizedBox(height: 20),
-                              _buildBriefingTimeSection(),
-                              const SizedBox(height: 20),
-                              _buildAlertLeadSection(),
-                            ],
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _saving ? null : _preview,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.blue,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: AppTheme.blue),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.volume_up_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('미리듣기'),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _saving ? null : _preview,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.blue,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  side: const BorderSide(color: AppTheme.blue),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                icon: const Icon(Icons.volume_up_outlined,
-                                    size: 18),
-                                label: const Text('미리듣기'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _saving ? null : _save,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _saving ? null : _save,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.blue,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: _saving
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : const Text('저장'),
-                              ),
-                            ),
-                          ],
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('저장'),
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
+                ),
+              ),
       ),
     );
   }

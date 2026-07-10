@@ -16,7 +16,8 @@ class ImageVerificationScreen extends StatefulWidget {
   const ImageVerificationScreen({super.key});
 
   @override
-  State<ImageVerificationScreen> createState() => _ImageVerificationScreenState();
+  State<ImageVerificationScreen> createState() =>
+      _ImageVerificationScreenState();
 }
 
 class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
@@ -135,14 +136,17 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Widget _serverHint() => Text(
-        '서버: $baseUrl',
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      );
+    '서버: $baseUrl',
+    style: const TextStyle(fontSize: 12, color: Colors.grey),
+  );
 
   Widget _sectionTitle(String t) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      t,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+    ),
+  );
 
   Widget _typeSelector() {
     return Wrap(
@@ -191,9 +195,16 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.photo_camera_outlined, size: 40, color: Colors.grey),
+                  Icon(
+                    Icons.photo_camera_outlined,
+                    size: 40,
+                    color: Colors.grey,
+                  ),
                   SizedBox(height: 8),
-                  Text('촬영한 사진이 여기에 표시됩니다', style: TextStyle(color: Colors.grey)),
+                  Text(
+                    '촬영한 사진이 여기에 표시됩니다',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
             )
@@ -229,7 +240,11 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
       child: FilledButton.icon(
         onPressed: (_loading || _image == null) ? null : _submit,
         icon: _loading
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : const Icon(Icons.verified_outlined),
         label: Text(_loading ? '인증 중...' : '인증 요청'),
       ),
@@ -245,7 +260,12 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
           children: [
             const Icon(Icons.error_outline, color: Color(0xFFC62828)),
             const SizedBox(width: 10),
-            Expanded(child: Text(msg, style: const TextStyle(color: Color(0xFFC62828)))),
+            Expanded(
+              child: Text(
+                msg,
+                style: const TextStyle(color: Color(0xFFC62828)),
+              ),
+            ),
           ],
         ),
       ),
@@ -271,22 +291,30 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
                 Expanded(
                   child: Text(
                     r.displayMessage,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text('타입: ${r.verificationType}  ·  판정: ${r.result}'
-                '${r.score != null ? '  ·  점수: ${r.score}' : ''}'),
+            Text(
+              '타입: ${r.verificationType}  ·  판정: ${r.result}'
+              '${r.score != null ? '  ·  점수: ${r.score}' : ''}',
+            ),
             if (r.reasons.isNotEmpty) ...[
               const SizedBox(height: 10),
               const Text('근거', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              ...r.reasons.map((m) => Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text('• $m', style: const TextStyle(fontSize: 13)),
-                  )),
+              ...r.reasons.map(
+                (m) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text('• $m', style: const TextStyle(fontSize: 13)),
+                ),
+              ),
             ],
           ],
         ),

@@ -15,8 +15,7 @@ library;
 const String kAssistantFallbackText = '요청을 확인했어요. 다시 한 번 말씀해 주세요.';
 
 /// 고립 한글 자모(초성/중성/종성 낱자, 호환 자모, 확장 자모) 매칭.
-final RegExp _isolatedJamo =
-    RegExp(r'[ᄀ-ᇿ㄰-㆏ꥠ-꥿ힰ-퟿]');
+final RegExp _isolatedJamo = RegExp(r'[ᄀ-ᇿ㄰-㆏ꥠ-꥿ힰ-퟿]');
 
 /// 표시/재생용으로 AI 문구를 정리한다. 손상이 심해 내용이 사라지면 [fallback].
 String sanitizeAssistantText(

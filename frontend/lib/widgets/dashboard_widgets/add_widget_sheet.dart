@@ -26,7 +26,9 @@ class _AddWidgetSheet extends StatelessWidget {
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: const BoxDecoration(
         color: TossColors.bgWhite,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(TossRadius.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(TossRadius.xl),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -62,8 +64,7 @@ class _AddWidgetSheet extends StatelessWidget {
                 itemCount: WidgetCatalog.catalogOrder.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, i) {
-                  final spec =
-                      WidgetCatalog.of(WidgetCatalog.catalogOrder[i]);
+                  final spec = WidgetCatalog.of(WidgetCatalog.catalogOrder[i]);
                   return _CatalogTile(spec: spec);
                 },
               ),
@@ -83,8 +84,8 @@ class _CatalogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.of(context)
-          .pop((type: spec.type, size: spec.defaultSize)),
+      onTap: () =>
+          Navigator.of(context).pop((type: spec.type, size: spec.defaultSize)),
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -141,8 +142,9 @@ class _CatalogTile extends StatelessWidget {
                     child: _SizeBadge(
                       size: size,
                       accent: spec.accent,
-                      onTap: () => Navigator.of(context)
-                          .pop((type: spec.type, size: size)),
+                      onTap: () => Navigator.of(
+                        context,
+                      ).pop((type: spec.type, size: size)),
                     ),
                   ),
               ],

@@ -94,10 +94,6 @@ class VoiceTtsService {
   double _currentRate = 0.5;
   double _currentPitch = 1.0;
 
-  /// 최근 speak 에 전달된 style/emotion(엔진 미반영, 보존/로그용).
-  String? _lastStyle;
-  String? _lastEmotion;
-
   /// 선택하려는 언어 우선순위. 앞에서부터 사용 가능한 첫 언어를 적용한다.
   static const List<String> _preferredLanguages = ['ko-KR', 'ko_KR', 'en-US'];
 
@@ -127,15 +123,13 @@ class VoiceTtsService {
       // iOS: 무음 스위치 상태에서도 재생되도록 오디오 세션을 명시적으로 설정한다.
       if (!kIsWeb && Platform.isIOS) {
         await _flutterTts.setSharedInstance(true);
-        await _flutterTts.setIosAudioCategory(
-          IosTextToSpeechAudioCategory.playback,
-          [
-            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-            IosTextToSpeechAudioCategoryOptions.mixWithOthers,
-            IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
-          ],
-        );
+        await _flutterTts
+            .setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
+              IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+              IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+              IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+              IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+            ]);
       }
 
       _flutterTts.setStartHandler(() => debugPrint('TTS started'));
@@ -185,16 +179,20 @@ class VoiceTtsService {
 
     try {
       await _flutterTts.setLanguage(_selectedLanguage);
-      debugPrint('TTS language selected: $_selectedLanguage '
-          '(korean available: $_koreanAvailable)');
+      debugPrint(
+        'TTS language selected: $_selectedLanguage '
+        '(korean available: $_koreanAvailable)',
+      );
     } catch (e) {
       debugPrint('TTS setLanguage($_selectedLanguage) error: $e');
     }
 
     if (!_koreanAvailable) {
-      debugPrint('TTS WARNING: 한국어(ko-KR) 음성 데이터가 없습니다. '
-          '기기 설정 > 언어 및 입력 > 텍스트 음성 변환(TTS)에서 '
-          '한국어 음성 데이터를 설치하세요. 현재는 "$_selectedLanguage" 로 재생됩니다.');
+      debugPrint(
+        'TTS WARNING: 한국어(ko-KR) 음성 데이터가 없습니다. '
+        '기기 설정 > 언어 및 입력 > 텍스트 음성 변환(TTS)에서 '
+        '한국어 음성 데이터를 설치하세요. 현재는 "$_selectedLanguage" 로 재생됩니다.',
+      );
     }
   }
 
@@ -207,7 +205,9 @@ class VoiceTtsService {
       if (voices is List) {
         for (final v in voices) {
           final s = v.toString().toLowerCase();
-          if (s.contains('ko-kr') || s.contains('ko_kr') || s.contains('korea')) {
+          if (s.contains('ko-kr') ||
+              s.contains('ko_kr') ||
+              s.contains('korea')) {
             hasKo = true;
             break;
           }
@@ -256,12 +256,12 @@ class VoiceTtsService {
       }
 
       final opts = options ?? TtsOptions.fromPreferences();
-      // style/emotion 은 엔진 미반영(보존/로그만). 한계는 문서/주석에 명시.
-      _lastStyle = opts.style;
-      _lastEmotion = opts.emotion;
+      // style/emotion 은 엔진 미반영(로그만). 한계는 문서/주석에 명시.
       if (opts.style != null || opts.emotion != null) {
-        debugPrint('TTS style/emotion preserved (engine does NOT apply): '
-            'style=${opts.style} emotion=${opts.emotion}');
+        debugPrint(
+          'TTS style/emotion preserved (engine does NOT apply): '
+          'style=${opts.style} emotion=${opts.emotion}',
+        );
       }
 
       // 속도/음높이 반영(변경된 경우에만 setter 호출).

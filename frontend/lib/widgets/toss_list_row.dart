@@ -66,9 +66,7 @@ class _TossListRowState extends State<TossListRow> {
           if (widget.trailingText != null)
             Text(
               widget.trailingText!,
-              style: TossTypography.label.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: TossTypography.label.copyWith(fontWeight: FontWeight.w600),
             ),
           if (widget.trailing != null) widget.trailing!,
           if (widget.showChevron) ...[

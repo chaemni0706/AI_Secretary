@@ -14,11 +14,7 @@ class TtsPlayback {
   final String text;
   final String? audioUrl;
 
-  const TtsPlayback({
-    required this.mode,
-    required this.text,
-    this.audioUrl,
-  });
+  const TtsPlayback({required this.mode, required this.text, this.audioUrl});
 
   bool get hasServerAudio =>
       mode == 'server_tts' && (audioUrl != null && audioUrl!.trim().isNotEmpty);
@@ -98,8 +94,10 @@ class VoiceApi {
     if (pb.hasServerAudio) {
       // TODO(server_tts): audioplayers 등으로 pb.audioUrl 재생.
       // MVP 에서는 오디오 플레이어를 도입하지 않으므로 기기 TTS 로 대체한다.
-      debugPrint('VoiceApi.speak: server_tts audio_url 감지(${pb.audioUrl}) '
-          '-> MVP: flutter_tts 로 대체 재생');
+      debugPrint(
+        'VoiceApi.speak: server_tts audio_url 감지(${pb.audioUrl}) '
+        '-> MVP: flutter_tts 로 대체 재생',
+      );
       return engine.speak(pb.text, options: options);
     }
 

@@ -31,8 +31,10 @@ class LocalDemoNotificationService {
         const InitializationSettings(android: androidInit, iOS: iosInit),
       );
 
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       const channel = AndroidNotificationChannel(
         _channelId,
         _channelName,

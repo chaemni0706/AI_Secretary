@@ -166,9 +166,8 @@ class LedgerTransactionDto {
       id: readString(_pick(json, ['transaction_id', 'transactionId', 'id'])),
       transactionType:
           readString(_pick(json, ['transaction_type', 'transactionType'])) ??
-              '',
-      sourceType:
-          readString(_pick(json, ['source_type', 'sourceType'])) ?? '',
+          '',
+      sourceType: readString(_pick(json, ['source_type', 'sourceType'])) ?? '',
       status: readString(json['status']) ?? '',
       amount: readInt(json['amount']),
       merchant: readString(json['merchant']) ?? '',
@@ -184,8 +183,9 @@ class LedgerTransactionDto {
       duplicate: json.containsKey('duplicate')
           ? readBool(json['duplicate'])
           : null,
-      categorySource:
-          readString(_pick(json, ['category_source', 'categorySource'])),
+      categorySource: readString(
+        _pick(json, ['category_source', 'categorySource']),
+      ),
       isRecurring: readBool(_pick(json, ['is_recurring', 'isRecurring'])),
       raw: json,
     );
@@ -243,16 +243,16 @@ class LedgerDashboardDto {
       summary: _asMap(json['summary']) ?? const {},
       calendar: _asList(json['calendar']),
       selectedDate: _asMap(_pick(json, ['selected_date', 'selectedDate'])),
-      pendingTransactions: _asList(
-        _pick(json, ['pending_transactions', 'pendingTransactions']),
-      )
-          .map(_asMap)
-          .where((m) => m != null)
-          .map((m) => LedgerTransactionDto.fromJson(m!))
-          .toList(),
+      pendingTransactions:
+          _asList(_pick(json, ['pending_transactions', 'pendingTransactions']))
+              .map(_asMap)
+              .where((m) => m != null)
+              .map((m) => LedgerTransactionDto.fromJson(m!))
+              .toList(),
       budgetAlerts: _asList(_pick(json, ['budget_alerts', 'budgetAlerts'])),
-      recurringPreview:
-          _asList(_pick(json, ['recurring_preview', 'recurringPreview'])),
+      recurringPreview: _asList(
+        _pick(json, ['recurring_preview', 'recurringPreview']),
+      ),
       raw: json,
     );
   }
@@ -305,8 +305,9 @@ class LedgerDayGroupDto {
       expenseTotal: readInt(_pick(json, ['expense_total', 'expenseTotal'])),
       incomeTotal: readInt(_pick(json, ['income_total', 'incomeTotal'])),
       netTotal: readInt(_pick(json, ['net_total', 'netTotal'])),
-      transactionCount:
-          readInt(_pick(json, ['transaction_count', 'transactionCount'])),
+      transactionCount: readInt(
+        _pick(json, ['transaction_count', 'transactionCount']),
+      ),
       transactions: _asList(json['transactions'])
           .map(_asMap)
           .where((m) => m != null)
@@ -393,18 +394,21 @@ class LedgerReportDto {
   factory LedgerReportDto.fromJson(Map<String, dynamic> json) {
     // briefing 이 문자열로 올 경우에도 죽지 않도록 message 로 감싼다.
     final briefingRaw = json['briefing'];
-    final Map<String, dynamic>? briefingMap = _asMap(briefingRaw) ??
+    final Map<String, dynamic>? briefingMap =
+        _asMap(briefingRaw) ??
         (readString(briefingRaw) != null
             ? <String, dynamic>{'message': readString(briefingRaw)}
             : null);
 
     return LedgerReportDto(
       summary: _asMap(json['summary']) ?? const {},
-      categoryAnalysis:
-          _asList(_pick(json, ['category_analysis', 'categoryAnalysis'])),
+      categoryAnalysis: _asList(
+        _pick(json, ['category_analysis', 'categoryAnalysis']),
+      ),
       budgetUsage: _asList(_pick(json, ['budget_usage', 'budgetUsage'])),
-      recurringPayments:
-          _asList(_pick(json, ['recurring_payments', 'recurringPayments'])),
+      recurringPayments: _asList(
+        _pick(json, ['recurring_payments', 'recurringPayments']),
+      ),
       briefing: briefingMap,
       month: readString(json['month']),
       raw: json,
@@ -467,8 +471,8 @@ class LedgerNotificationResultDto {
     if (nested != null) {
       tx = LedgerTransactionDto.fromJson(nested);
     } else {
-      final selfHasTx = _pick(json, ['transaction_id', 'transactionId', 'id']) !=
-              null ||
+      final selfHasTx =
+          _pick(json, ['transaction_id', 'transactionId', 'id']) != null ||
           json.containsKey('transaction_type') ||
           json.containsKey('amount');
       if (selfHasTx) {

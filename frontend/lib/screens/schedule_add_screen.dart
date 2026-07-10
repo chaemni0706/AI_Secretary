@@ -57,8 +57,11 @@ class _ScheduleAddScreenState extends State<ScheduleAddScreen> {
   }
 
   Future<void> _pickEndDate() async {
-    final p = await DateTimePickers.pickDate(context,
-        initial: _endDate ?? _date, firstDate: DateTimePickers.parseDate(_date));
+    final p = await DateTimePickers.pickDate(
+      context,
+      initial: _endDate ?? _date,
+      firstDate: DateTimePickers.parseDate(_date),
+    );
     if (p == null) return;
     setState(() => _endDate = p);
   }
@@ -103,7 +106,10 @@ class _ScheduleAddScreenState extends State<ScheduleAddScreen> {
       'source': 'user',
     };
     try {
-      final saved = await scheduleApi.createFromDraft(draft, intent: 'create_schedule');
+      final saved = await scheduleApi.createFromDraft(
+        draft,
+        intent: 'create_schedule',
+      );
       if (!mounted) return;
       Navigator.pop<ScheduleModel>(context, saved);
     } on ApiException catch (e) {
@@ -146,7 +152,11 @@ class _ScheduleAddScreenState extends State<ScheduleAddScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _TextInput(controller: _titleController, label: '제목', icon: Icons.title),
+                    _TextInput(
+                      controller: _titleController,
+                      label: '제목',
+                      icon: Icons.title,
+                    ),
                     PickerField(
                       icon: Icons.event_outlined,
                       label: '시작 날짜',
@@ -182,14 +192,16 @@ class _ScheduleAddScreenState extends State<ScheduleAddScreen> {
                       onChanged: (v) => setState(() => _category = v),
                     ),
                     _TextInput(
-                        controller: _locationController,
-                        label: '장소',
-                        icon: Icons.place_outlined),
+                      controller: _locationController,
+                      label: '장소',
+                      icon: Icons.place_outlined,
+                    ),
                     _TextInput(
-                        controller: _memoController,
-                        label: '메모',
-                        icon: Icons.notes_outlined,
-                        maxLines: 3),
+                      controller: _memoController,
+                      label: '메모',
+                      icon: Icons.notes_outlined,
+                      maxLines: 3,
+                    ),
                   ],
                 ),
               ),
@@ -215,7 +227,10 @@ class _ScheduleAddScreenState extends State<ScheduleAddScreen> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Text('저장'),
                     ),
                   ),

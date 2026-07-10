@@ -96,8 +96,7 @@ class VoiceSttService {
   Future<bool> init({
     void Function(String status)? onStatus,
     void Function(String error)? onError,
-  }) =>
-      initialize(onStatus: onStatus, onError: onError);
+  }) => initialize(onStatus: onStatus, onError: onError);
 
   // --------------------------------------------------------------------- //
   // 듣기 시작 / 종료 / 취소
@@ -136,13 +135,13 @@ class VoiceSttService {
     try {
       await _speech.listen(
         onResult: (r) => onResult(SttResult(r.recognizedWords, r.finalResult)),
-        localeId: localeId,
-        listenFor: listenFor,
-        pauseFor: pauseFor,
         listenOptions: SpeechListenOptions(
           partialResults: true,
           cancelOnError: true,
           listenMode: ListenMode.dictation,
+          localeId: localeId,
+          listenFor: listenFor,
+          pauseFor: pauseFor,
         ),
       );
       return true;
@@ -157,8 +156,7 @@ class VoiceSttService {
   Future<void> listen({
     required void Function(SttResult) onResult,
     String localeId = 'ko_KR',
-  }) =>
-      startListening(onResult: onResult, localeId: localeId);
+  }) => startListening(onResult: onResult, localeId: localeId);
 
   /// 듣기를 정상 종료한다(부분 결과까지 최종 결과로 확정).
   Future<void> stopListening() async {

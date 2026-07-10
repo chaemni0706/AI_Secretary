@@ -38,7 +38,10 @@ class LedgerStyles {
       categoryColor(catKey).withValues(alpha: 0.12);
 
   /// 대기 거래 상태 배지 라벨.
-  static String pendingBadgeLabel({required bool review, required int confidence}) {
+  static String pendingBadgeLabel({
+    required bool review,
+    required int confidence,
+  }) {
     if (review) return '확인 필요';
     return confidence >= 95 ? '자동 분류' : 'AI $confidence%';
   }

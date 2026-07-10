@@ -40,7 +40,8 @@ class BriefingSchedulerService {
   static const String _briefingPayload = 'daily_briefing';
   static const String _scheduleAlertPrefix = 'schedule_alert:';
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   AndroidFlutterLocalNotificationsPlugin? _androidImpl;
   GlobalKey<NavigatorState>? _navigatorKey;
   bool _initialized = false;
@@ -69,17 +70,21 @@ class BriefingSchedulerService {
       );
 
       const channel = AndroidNotificationChannel(
-        _channelId, _channelName,
+        _channelId,
+        _channelName,
         description: _channelDesc,
         importance: Importance.max,
       );
       const scheduleChannel = AndroidNotificationChannel(
-        _scheduleChannelId, _scheduleChannelName,
+        _scheduleChannelId,
+        _scheduleChannelName,
         description: _scheduleChannelDesc,
         importance: Importance.max,
       );
-      _androidImpl = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      _androidImpl = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await _androidImpl?.createNotificationChannel(channel);
       await _androidImpl?.createNotificationChannel(scheduleChannel);
 
@@ -148,7 +153,8 @@ class BriefingSchedulerService {
         _nextInstance(hour, minute),
         const NotificationDetails(
           android: AndroidNotificationDetails(
-            _channelId, _channelName,
+            _channelId,
+            _channelName,
             channelDescription: _channelDesc,
             importance: Importance.max,
             priority: Priority.high,
@@ -318,7 +324,13 @@ class BriefingSchedulerService {
     final dt = DateTime.tryParse(iso);
     if (dt == null) return null;
     return tz.TZDateTime(
-      tz.local, dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
+      tz.local,
+      dt.year,
+      dt.month,
+      dt.day,
+      dt.hour,
+      dt.minute,
+      dt.second,
     );
   }
 
@@ -329,11 +341,13 @@ class BriefingSchedulerService {
     required String message,
     required String ttsText,
   }) async {
-    final payload = _scheduleAlertPrefix +
+    final payload =
+        _scheduleAlertPrefix +
         jsonEncode({'title': title, 'message': message, 'tts': ttsText});
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        _scheduleChannelId, _scheduleChannelName,
+        _scheduleChannelId,
+        _scheduleChannelName,
         channelDescription: _scheduleChannelDesc,
         importance: Importance.max,
         priority: Priority.high,
@@ -370,15 +384,19 @@ class BriefingSchedulerService {
   tz.TZDateTime? _buildStart(ScheduleModel s) {
     final date = s.date;
     final time = s.startTime;
-    if (date == null || date.isEmpty || time == null || time.isEmpty) return null;
+    if (date == null || date.isEmpty || time == null || time.isEmpty)
+      return null;
     final d = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})$').firstMatch(date);
     final t = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(time);
     if (d == null || t == null) return null;
     try {
       return tz.TZDateTime(
         tz.local,
-        int.parse(d.group(1)!), int.parse(d.group(2)!), int.parse(d.group(3)!),
-        int.parse(t.group(1)!), int.parse(t.group(2)!),
+        int.parse(d.group(1)!),
+        int.parse(d.group(2)!),
+        int.parse(d.group(3)!),
+        int.parse(t.group(1)!),
+        int.parse(t.group(2)!),
       );
     } catch (_) {
       return null;
@@ -403,14 +421,16 @@ class BriefingSchedulerService {
       message = (m['message'] ?? message).toString();
       tts = (m['tts'] ?? message).toString();
     } catch (_) {}
-    navigator.push(MaterialPageRoute(
-      builder: (_) => MockCallAlertScreen(
-        overrideTitle: title,
-        overrideMessage: message,
-        overrideTtsText: tts,
-        autoPlay: true,
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) => MockCallAlertScreen(
+          overrideTitle: title,
+          overrideMessage: message,
+          overrideTtsText: tts,
+          autoPlay: true,
+        ),
       ),
-    ));
+    );
   }
 
   (int, int)? _parseHhmm(String value) {
@@ -421,7 +441,14 @@ class BriefingSchedulerService {
 
   tz.TZDateTime _nextInstance(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (!scheduled.isAfter(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
@@ -446,21 +473,24 @@ class BriefingSchedulerService {
       try {
         final briefing = await briefingApi.getDailyBriefing();
         message = briefing.summary.isNotEmpty ? briefing.summary : message;
-        ttsText = (briefing.ttsText != null && briefing.ttsText!.trim().isNotEmpty)
+        ttsText =
+            (briefing.ttsText != null && briefing.ttsText!.trim().isNotEmpty)
             ? briefing.ttsText!
             : message;
       } catch (e) {
         debugPrint('[BriefingScheduler] briefing fetch failed: $e');
       }
 
-      navigator.push(MaterialPageRoute(
-        builder: (_) => MockCallAlertScreen(
-          overrideTitle: title,
-          overrideMessage: message,
-          overrideTtsText: ttsText,
-          autoPlay: true,
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => MockCallAlertScreen(
+            overrideTitle: title,
+            overrideMessage: message,
+            overrideTtsText: ttsText,
+            autoPlay: true,
+          ),
         ),
-      ));
+      );
     }();
   }
 }

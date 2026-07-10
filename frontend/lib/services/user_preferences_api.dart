@@ -11,7 +11,9 @@ class UserPreferencesApi {
 
   /// 현재 설정값 + 화면에 표시할 옵션(code/display_name) 목록을 함께 반환한다.
   /// 반환 형태: { "user_id", "preferences": {...}, "options": {...} }
-  static Future<Map<String, dynamic>> fetch({String userId = 'local-user'}) async {
+  static Future<Map<String, dynamic>> fetch({
+    String userId = 'local-user',
+  }) async {
     final data = await apiClient.getData(_path, query: {'user_id': userId});
     return Map<String, dynamic>.from(data as Map);
   }

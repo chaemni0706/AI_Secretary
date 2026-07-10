@@ -17,12 +17,12 @@ class WeatherNow {
   });
 
   factory WeatherNow.fromJson(Map<String, dynamic> j) => WeatherNow(
-        tempC: (j['temp_c'] as num?)?.toDouble(),
-        sky: j['sky'] as String?,
-        precipitation: j['precipitation'] as String?,
-        humidity: j['humidity'] as int?,
-        summary: j['summary'] as String?,
-      );
+    tempC: (j['temp_c'] as num?)?.toDouble(),
+    sky: j['sky'] as String?,
+    precipitation: j['precipitation'] as String?,
+    humidity: j['humidity'] as int?,
+    summary: j['summary'] as String?,
+  );
 }
 
 class WeatherHour {
@@ -41,12 +41,12 @@ class WeatherHour {
   });
 
   factory WeatherHour.fromJson(Map<String, dynamic> j) => WeatherHour(
-        time: (j['time'] ?? '').toString(),
-        tempC: (j['temp_c'] as num?)?.toDouble(),
-        sky: j['sky'] as String?,
-        precipitation: j['precipitation'] as String?,
-        pop: j['pop'] as int?,
-      );
+    time: (j['time'] ?? '').toString(),
+    tempC: (j['temp_c'] as num?)?.toDouble(),
+    sky: j['sky'] as String?,
+    precipitation: j['precipitation'] as String?,
+    pop: j['pop'] as int?,
+  );
 }
 
 class WeatherDay {
@@ -67,13 +67,13 @@ class WeatherDay {
   });
 
   factory WeatherDay.fromJson(Map<String, dynamic> j) => WeatherDay(
-        date: (j['date'] ?? '').toString(),
-        dow: (j['dow'] ?? '').toString(),
-        tempMin: (j['temp_min'] as num?)?.toDouble(),
-        tempMax: (j['temp_max'] as num?)?.toDouble(),
-        sky: j['sky'] as String?,
-        precipitation: j['precipitation'] as String?,
-      );
+    date: (j['date'] ?? '').toString(),
+    dow: (j['dow'] ?? '').toString(),
+    tempMin: (j['temp_min'] as num?)?.toDouble(),
+    tempMax: (j['temp_max'] as num?)?.toDouble(),
+    sky: j['sky'] as String?,
+    precipitation: j['precipitation'] as String?,
+  );
 
   IconData get icon => weatherIcon(sky, precipitation);
 }
@@ -98,29 +98,30 @@ class WeatherModel {
   });
 
   factory WeatherModel.fromJson(Map<String, dynamic> j) => WeatherModel(
-        location: (j['location'] ?? '현재 위치').toString(),
-        now: WeatherNow.fromJson(
-            (j['now'] as Map?)?.cast<String, dynamic>() ?? const {}),
-        today: ((j['today'] as List?) ?? const [])
-            .map((e) => WeatherHour.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        daily: ((j['daily'] as List?) ?? const [])
-            .map((e) => WeatherDay.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        tempMin: (j['temp_min'] as num?)?.toDouble(),
-        tempMax: (j['temp_max'] as num?)?.toDouble(),
-        source: (j['source'] ?? 'kma').toString(),
-      );
+    location: (j['location'] ?? '현재 위치').toString(),
+    now: WeatherNow.fromJson(
+      (j['now'] as Map?)?.cast<String, dynamic>() ?? const {},
+    ),
+    today: ((j['today'] as List?) ?? const [])
+        .map((e) => WeatherHour.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+    daily: ((j['daily'] as List?) ?? const [])
+        .map((e) => WeatherDay.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+    tempMin: (j['temp_min'] as num?)?.toDouble(),
+    tempMax: (j['temp_max'] as num?)?.toDouble(),
+    source: (j['source'] ?? 'kma').toString(),
+  );
 
   WeatherModel copyWith({String? location}) => WeatherModel(
-        location: location ?? this.location,
-        now: now,
-        today: today,
-        daily: daily,
-        tempMin: tempMin,
-        tempMax: tempMax,
-        source: source,
-      );
+    location: location ?? this.location,
+    now: now,
+    today: today,
+    daily: daily,
+    tempMin: tempMin,
+    tempMax: tempMax,
+    source: source,
+  );
 }
 
 /// 하늘/강수 상태 → 아이콘. 강수가 있으면 강수 우선.

@@ -157,10 +157,7 @@ class ApiClient {
 
   /// multipart/form-data(파일 업로드) POST 후 envelope 를 풀어 `data` 를 반환.
   /// 이미지 인증(`/verification/image/{type}`)처럼 파일을 올릴 때 사용한다.
-  Future<dynamic> postMultipart(
-    String path,
-    FormData formData,
-  ) async {
+  Future<dynamic> postMultipart(String path, FormData formData) async {
     try {
       final res = await _dio.post(
         path,
@@ -222,10 +219,7 @@ class ApiClient {
   }
 
   /// DELETE 후 envelope 를 풀어 `data` 를 반환.
-  Future<dynamic> deleteData(
-    String path, {
-    Object? body,
-  }) async {
+  Future<dynamic> deleteData(String path, {Object? body}) async {
     try {
       final res = await _dio.delete(path, data: body);
       return _unwrap(res);

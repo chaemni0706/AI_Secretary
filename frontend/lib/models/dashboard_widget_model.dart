@@ -67,18 +67,14 @@ class DashboardWidgetItem {
   });
 
   DashboardWidgetItem copyWith({WidgetSize? size}) {
-    return DashboardWidgetItem(
-      id: id,
-      type: type,
-      size: size ?? this.size,
-    );
+    return DashboardWidgetItem(id: id, type: type, size: size ?? this.size);
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type.name,
-        'size': size.name,
-      };
+    'id': id,
+    'type': type.name,
+    'size': size.name,
+  };
 
   static DashboardWidgetItem? fromJson(Map<String, dynamic> json) {
     final type = dashboardWidgetTypeFromName((json['type'] ?? '').toString());

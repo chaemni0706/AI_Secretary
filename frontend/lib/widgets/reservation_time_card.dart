@@ -28,24 +28,32 @@ class ReservationTimeCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.event_available_outlined,
-                  size: 16, color: AppTheme.teal),
+              const Icon(
+                Icons.event_available_outlined,
+                size: 16,
+                color: AppTheme.teal,
+              ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text('$placeName · $dateLabel 예약 가능 시간',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary)),
+                child: Text(
+                  '$placeName · $dateLabel 예약 가능 시간',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 10),
           if (open.isEmpty)
-            const Text('예약 가능한 시간을 찾지 못했어요. 다른 날짜로 다시 시도해주세요.',
-                style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary))
+            const Text(
+              '예약 가능한 시간을 찾지 못했어요. 다른 날짜로 다시 시도해주세요.',
+              style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+            )
           else
             Wrap(
               spacing: 8,
@@ -56,19 +64,23 @@ class ReservationTimeCard extends StatelessWidget {
                     onTap: () => onSelect(c),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 9),
+                        horizontal: 14,
+                        vertical: 9,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.blue.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: AppTheme.blue.withValues(alpha: 0.4)),
+                          color: AppTheme.blue.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Text(
                         c.startTime,
                         style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.blue),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.blue,
+                        ),
                       ),
                     ),
                   ),

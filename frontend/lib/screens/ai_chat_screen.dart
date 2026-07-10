@@ -71,19 +71,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (!mounted || msg == null) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(msg),
-        action: SnackBarAction(
-          label: '설정',
-          onPressed: () {
-            if (res.status == LocationStatus.serviceDisabled) {
-              DeviceLocation.openLocationSettings();
-            } else {
-              DeviceLocation.openAppSettings();
-            }
-          },
+      ..showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          action: SnackBarAction(
+            label: '설정',
+            onPressed: () {
+              if (res.status == LocationStatus.serviceDisabled) {
+                DeviceLocation.openLocationSettings();
+              } else {
+                DeviceLocation.openAppSettings();
+              }
+            },
+          ),
         ),
-      ));
+      );
   }
 
   @override
@@ -193,9 +195,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  void _addMessage(String text, {required bool isUser, VoiceRouteResult? route}) {
-    setState(() =>
-        _messages.add(_ChatMessage(text: text, isUser: isUser, route: route)));
+  void _addMessage(
+    String text, {
+    required bool isUser,
+    VoiceRouteResult? route,
+  }) {
+    setState(
+      () =>
+          _messages.add(_ChatMessage(text: text, isUser: isUser, route: route)),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -234,7 +242,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
       //    기존 일정 파싱 흐름을 유지한다. → 잡담/고민이 일정 카드로 잘못 뜨는 문제 해결.
       String intent;
       try {
-        intent = await voiceRouterApi.classifyIntent(text, currentDatetime: now);
+        intent = await voiceRouterApi.classifyIntent(
+          text,
+          currentDatetime: now,
+        );
       } catch (_) {
         intent = 'schedule_create'; // 분류 실패 시 기존 동작(일정 파싱)으로 안전 폴백
       }
@@ -474,9 +485,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 0.6),
                 shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.separator.withOpacity(0.7)),
+                border: Border.all(
+                  color: AppTheme.separator.withValues(alpha: 0.7),
+                ),
               ),
               child: const Icon(
                 Icons.more_horiz,
@@ -540,7 +553,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: AppTheme.teal.withOpacity(0.15),
+                    color: AppTheme.teal.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -703,9 +716,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85),
+        color: Colors.white.withValues(alpha: 0.85),
         border: Border(
-          top: BorderSide(color: AppTheme.separator.withOpacity(0.5)),
+          top: BorderSide(color: AppTheme.separator.withValues(alpha: 0.5)),
         ),
       ),
       child: Row(
@@ -751,7 +764,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       decoration: BoxDecoration(
                         color: _isListening
                             ? AppTheme.red
-                            : AppTheme.blue.withOpacity(0.12),
+                            : AppTheme.blue.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -842,7 +855,7 @@ class _ChatBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: message.isUser
                     ? AppTheme.blue
-                    : Colors.white.withOpacity(0.85),
+                    : Colors.white.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),

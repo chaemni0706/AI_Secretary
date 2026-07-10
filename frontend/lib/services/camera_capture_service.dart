@@ -8,7 +8,8 @@ import 'package:image_picker/image_picker.dart';
 /// (1) 이미지 인증 API 업로드, (2) 추후 온디바이스 소형 VLM 입력 등 어디에나 재사용할 수 있다.
 /// 즉 "캡처"는 "판정/업로드"를 알지 못하며, 순수하게 이미지 파일만 만든다.
 class CameraCaptureService {
-  CameraCaptureService({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
+  CameraCaptureService({ImagePicker? picker})
+    : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
 

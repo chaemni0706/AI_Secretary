@@ -46,8 +46,9 @@ class ReservationCandidateWidget extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: spec.accent.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(11),
-                    border:
-                        Border.all(color: spec.accent.withValues(alpha: 0.20)),
+                    border: Border.all(
+                      color: spec.accent.withValues(alpha: 0.20),
+                    ),
                   ),
                   child: Text(
                     time,

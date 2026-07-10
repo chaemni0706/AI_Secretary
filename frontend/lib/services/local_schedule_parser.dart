@@ -25,9 +25,10 @@ class LocalScheduleParser {
 
   /// [input] 자연어를 파싱해 서버와 같은 형태의 [ParseResult] 로 돌려준다.
   static ParseResult parse(
-    String input,
-    {String inputType = 'text', DateTime? now}
-  ) {
+    String input, {
+    String inputType = 'text',
+    DateTime? now,
+  }) {
     final base = now ?? DateTime.now();
     final text = input.trim();
 
@@ -104,11 +105,18 @@ class LocalScheduleParser {
   // intent (일정 vs 할 일)
   // ------------------------------------------------------------------ //
   static const _todoSignals = [
-    '제출', '과제', '마감', '까지', '장보기', '작성', '사기', '사와', '정리', '시험',
+    '제출',
+    '과제',
+    '마감',
+    '까지',
+    '장보기',
+    '작성',
+    '사기',
+    '사와',
+    '정리',
+    '시험',
   ];
-  static const _todoOverride = [
-    '예약', '회의', '미팅', '약속', '병원', '진료', '수업', '운동',
-  ];
+  static const _todoOverride = ['예약', '회의', '미팅', '약속', '병원', '진료', '수업', '운동'];
 
   static bool _isTodo(String t) {
     final hasTodo = _todoSignals.any(t.contains);
@@ -134,7 +142,10 @@ class LocalScheduleParser {
     final iso = RegExp(r'(\d{4})-(\d{1,2})-(\d{1,2})').firstMatch(t);
     if (iso != null) {
       final dt = _safeDate(
-          int.parse(iso.group(1)!), int.parse(iso.group(2)!), int.parse(iso.group(3)!));
+        int.parse(iso.group(1)!),
+        int.parse(iso.group(2)!),
+        int.parse(iso.group(3)!),
+      );
       if (dt != null) return _DateResult(_fmt(dt), iso.group(0)!);
     }
 
@@ -158,11 +169,15 @@ class LocalScheduleParser {
 
     // 4) 상대 표현
     if (t.contains('모레') || t.contains('내일모레')) {
-      return _DateResult(_fmt(base.add(const Duration(days: 2))),
-          t.contains('내일모레') ? '내일모레' : '모레');
+      return _DateResult(
+        _fmt(base.add(const Duration(days: 2))),
+        t.contains('내일모레') ? '내일모레' : '모레',
+      );
     }
-    if (t.contains('글피')) return _DateResult(_fmt(base.add(const Duration(days: 3))), '글피');
-    if (t.contains('내일')) return _DateResult(_fmt(base.add(const Duration(days: 1))), '내일');
+    if (t.contains('글피'))
+      return _DateResult(_fmt(base.add(const Duration(days: 3))), '글피');
+    if (t.contains('내일'))
+      return _DateResult(_fmt(base.add(const Duration(days: 1))), '내일');
     if (t.contains('오늘')) return _DateResult(_fmt(base), '오늘');
 
     // 5) 단독 요일(까지 포함) → 다가오는 해당 요일(오늘 제외).
@@ -187,7 +202,9 @@ class LocalScheduleParser {
     }
 
     // 7) M/D
-    final slash = RegExp(r'(?<!\d)(\d{1,2})\s*/\s*(\d{1,2})(?!\d)').firstMatch(t);
+    final slash = RegExp(
+      r'(?<!\d)(\d{1,2})\s*/\s*(\d{1,2})(?!\d)',
+    ).firstMatch(t);
     if (slash != null) {
       final m = int.parse(slash.group(1)!);
       final d = int.parse(slash.group(2)!);
@@ -215,8 +232,7 @@ class LocalScheduleParser {
     } else {
       const tok =
           r'(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s*월\s*\d{1,2}\s*일|\d{1,2}\s*/\s*\d{1,2}|\d{1,2}\s*일)';
-      final tilde =
-          RegExp('($tok)\\s*[~∼〜–—-]\\s*($tok)').firstMatch(t);
+      final tilde = RegExp('($tok)\\s*[~∼〜–—-]\\s*($tok)').firstMatch(t);
       if (tilde != null) rightExpr = tilde.group(2);
     }
     if (rightExpr == null) return null;
@@ -324,7 +340,9 @@ class LocalScheduleParser {
   // 제목 정제
   // ------------------------------------------------------------------ //
   static final _commandPatterns = <RegExp>[
-    RegExp(r'(잡아\s*줘|잡아줘|추가해\s*줘|추가해줘|등록해\s*줘|등록해줘|저장해\s*줘|저장해줘|알려\s*줘|알려줘|넣어\s*줘|넣어줘|해\s*줘|해줘|부탁해?|해야\s*해|해야지|하기)'),
+    RegExp(
+      r'(잡아\s*줘|잡아줘|추가해\s*줘|추가해줘|등록해\s*줘|등록해줘|저장해\s*줘|저장해줘|알려\s*줘|알려줘|넣어\s*줘|넣어줘|해\s*줘|해줘|부탁해?|해야\s*해|해야지|하기)',
+    ),
   ];
   static final _fillerPatterns = <RegExp>[
     RegExp(r'(다음\s*주|이번\s*주)'),
@@ -342,8 +360,10 @@ class LocalScheduleParser {
   static String _extractTitle(String t, String? dateExpr, String? timeExpr) {
     var s = t;
     // 매칭된 날짜/시간 표현을 우선 제거.
-    if (dateExpr != null && dateExpr.isNotEmpty) s = s.replaceAll(dateExpr, ' ');
-    if (timeExpr != null && timeExpr.isNotEmpty) s = s.replaceAll(timeExpr, ' ');
+    if (dateExpr != null && dateExpr.isNotEmpty)
+      s = s.replaceAll(dateExpr, ' ');
+    if (timeExpr != null && timeExpr.isNotEmpty)
+      s = s.replaceAll(timeExpr, ' ');
     for (final p in _commandPatterns) {
       s = s.replaceAll(p, ' ');
     }
@@ -352,9 +372,24 @@ class LocalScheduleParser {
     }
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
     // 홀로 남은 조사 토큰 제거(예: "7시에" 제거 후 남은 "에").
-    const particles = {'에', '에서', '로', '으로', '을', '를', '이', '가', '는', '은', '도', '만'};
-    final tokens =
-        s.split(' ').where((w) => w.isNotEmpty && !particles.contains(w)).toList();
+    const particles = {
+      '에',
+      '에서',
+      '로',
+      '으로',
+      '을',
+      '를',
+      '이',
+      '가',
+      '는',
+      '은',
+      '도',
+      '만',
+    };
+    final tokens = s
+        .split(' ')
+        .where((w) => w.isNotEmpty && !particles.contains(w))
+        .toList();
     s = tokens.join(' ').trim();
     // 조사 꼬리 정리(에서/에/으로/로/을/를/이/가 로 끝나면 제거).
     s = s.replaceAll(RegExp(r'(에서|에|으로|로|을|를|이|가)$'), '').trim();

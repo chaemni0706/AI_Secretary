@@ -42,9 +42,39 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
   /// 기기 GPS 좌표(업체 추천 등 위치 기반용). 세션 내 1회 조회 후 캐시.
   Map<String, dynamic>? _deviceLocation;
 
+  /// 위치를 얻으면 좌표 반환. 못 얻으면(권한 거부/서비스 OFF) 안내 스낵바를 띄우고 null.
+  /// 텍스트 챗(ai_chat_screen)과 동일한 권한 안내 UX를 음성 챗에도 적용한다.
   Future<Map<String, dynamic>?> _ensureLocation() async {
-    _deviceLocation ??= await DeviceLocation.currentLatLon();
-    return _deviceLocation;
+    if (_deviceLocation != null) return _deviceLocation;
+    final res = await DeviceLocation.resolve();
+    if (res.ok) {
+      _deviceLocation = res.latLon;
+      return _deviceLocation;
+    }
+    _showLocationGuide(res);
+    return null;
+  }
+
+  void _showLocationGuide(DeviceLocationResult res) {
+    final msg = res.guideMessage;
+    if (!mounted || msg == null) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          action: SnackBarAction(
+            label: '설정',
+            onPressed: () {
+              if (res.status == LocationStatus.serviceDisabled) {
+                DeviceLocation.openLocationSettings();
+              } else {
+                DeviceLocation.openAppSettings();
+              }
+            },
+          ),
+        ),
+      );
   }
 
   @override

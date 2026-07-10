@@ -1,0 +1,33 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "digital_study",
+  "objects": [
+    {
+      "label": "monitor",
+      "confidence": 0.99,
+      "evidence": "모니터에 강의 영상"
+    },
+    {
+      "label": "tablet",
+      "confidence": 0.92,
+      "evidence": "책상 위 태블릿"
+    },
+    {
+      "label": "desk",
+      "confidence": 0.99,
+      "evidence": "학습용 책상"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "lecture_video",
+    "study_content_on_screen"
+  ],
+  "water_visual_evidence": []
+}

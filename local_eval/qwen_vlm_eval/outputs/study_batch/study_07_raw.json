@@ -1,0 +1,49 @@
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "type": "open_workbook",
+      "position": [
+        213,
+        204,
+        368,
+        315
+      ]
+    },
+    {
+      "type": "study_timer",
+      "position": [
+        417,
+        169,
+        530,
+        254
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "type": "lecture_video",
+      "position": [
+        232,
+        2,
+        495,
+        174
+      ]
+    }
+  ],
+  "visual_evidence": [
+    "open_workbook",
+    "study_timer"
+  ],
+  "negative_evidence": [
+    []
+  ],
+  "uncertain_evidence": [
+    []
+  ],
+  "text_observed": [
+    "56:43"
+  ],
+  "confidence": 0.9
+}

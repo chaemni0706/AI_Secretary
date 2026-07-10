@@ -50,15 +50,31 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
     if (_open) setState(() => _open = false);
   }
 
+  /// 하단 여백(메뉴/탭바 회피)과 상단 최소 여백.
+  static const double _bottomMargin = 88;
+  static const double _topGap = 12;
+
+  /// FAB 를 화면 안으로 보정한다(사이드 스냅 + 상단 인셋 고려).
+  /// 초기 프레임처럼 크기가 0이거나 공간이 없으면(upper < lower) clamp 예외가
+  /// 나므로, 안전한 기본 위치를 돌려준다.
   Offset _clamp(Offset position, Size size, double topInset) {
+    final double minX = _edgeMargin;
+    final double maxX = size.width - _buttonSize - _edgeMargin;
+    final double minY = topInset + _topGap;
+    final double maxY = size.height - _buttonSize - _bottomMargin;
+    if (size.width <= 0 || size.height <= 0 || maxX < minX || maxY < minY) {
+      return Offset(minX, minY);
+    }
     return Offset(
-      position.dx.clamp(_edgeMargin, size.width - _buttonSize - _edgeMargin),
-      position.dy.clamp(
-        topInset + 12,
-        size.height - _buttonSize - 88,
-      ),
+      position.dx.clamp(minX, maxX).toDouble(),
+      position.dy.clamp(minY, maxY).toDouble(),
     );
   }
+
+  /// FAB 를 배치할 만큼 레이아웃 크기가 확보됐는지(초기 0크기 프레임 배제).
+  bool _hasUsableBounds(Size size) =>
+      size.width > _buttonSize + 2 * _edgeMargin &&
+      size.height > _buttonSize + _bottomMargin + _topGap;
 
   void _snapToNearestSide(Size size) {
     final current = _position;
@@ -99,7 +115,10 @@ class _DraggableAssistantFabState extends State<DraggableAssistantFab> {
         final position =
             _position ?? Offset(size.width - 82, size.height - 146);
         final safePosition = _clamp(position, size, topInset);
-        if (_position == null || safePosition != position) {
+        // 유효한 레이아웃 프레임에서만 위치를 확정한다. 초기 0크기 프레임에서 확정하면
+        // FAB 가 좌상단에 고정되어 기본 우하단 위치로 못 가기 때문.
+        if (_hasUsableBounds(size) &&
+            (_position == null || safePosition != position)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _position = safePosition);
           });

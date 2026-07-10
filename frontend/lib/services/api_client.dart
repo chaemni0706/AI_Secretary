@@ -155,6 +155,34 @@ class ApiClient {
     }
   }
 
+  /// multipart/form-data(파일 업로드) POST 후 envelope 를 풀어 `data` 를 반환.
+  /// 이미지 인증(`/verification/image/{type}`)처럼 파일을 올릴 때 사용한다.
+  Future<dynamic> postMultipart(
+    String path,
+    FormData formData,
+  ) async {
+    try {
+      final res = await _dio.post(
+        path,
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+          // 이미지 전송 + 판정 시간을 고려해 여유 있게.
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+      return _unwrap(res);
+    } on DioException catch (e) {
+      throw ApiException(
+        '네트워크 오류: ${e.message ?? e.type.name}',
+        statusCode: e.response?.statusCode,
+        requestUri: e.requestOptions.uri.toString(),
+        responseBody: e.response?.data,
+      );
+    }
+  }
+
   /// PATCH 후 envelope 를 풀어 `data` 를 반환.
   Future<dynamic> patchData(String path, {Object? body}) async {
     try {

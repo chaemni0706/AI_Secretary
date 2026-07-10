@@ -1,0 +1,40 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "empty_container",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "empty glass"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "empty glass"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "empty glass"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non_water_beverage"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque_closed_container"
+    }
+  ],
+  "text_observed": [
+    "empty glass"
+  ],
+  "confidence": 0.95
+}
+```

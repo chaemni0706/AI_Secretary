@@ -1,0 +1,50 @@
+{
+  "verification_type": "study",
+  "activity_type": null,
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "open_textbook",
+      "description": "A textbook is open on the desk."
+    },
+    {
+      "name": "handwritten_notes",
+      "description": "Notes are written on a notepad."
+    },
+    {
+      "name": "highlighted_text",
+      "description": "Text is highlighted in the book."
+    },
+    {
+      "name": "study_content_on_screen",
+      "description": "Content from a digital device is displayed on the screen."
+    }
+  ],
+  "scenes": [
+    "desk"
+  ],
+  "visual_evidence": [
+    "open_textbook",
+    "handwritten_notes",
+    "highlighted_text",
+    "study_content_on_screen"
+  ],
+  "negative_evidence": [
+    "gaming_content",
+    "entertainment_video",
+    "social_media",
+    "shopping_content"
+  ],
+  "uncertain_evidence": [
+    "uncertain_screen_content"
+  ],
+  "text_observed": [
+    "textbook content",
+    "notes content",
+    "highlighted text content"
+  ],
+  "confidence": 0.95
+}

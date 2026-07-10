@@ -71,6 +71,51 @@ python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 예약 메시지 `data.generated_message`, 출발 알림 `data.leave_time`·`data.checklist`,
 브리핑 `data.summary`·`data.key_points`, 감정 `data.emotion`·`data.coaching`.
 
+## 인증(Verification) 도메인
+
+인증 타입은 책임에 따라 두 범주로 나뉘며, 판정 로직은 타입별로 분리되어 있다.
+라우팅은 `backend/services/verification_orchestrator.py`가 담당한다.
+
+1. **VLM 기반 시각 인증** — water / exercise / study
+   - 이미지 → VisionAnalyzer → VisionAnalysis → `evaluate_image_verification(type, ...)`(Rule Engine) → 판정
+   - exercise는 `activity_type`(gym/home_workout 등)이 필수이며, 없으면 422를 반환한다.
+   - study는 기기(노트북/모니터) 존재만으로 verified되지 않고 학습 콘텐츠 근거가 필요하다.
+   - water는 빈 컵/색 음료/근거 부족이 PASS되지 않는다(false positive 우선 차단).
+
+2. **세션/시간 기반 인증** — wakeup
+   - 서버 수신 시각, 일회성 인증 세션, 이미지 SHA256 중복 검사, 재촬영 횟수 제한으로 판정한다.
+   - **Qwen VLM과 Rule Engine을 사용하지 않는다.** 휴대전화 시간·EXIF 시간·사진에 표시된 시각은 최종 판정 기준으로 쓰지 않는다.
+   - 그래서 wakeup은 Qwen VLM batch 평가(local_eval) 대상에서 의도적으로 제외된다.
+
+> Wakeup verification is intentionally excluded from Qwen VLM batch evaluation because the final
+> decision is based on server-side time/session validation and duplicate image hash checks, not
+> visual semantic evidence.
+
+### 엔드포인트
+
+기존 엔드포인트는 유지되며(하위호환), 아래 통합 경로가 추가되었다.
+
+VLM 이미지 인증:
+
+```http
+POST /api/v1/verification/image/{verification_type}    # water | exercise | study (multipart)
+```
+
+기상(wakeup) 인증:
+
+```http
+POST /api/v1/verification/wakeup/session               # 세션 발급 (JSON)
+POST /api/v1/verification/wakeup/submit                # 이미지 제출 (multipart: session_id + file)
+```
+
+기존 경로(그대로 유지): `POST /api/v1/image-verifications`,
+`POST /api/v1/image-verifications/wakeup/sessions`,
+`POST /api/v1/image-verifications/wakeup/sessions/{session_id}/verify`.
+
+응답은 공통 envelope `{success, message, data}`를 따른다. 이미지 인증의 `data`는
+`verification_type / result / score / rule_evidence / vlm_analysis`를 포함하고, wakeup 제출의
+`data`는 `{verification_type: "wakeup", result, wakeup_data}` 형태로 감싼다.
+
 ## 알림 계획 API
 
 알림 계획 생성:

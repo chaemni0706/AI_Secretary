@@ -1,0 +1,19 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "home workout: exercise mat.",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "home_workout_environment",
+    "exercise_mat_present"
+  ],
+  "_raw_text": "home workout: exercise mat."
+}

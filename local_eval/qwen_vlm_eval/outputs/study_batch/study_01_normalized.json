@@ -1,0 +1,41 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "desk_environment",
+  "objects": [
+    {
+      "label": "textbook",
+      "confidence": 0.95,
+      "evidence": "A textbook is open on the desk."
+    },
+    {
+      "label": "notebook",
+      "confidence": 0.95,
+      "evidence": "Handwritten notes are on the desk."
+    },
+    {
+      "label": "printed_document",
+      "confidence": 0.95,
+      "evidence": "Problem-solving materials are on the desk."
+    }
+  ],
+  "visible_text": [
+    "open_textbook",
+    "handwritten_notes",
+    "highlighted_text",
+    "problem_solving_material"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "open_textbook",
+    "handwritten_notes",
+    "highlighted_text",
+    "problem_solving_material"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

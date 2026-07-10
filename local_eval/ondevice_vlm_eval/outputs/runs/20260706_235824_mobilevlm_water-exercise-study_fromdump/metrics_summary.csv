@@ -1,0 +1,5 @@
+model_name,verification_type,num_samples,tp,tn,fp,fn,accuracy,precision,recall,f1,false_positive_rate,false_negative_rate,avg_latency_ms,p50_latency_ms,p95_latency_ms,max_latency_ms,model_size_mb,runtime_target,android_feasibility
+MobileVLM-V2-1.7B,water,18,11,4,3,0,0.8333,0.7857,1.0,0.88,0.4286,0.0,1110.843,1148.057,1407.737,1407.737,1100,mlc-int4 / nnapi,high
+MobileVLM-V2-1.7B,exercise,12,6,6,0,0,1.0,1.0,1.0,1.0,0.0,0.0,1154.76,1152.971,1182.938,1182.938,1100,mlc-int4 / nnapi,high
+MobileVLM-V2-1.7B,study,10,2,3,0,5,0.5,1.0,0.2857,0.4444,0.0,0.7143,767.346,636.489,1171.492,1171.492,1100,mlc-int4 / nnapi,high
+MobileVLM-V2-1.7B,ALL,40,19,13,3,5,0.8,0.8636,0.7917,0.8261,0.1875,0.2083,1038.144,1148.057,1179.968,1407.737,1100,mlc-int4 / nnapi,high

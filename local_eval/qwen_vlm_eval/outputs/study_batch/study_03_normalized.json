@@ -1,0 +1,37 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study",
+  "objects": [
+    {
+      "label": "textbook",
+      "confidence": 0.8,
+      "evidence": null
+    },
+    {
+      "label": "workbook",
+      "confidence": 0.8,
+      "evidence": null
+    },
+    {
+      "label": "notebook",
+      "confidence": 0.8,
+      "evidence": null
+    }
+  ],
+  "visible_text": [
+    "Unclear text from the open textbook and workbook."
+  ],
+  "visual_evidence": [
+    "A person's hand holding a pen over an open textbook with various diagrams and text.",
+    "An open workbook with pages turned to different sections.",
+    "[]"
+  ],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

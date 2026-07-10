@@ -1,0 +1,2 @@
+model_name,verification_type,avg_latency_ms,p50_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms
+SmolVLM-500M,exercise,826.525,789.34,1312.461,721.82,1312.461

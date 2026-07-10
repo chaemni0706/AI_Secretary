@@ -1,0 +1,51 @@
+{
+  "filename": "study_01.png",
+  "source": "fixture",
+  "verification_type": "study",
+  "expected_label": "PASS",
+  "predicted_label": "PASS",
+  "engine_result": "verified",
+  "score": 80,
+  "mandatory_passed": true,
+  "ok": true,
+  "visual_evidence": [
+    "open_textbook",
+    "handwritten_notes",
+    "highlighted_text",
+    "problem_solving_material"
+  ],
+  "objects": [
+    "textbook",
+    "notebook",
+    "printed_document"
+  ],
+  "rule_evidence": [
+    {
+      "code": "study_evidence:problem_solving_material",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 20
+    },
+    {
+      "code": "study_evidence:open_textbook",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 25
+    },
+    {
+      "code": "study_evidence:highlighted_text",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 15
+    },
+    {
+      "code": "study_evidence:handwritten_notes",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 20
+    }
+  ],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/study_batch/study_01_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/study_batch/study_01_normalized.json",
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/study_batch/study_01_result.json",
+  "error": "",
+  "image_id": "study_01",
+  "expected_decision": "verified",
+  "expected_study_evidence": "open_textbook;handwritten_notes;highlighted_text"
+}

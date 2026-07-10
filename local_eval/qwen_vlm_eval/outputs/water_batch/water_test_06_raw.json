@@ -1,0 +1,55 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand",
+      "description": "A hand reaching towards a water dispenser"
+    },
+    {
+      "name": "dispenser",
+      "description": "A white water dispenser with a digital display"
+    },
+    {
+      "name": "glass",
+      "description": "A clear glass being filled with water"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A kitchen counter with a tiled backsplash and a bowl of limes in the background"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "description": "A hand reaching towards a water dispenser"
+    },
+    {
+      "description": "A clear glass being filled with water"
+    },
+    {
+      "description": "A white water dispenser with a digital display"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "description": "A bowl of limes in the background"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "description": "The glass appears to be partially filled with water"
+    }
+  ],
+  "text_observed": [
+    {
+      "description": "The word 'COWAY' on the water dispenser"
+    }
+  ],
+  "confidence": 0.85
+}

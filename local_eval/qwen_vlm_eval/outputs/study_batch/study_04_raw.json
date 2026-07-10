@@ -1,0 +1,37 @@
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes"
+  ],
+  "scenes": [
+    "lecture_video",
+    "educational_document",
+    "code_editor",
+    "study_timer"
+  ],
+  "visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "study_content_on_screen"
+  ],
+  "negative_evidence": [
+    "gaming_content",
+    "entertainment_video",
+    "social_media",
+    "shopping_content",
+    "non_study_screen"
+  ],
+  "uncertain_evidence": [
+    "uncertain_screen_content"
+  ],
+  "text_observed": [
+    "a book with handwritten notes and diagrams",
+    "a tablet displaying educational content",
+    "a notebook with detailed writing and sketches"
+  ],
+  "confidence": 0.95
+}

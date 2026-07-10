@@ -1,0 +1,18 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [],
+  "study_visual_evidence": [
+    "uncertain_screen_content"
+  ],
+  "exercise_visual_evidence": [],
+  "_raw_text": "The image captures a moment of concentration and productivity. A young man, donned in a black and white jacket, is engrossed in his work on a computer. He is seated at a desk, his hands"
+}

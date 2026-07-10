@@ -1,0 +1,34 @@
+{
+  "filename": "generated_water_04_dispenser_filling_cup.png",
+  "source": "generated",
+  "expected_label": "PASS",
+  "predicted_label": "PASS",
+  "engine_result": "verified",
+  "score": 75,
+  "mandatory_passed": true,
+  "ok": true,
+  "water_visual_evidence": [
+    "water_stream",
+    "receiving_water"
+  ],
+  "objects": [
+    "water_dispenser",
+    "cup"
+  ],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_04_dispenser_filling_cup_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_04_dispenser_filling_cup_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "object:cup",
+      "message": "cup 객체가 확인되었습니다.",
+      "score_delta": 15
+    },
+    {
+      "code": "water_pattern:dispenser_receiving_water",
+      "message": "정수기에서 물을 받는 상태가 확인되었습니다.",
+      "score_delta": 60
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_04_dispenser_filling_cup_result.json",
+  "error": ""
+}

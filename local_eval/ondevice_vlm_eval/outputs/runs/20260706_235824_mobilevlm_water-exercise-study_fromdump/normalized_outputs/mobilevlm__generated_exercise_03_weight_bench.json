@@ -1,0 +1,20 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "The image presents a simple yet effective exercise setup. Dominating the center of the image is a gray gym weight bench, which is equipped with a black resistance band. The resistance band is currently in a resting position, suggesting",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "gym_environment",
+    "gym_bench_present",
+    "resistance_band_present"
+  ],
+  "_raw_text": "The image presents a simple yet effective exercise setup. Dominating the center of the image is a gray gym weight bench, which is equipped with a black resistance band. The resistance band is currently in a resting position, suggesting"
+}

@@ -1,0 +1,35 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "notebook",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "pen",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "desk",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [],
+  "study_visual_evidence": [
+    "handwritten_notes",
+    "open_textbook",
+    "uncertain_screen_content"
+  ],
+  "exercise_visual_evidence": []
+}

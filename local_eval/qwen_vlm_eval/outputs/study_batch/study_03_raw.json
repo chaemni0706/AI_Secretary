@@ -1,0 +1,27 @@
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes"
+  ],
+  "scenes": [
+    "study",
+    "work"
+  ],
+  "visual_evidence": [
+    "A person's hand holding a pen over an open textbook with various diagrams and text.",
+    "An open workbook with pages turned to different sections."
+  ],
+  "negative_evidence": [
+    []
+  ],
+  "uncertain_evidence": [
+    []
+  ],
+  "text_observed": [
+    "Unclear text from the open textbook and workbook."
+  ],
+  "confidence": 0.8
+}

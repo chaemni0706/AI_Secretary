@@ -1,0 +1,41 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "lecture_video",
+  "objects": [
+    {
+      "label": "workbook",
+      "confidence": 0.9,
+      "evidence": null
+    },
+    {
+      "label": "study_timer",
+      "confidence": 0.9,
+      "evidence": null
+    },
+    {
+      "label": "monitor",
+      "confidence": 0.9,
+      "evidence": "mapped_from_evidence:lecture_video"
+    }
+  ],
+  "visible_text": [
+    "56:43"
+  ],
+  "visual_evidence": [
+    "open_workbook",
+    "study_timer",
+    "lecture_video"
+  ],
+  "study_visual_evidence": [
+    "open_workbook",
+    "study_timer",
+    "lecture_video"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

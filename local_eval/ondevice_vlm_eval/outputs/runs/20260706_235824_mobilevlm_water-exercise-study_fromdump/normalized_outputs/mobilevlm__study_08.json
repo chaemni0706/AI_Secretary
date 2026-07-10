@@ -1,0 +1,19 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [],
+  "study_visual_evidence": [
+    "entertainment_video",
+    "gaming_content"
+  ],
+  "exercise_visual_evidence": [],
+  "_raw_text": "The image captures a moment of digital learning or entertainment. A person is engrossed in a video game, their fingers dancing across the keyboard as they navigate through the game. The game, a vibrant display of color"
+}

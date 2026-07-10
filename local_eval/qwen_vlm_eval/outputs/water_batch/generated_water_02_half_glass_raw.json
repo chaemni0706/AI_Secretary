@@ -1,0 +1,47 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "glass",
+      "position": [
+        204,
+        147,
+        385,
+        400
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "name": "half glass of water"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "glass",
+      "description": "A glass with a half-filled liquid."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non_water_beverage",
+      "description": "The liquid appears to be water."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque_closed_container",
+      "description": "The glass is opaque and closed."
+    }
+  ],
+  "text_observed": [
+    "half glass of water"
+  ],
+  "confidence": 0.9
+}

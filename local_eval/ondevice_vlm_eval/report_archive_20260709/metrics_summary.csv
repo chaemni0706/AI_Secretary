@@ -1,0 +1,5 @@
+scope,n,tp,tn,fp,fn,accuracy,precision,recall,f1,false_positive_rate,false_negative_rate,specificity,negative_predictive_value
+ALL,171,20,81,9,61,0.5906,0.6897,0.2469,0.3636,0.1,0.7531,0.9,0.5704
+water,57,5,31,6,15,0.6316,0.4545,0.25,0.3226,0.1622,0.75,0.8378,0.6739
+exercise,60,3,28,0,29,0.5167,1.0,0.0938,0.1714,0.0,0.9062,1.0,0.4912
+study,54,12,22,3,17,0.6296,0.8,0.4138,0.5455,0.12,0.5862,0.88,0.5641

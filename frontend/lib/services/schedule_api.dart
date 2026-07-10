@@ -15,12 +15,17 @@ class ParseResult {
   /// 없을 수 있으므로(구버전 호환) 화면에서 fallback 을 마련한다.
   final String? ttsText;
 
+  /// 파싱 출처(예: 'on_device_rule' = 오프라인 기기 파서). 백엔드 응답에는
+  /// 없을 수 있어 nullable. scheduleDraft['source'](저장용 source)와는 별개다.
+  final String? source;
+
   const ParseResult({
     required this.intent,
     required this.confidence,
     required this.scheduleDraft,
     this.missingFields = const [],
     this.ttsText,
+    this.source,
   });
 
   bool get isTodo => intent == 'create_todo';
@@ -44,6 +49,7 @@ class ParseResult {
       scheduleDraft: draft,
       missingFields: missing.map((e) => e.toString()).toList(),
       ttsText: tts == null ? null : tts.toString(),
+      source: json['source']?.toString(),
     );
   }
 }

@@ -8,6 +8,7 @@ from backend.api import (
     dashboard,
     emotion,
     health,
+    image_verification,
     local_schedule,
     memory,
     message,
@@ -22,6 +23,7 @@ from backend.api import (
     voice,
     user_preferences,
     weather,
+    verification,
 )
 from backend.core.config import settings
 from backend.core.response import register_exception_handlers
@@ -59,6 +61,8 @@ for r in (
     alert,
     briefing,
     emotion,
+    image_verification,
+    verification,
     local_schedule,
     todo,
     dashboard,

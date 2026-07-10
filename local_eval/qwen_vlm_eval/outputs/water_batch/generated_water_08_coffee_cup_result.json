@@ -1,0 +1,37 @@
+{
+  "filename": "generated_water_08_coffee_cup.png",
+  "source": "generated",
+  "expected_label": "FAIL",
+  "predicted_label": "FAIL",
+  "engine_result": "rejected",
+  "score": 15,
+  "mandatory_passed": false,
+  "ok": true,
+  "water_visual_evidence": [
+    "non_water_beverage"
+  ],
+  "objects": [
+    "cup"
+  ],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_08_coffee_cup_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_08_coffee_cup_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "water_priority:non_water_beverage",
+      "message": "물이 아닌 음료가 확인되어 물 인증을 거절합니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "water_pattern_missing",
+      "message": "물 인증에 필요한 물/용기 근거가 부족합니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "object:cup",
+      "message": "cup 객체가 확인되었습니다.",
+      "score_delta": 15
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_08_coffee_cup_result.json",
+  "error": ""
+}

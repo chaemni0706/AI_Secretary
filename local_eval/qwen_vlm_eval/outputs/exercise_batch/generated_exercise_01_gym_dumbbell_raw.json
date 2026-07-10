@@ -1,0 +1,58 @@
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "bbox_2d": [
+        103,
+        174,
+        356,
+        338
+      ],
+      "label": "dumbbells on a rack"
+    }
+  ],
+  "scenes": [
+    {
+      "bbox_2d": [
+        0,
+        0,
+        448,
+        448
+      ],
+      "label": "gym: dumbbells on a rack"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "bbox_2d": [
+        103,
+        174,
+        356,
+        338
+      ],
+      "label": "dumbbells on a rack"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "bbox_2d": [
+        0,
+        0,
+        448,
+        448
+      ],
+      "label": "gym: dumbbells on a rack"
+    }
+  ],
+  "uncertain_evidence": [],
+  "text_observed": [
+    "gym: dumbbells on a rack"
+  ],
+  "confidence": 0.9
+}

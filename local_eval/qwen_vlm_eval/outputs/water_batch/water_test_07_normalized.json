@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "desk",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.85,
+      "evidence": "fallback_from_description"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container",
+    "water_stream",
+    "receiving_water"
+  ],
+  "exercise_visual_evidence": []
+}

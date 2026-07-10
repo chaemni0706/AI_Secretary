@@ -10,6 +10,7 @@ import 'voice_chat_screen.dart';
 import 'voice_schedule_screen.dart';
 import 'mock_call_alert_screen.dart';
 import 'user_preference_screen.dart';
+import 'image_verification_screen.dart';
 
 class MenuScreen extends StatelessWidget {
   final bool isDrawer;
@@ -128,6 +129,13 @@ class MenuScreen extends StatelessWidget {
         title: '예약 메시지',
         subtitle: '정중한 문의 생성',
         onTap: () => _openService(context, const BookingMessageScreen()),
+      ),
+      _MenuItem(
+        icon: Icons.photo_camera_outlined,
+        color: AppTheme.purple,
+        title: '이미지 인증',
+        subtitle: '물·운동·공부 사진 인증',
+        onTap: () => _openService(context, const ImageVerificationScreen()),
       ),
       _MenuItem(
         icon: Icons.backpack_outlined,

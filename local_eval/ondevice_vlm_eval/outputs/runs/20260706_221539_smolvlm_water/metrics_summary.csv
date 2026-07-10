@@ -1,0 +1,3 @@
+model_name,verification_type,num_samples,tp,tn,fp,fn,accuracy,precision,recall,f1,false_positive_rate,false_negative_rate,avg_latency_ms,p50_latency_ms,p95_latency_ms,max_latency_ms,model_size_mb,runtime_target,android_feasibility
+SmolVLM-500M,water,18,10,7,0,1,0.9444,1.0,0.9091,0.9524,0.0,0.0909,748.853,722.917,1355.546,1355.546,600,onnx-int8 / mlc,high (500M) / medium (2.2B)
+SmolVLM-500M,ALL,18,10,7,0,1,0.9444,1.0,0.9091,0.9524,0.0,0.0909,748.853,722.917,1355.546,1355.546,600,onnx-int8 / mlc,high (500M) / medium (2.2B)

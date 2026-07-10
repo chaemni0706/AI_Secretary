@@ -1,0 +1,39 @@
+type: medicine
+allowed_labels:
+  - pill
+  - pill_pack
+  - medicine_bottle
+  - prescription
+  - blister_pack
+mandatory:
+  quality_usable: true
+  min_allowed_objects: 1
+  any_of_objects:
+    - pill
+    - pill_pack
+    - medicine_bottle
+    - prescription
+    - blister_pack
+thresholds:
+  verified: 75
+  retake_required: 45
+scoring:
+  base_score: 20
+  object_scores:
+    pill: 30
+    pill_pack: 35
+    medicine_bottle: 35
+    prescription: 25
+    blister_pack: 35
+  scene_scores:
+    table: 10
+    medicine_area: 15
+  text_keywords:
+    mg: 10
+    tablet: 10
+    capsule: 10
+  similar_object_groups:
+    - labels: [pill_pack, blister_pack]
+      max_score: 35
+gps:
+  enabled: false

@@ -1,0 +1,32 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "gym environment",
+  "objects": [
+    {
+      "label": "gym_bench",
+      "confidence": 0.95,
+      "evidence": "a flat surface with two vertical supports and a horizontal bar"
+    },
+    {
+      "label": "barbell",
+      "confidence": 0.95,
+      "evidence": "a long, heavy metal rod with weights attached at each end"
+    }
+  ],
+  "visible_text": [
+    "gym: weight bench + barbell"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "gym_environment",
+    "barbell_present",
+    "gym_bench_present"
+  ]
+}

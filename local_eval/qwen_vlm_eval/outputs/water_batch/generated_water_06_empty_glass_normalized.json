@@ -1,0 +1,27 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "empty glass",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.95,
+      "evidence": "fallback_from_description"
+    }
+  ],
+  "visible_text": [
+    "empty glass"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "empty_container",
+    "non_water_beverage",
+    "opaque_closed_container"
+  ],
+  "exercise_visual_evidence": []
+}

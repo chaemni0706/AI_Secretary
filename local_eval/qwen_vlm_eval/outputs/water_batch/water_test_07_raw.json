@@ -1,0 +1,45 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand",
+      "description": "A hand holding a glass"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "desk",
+      "description": "A desk with a glass and a water dispenser"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "glass",
+      "description": "A clear glass containing water"
+    },
+    {
+      "name": "water dispenser",
+      "description": "A white water dispenser pouring water into the glass"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non_water_beverage",
+      "description": "The glass does not contain coffee or any other non-water beverage"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque_closed_container",
+      "description": "The glass appears to be closed, but the liquid inside is not fully visible"
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.85
+}

@@ -1,0 +1,43 @@
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "running shoes",
+      "description": "Two pairs of running shoes."
+    }
+  ],
+  "scenes": [
+    {
+      "name": "gym environment",
+      "description": "A gym setting with exercise equipment."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "running shoes",
+      "description": "Two pairs of running shoes are visible."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "unrelated room",
+      "description": "The image does not show a gym environment."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "uncertain screen content",
+      "description": "The image does not provide clear visual evidence of exercise equipment or a gym environment."
+    }
+  ],
+  "text_observed": [
+    "running shoes only"
+  ],
+  "confidence": 0.8
+}

@@ -1,0 +1,20 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "Weight bench + barbell.",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "barbell_present",
+    "gym_bench_present",
+    "gym_environment"
+  ],
+  "_raw_text": "Weight bench + barbell."
+}

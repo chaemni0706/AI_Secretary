@@ -1,0 +1,4 @@
+model_name,verification_type,tp,tn,fp,fn
+MobileVLM-V2-1.7B,water,11,4,3,0
+MobileVLM-V2-1.7B,exercise,6,6,0,0
+MobileVLM-V2-1.7B,study,2,3,0,5

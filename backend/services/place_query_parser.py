@@ -101,10 +101,14 @@ def _rule_based_query(
     kept_aliases = [t for t in tokens if t in cat_words and _is_clean_keyword(t)]
 
     parts: List[str] = []
-    # fall back to structured location text when the utterance has no region
-    if not region and location_address:
+    # 위치 우선순위: GPS/구조화된 위치(location_address)가 있으면 그것을 '지역'으로
+    # 신뢰한다. 발화의 자유 지역토큰은 STT 오인식(예: "포항"→"포비야")이나 잔여
+    # 어미("싶은데")가 섞여 검색 0건→mock 을 유발하므로, 위치가 주어졌을 때는
+    # 발화 지역토큰을 쓰지 않는다. (위치가 없을 때만 발화 지역토큰으로 폴백)
+    if location_address:
         parts.extend(_clean_tokens(location_address, rules))
-    parts.extend(region)
+    else:
+        parts.extend(region)
     parts.extend(kept_aliases)
 
     # if we still have nothing, lean on preference keywords

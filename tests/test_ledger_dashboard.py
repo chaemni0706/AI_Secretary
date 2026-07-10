@@ -1,12 +1,27 @@
-"""Dashboard + report tests, driven by the idempotent mock seed."""
+"""Dashboard + report tests, driven by the idempotent mock seed.
+
+시드는 date.today() 기준 상대 날짜로 거래를 만든다(고정 연/월 사용 안 함).
+따라서 월/선택일은 현재 월 기준으로 계산하고, 특정 일자 건수처럼 '오늘 날짜에
+따라 달라지는' 값은 단정하지 않는다.
+"""
 
 from __future__ import annotations
+
+from datetime import date
 
 from tests.ledger_test_utils import client  # noqa: F401
 
 SEED = "/api/v1/ledger/mock/seed"
 DASH = "/api/v1/ledger/dashboard"
 REPORT = "/api/v1/ledger/report"
+
+
+def _ym() -> str:
+    return date.today().strftime("%Y-%m")
+
+
+def _today() -> str:
+    return date.today().isoformat()
 
 
 def _data(body):
@@ -19,31 +34,32 @@ def test_seed_is_idempotent(client):
     assert first["count"] == 7
     second = _data(client.post(SEED, params={"user_id": "user-1"}).json())
     assert second["count"] == 7
-    # after two seeds, the month still has exactly the seed set (no doubling)
-    dash = _data(client.get(DASH, params={"user_id": "user-1", "month": "2026-12"}).json())
-    assert dash["summary"]["transaction_count"] == 7
+    # 두 번 시드해도 이번 달 거래가 두 배로 늘지 않는다(멱등).
+    # '어제'가 전월로 넘어가는 월초(1일)엔 6건, 그 외엔 7건.
+    dash = _data(client.get(DASH, params={"user_id": "user-1", "month": _ym()}).json())
+    assert dash["summary"]["transaction_count"] in (6, 7)
 
 
 def test_dashboard_shape(client):
     client.post(SEED, params={"user_id": "user-1"})
     d = _data(client.get(DASH, params={
-        "user_id": "user-1", "month": "2026-12", "selected_date": "2026-12-31",
+        "user_id": "user-1", "month": _ym(), "selected_date": _today(),
     }).json())
     assert "summary" in d and "calendar" in d
     assert d["calendar"], "calendar should not be empty after seed"
     sd = d["selected_date"]
-    assert sd["date"] == "2026-12-31"
+    assert sd["date"] == _today()
     assert "briefing" in sd and sd["briefing"]["title"]
-    assert "transactions" in sd
-    # 2026-12-31 seed rows: 스타벅스 + 홍콩반점 + 카카오T = 3
-    assert len(sd["transactions"]) == 3
+    # 오늘(base)엔 스타벅스(카페) 거래가 항상 있다.
+    assert isinstance(sd["transactions"], list) and len(sd["transactions"]) >= 1
+    # 급여(수입)는 이번 달 20일에 시드되어 항상 이번 달에 포함된다.
     assert d["summary"]["month_income"] == 500000
 
 
 def test_report_shape_and_budget(client):
     client.post(SEED, params={"user_id": "user-1"})
-    d = _data(client.get(REPORT, params={"user_id": "user-1", "month": "2026-12"}).json())
-    assert d["month"] == "2026-12"
+    d = _data(client.get(REPORT, params={"user_id": "user-1", "month": _ym()}).json())
+    assert d["month"] == _ym()
     assert d["category_analysis"], "category_analysis present"
     assert d["budget_usage"], "budget_usage present"
     assert d["briefing"]["title"]
@@ -54,7 +70,7 @@ def test_report_shape_and_budget(client):
 
 def test_recurring_payments_include_netflix_and_kt(client):
     client.post(SEED, params={"user_id": "user-1"})
-    d = _data(client.get(REPORT, params={"user_id": "user-1", "month": "2026-12"}).json())
+    d = _data(client.get(REPORT, params={"user_id": "user-1", "month": _ym()}).json())
     merchants = {r["merchant"] for r in d["recurring_payments"]}
     assert "NETFLIX" in merchants
     assert "KT 통신비" in merchants

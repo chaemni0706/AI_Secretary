@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/voice_intent_card.dart';
 import '../models/voice_chat_message.dart';
+import '../services/device_location.dart';
 import '../services/preference_store.dart';
 import '../services/voice_router_api.dart';
 import '../services/voice_stt_service.dart';
@@ -37,6 +38,14 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
   /// 직전 turn 에서 서버가 돌려준 pending context(예: 방금 등록한 일정).
   /// 다음 발화 한 번에만 유효하며, 사용 여부와 무관하게 매 턴 종료 시 비운다.
   Map<String, dynamic>? _pendingContext;
+
+  /// 기기 GPS 좌표(업체 추천 등 위치 기반용). 세션 내 1회 조회 후 캐시.
+  Map<String, dynamic>? _deviceLocation;
+
+  Future<Map<String, dynamic>?> _ensureLocation() async {
+    _deviceLocation ??= await DeviceLocation.currentLatLon();
+    return _deviceLocation;
+  }
 
   @override
   void initState() {
@@ -157,6 +166,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
         trimmed,
         currentDatetime: _nowIso(),
         context: contextToSend,
+        location: await _ensureLocation(),
         assistantTone: preferenceStore.assistantTone,
         responseLength: preferenceStore.responseLength,
         reminderStrength: preferenceStore.reminderStrength,

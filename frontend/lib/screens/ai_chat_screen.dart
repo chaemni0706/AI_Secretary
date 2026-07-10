@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/voice_intent_card.dart';
 import '../services/api_client.dart';
 import '../services/chat_api.dart';
+import '../services/device_location.dart';
 import '../services/schedule_api.dart';
 import '../services/voice_router_api.dart';
 import '../services/preference_store.dart';
@@ -48,6 +50,41 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   /// 마지막 parse 결과 (저장 대상).
   ParseResult? _lastParse;
+
+  /// 기기 GPS 좌표(업체 추천 등 위치 기반용). 성공 시 세션 캐시.
+  Map<String, dynamic>? _deviceLocation;
+
+  /// 위치를 얻으면 좌표 반환. 못 얻으면(권한 거부/서비스 OFF) 안내 스낵바를 띄우고 null.
+  Future<Map<String, dynamic>?> _ensureLocation() async {
+    if (_deviceLocation != null) return _deviceLocation;
+    final res = await DeviceLocation.resolve();
+    if (res.ok) {
+      _deviceLocation = res.latLon;
+      return _deviceLocation;
+    }
+    _showLocationGuide(res);
+    return null;
+  }
+
+  void _showLocationGuide(DeviceLocationResult res) {
+    final msg = res.guideMessage;
+    if (!mounted || msg == null) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(msg),
+        action: SnackBarAction(
+          label: '설정',
+          onPressed: () {
+            if (res.status == LocationStatus.serviceDisabled) {
+              DeviceLocation.openLocationSettings();
+            } else {
+              DeviceLocation.openAppSettings();
+            }
+          },
+        ),
+      ));
+  }
 
   @override
   void initState() {
@@ -156,8 +193,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  void _addMessage(String text, {required bool isUser}) {
-    setState(() => _messages.add(_ChatMessage(text: text, isUser: isUser)));
+  void _addMessage(String text, {required bool isUser, VoiceRouteResult? route}) {
+    setState(() =>
+        _messages.add(_ChatMessage(text: text, isUser: isUser, route: route)));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -202,7 +240,31 @@ class _AiChatScreenState extends State<AiChatScreen> {
       }
       const consultIntents = {'fallback_chat', 'emotion_schedule_coaching'};
 
-      // 2) 상담/대화 계열 → 일정 카드 대신 대화 답변.
+      // 2) 위치 기반 업체 추천 → /voice/route 로 위임하고 채팅 안에 추천 카드 렌더.
+      if (intent == 'reservation_recommendation') {
+        final route = await voiceRouterApi.route(
+          text,
+          currentDatetime: now,
+          location: await _ensureLocation(),
+          assistantTone: preferenceStore.assistantTone,
+          responseLength: preferenceStore.responseLength,
+          reminderStrength: preferenceStore.reminderStrength,
+        );
+        if (!mounted) return;
+        setState(() {
+          _lastParse = null;
+          _parsing = false;
+          _voiceStatus = null;
+        });
+        final answer = route.ttsText.trim().isNotEmpty
+            ? route.ttsText
+            : '주변에서 추천할 만한 곳을 찾아봤어요.';
+        _addMessage(answer, isUser: false, route: route);
+        if (_fromVoice) await _speak(answer);
+        return;
+      }
+
+      // 3) 상담/대화 계열 → 일정 카드 대신 대화 답변.
       if (consultIntents.contains(intent)) {
         final chat = await chatApi.respond(text);
         if (!mounted) return;
@@ -435,6 +497,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
       itemCount: _messages.length,
       itemBuilder: (context, i) {
         final msg = _messages[i];
+        if (msg.route != null) {
+          // 어시스턴트 버블 + 그 아래 intent 결과 카드(업체 추천 캐러셀 등).
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ChatBubble(message: msg),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(36, 4, 8, 4),
+                child: buildVoiceIntentCard(context, msg.route!),
+              ),
+            ],
+          );
+        }
         return _ChatBubble(message: msg);
       },
     );
@@ -719,7 +794,10 @@ class _ChatMessage {
   final String text;
   final bool isUser;
 
-  const _ChatMessage({required this.text, required this.isUser});
+  /// 있으면 이 메시지 아래에 intent 결과 카드(예: 업체 추천 캐러셀)를 렌더한다.
+  final VoiceRouteResult? route;
+
+  const _ChatMessage({required this.text, required this.isUser, this.route});
 }
 
 class _ChatBubble extends StatelessWidget {

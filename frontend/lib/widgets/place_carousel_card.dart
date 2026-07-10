@@ -59,7 +59,7 @@ class _PlaceCarouselCardState extends State<PlaceCarouselCard> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 168,
+          height: 184,
           child: PageView.builder(
             controller: _controller,
             itemCount: widget.places.length,

@@ -95,7 +95,9 @@ def _rule_based_query(
     cat_words = set(aliases.get(category, [])) if category else set()
 
     tokens = _clean_tokens(input_text or "", rules)
-    region = [t for t in tokens if t not in cat_words]
+    # 지역 토큰은 2글자 이상만 인정한다. "치과 예약 잡아줘"에서 '잡아'가 제거된 뒤
+    # 남는 1글자 '줘' 같은 잔여 조사/어미가 검색어에 섞여 0건→mock 되는 것을 막는다.
+    region = [t for t in tokens if t not in cat_words and len(t) >= 2]
     kept_aliases = [t for t in tokens if t in cat_words and _is_clean_keyword(t)]
 
     parts: List[str] = []

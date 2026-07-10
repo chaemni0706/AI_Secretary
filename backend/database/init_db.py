@@ -24,6 +24,34 @@ def read_schema_sql() -> str:
     return LOCAL_SCHEMA_PATH.read_text(encoding="utf-8")
 
 
+# --- Lightweight, idempotent column migrations ------------------------------
+# CREATE TABLE IF NOT EXISTS never alters an existing table, so newly-added
+# columns must be backfilled for databases created before the column existed.
+# Each entry: table -> {column: column_definition}. Applied only when missing.
+_COLUMN_MIGRATIONS = {
+    "ledger_transactions": {
+        "memo": "TEXT",  # user free-form memo (optional)
+    },
+}
+
+
+def _apply_column_migrations(cursor) -> None:
+    """Add any missing columns listed in ``_COLUMN_MIGRATIONS`` (SQLite has no
+    ADD COLUMN IF NOT EXISTS, so existence is checked via PRAGMA table_info)."""
+    for table, columns in _COLUMN_MIGRATIONS.items():
+        try:
+            existing = {row[1] for row in cursor.execute(
+                f"PRAGMA table_info({table})"
+            ).fetchall()}
+        except Exception:
+            continue  # table not present yet -> CREATE handled it already
+        if not existing:
+            continue
+        for col, decl in columns.items():
+            if col not in existing:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+
+
 def apply_schema_to_sqlite_file(db_path: Union[str, Path]) -> None:
     """Initialize a standalone SQLite file from local_schema.sql (raw sqlite3)."""
     db_path = Path(db_path)
@@ -32,6 +60,7 @@ def apply_schema_to_sqlite_file(db_path: Union[str, Path]) -> None:
     with sqlite3.connect(str(db_path)) as conn:
         conn.execute("PRAGMA foreign_keys=ON")
         conn.executescript(sql)
+        _apply_column_migrations(conn.cursor())
         conn.commit()
 
 
@@ -43,6 +72,7 @@ def init_db_from_engine(engine: Engine) -> None:
     try:
         cursor = raw.cursor()
         cursor.executescript(sql)
+        _apply_column_migrations(cursor)
         raw.commit()
     finally:
         raw.close()

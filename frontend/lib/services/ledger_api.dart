@@ -49,6 +49,30 @@ class LedgerApi {
     return LedgerReportDto.fromJson(_expectMap(data, 'report'));
   }
 
+  /// 월 전체 거래내역: `GET /ledger/transactions`
+  ///
+  /// 대시보드가 '선택 날짜'만 반환하는 것과 달리, 해당 월의 모든 거래를
+  /// 일자별 그룹(`by_date`, 최신순)과 평면 목록(`transactions`)으로 함께 받는다.
+  /// [status] 가 주어지면 쉼표구분 상태 필터로 전달한다(예: 'confirmed,pending').
+  Future<LedgerMonthTransactionsDto> monthTransactions({
+    String userId = 'local-user',
+    required int year,
+    required int month,
+    String? status,
+  }) async {
+    final query = <String, dynamic>{
+      'user_id': userId,
+      'month': _formatMonth(year, month),
+    };
+    if (status != null && status.trim().isNotEmpty) {
+      query['status'] = status.trim();
+    }
+    final data = await apiClient.getData('$_base/transactions', query: query);
+    return LedgerMonthTransactionsDto.fromJson(
+      _expectMap(data, 'transactions'),
+    );
+  }
+
   // ------------------------------------------------------------------------
   // 알림 → 거래 후보 생성
   // ------------------------------------------------------------------------
@@ -96,10 +120,10 @@ class LedgerApi {
 
   /// 거래 수정: `PATCH /ledger/transactions/{id}`
   ///
-  /// 백엔드는 category / merchant / amount / occurred_at / status 만 받는다.
+  /// 백엔드는 category / merchant / amount / occurred_at / status / memo 를 받는다.
   /// [date]·[time] 이 주어지면 여기서 occurred_at(ISO)로 합쳐 전송한다.
   /// (백엔드가 occurred_at 으로부터 date/time 을 재계산한다.)
-  /// 백엔드 TransactionUpdateRequest 가 받는 필드만 전송한다(memo 미지원).
+  /// [memo] 는 null 이면 미전송(변경 없음), 빈 문자열이면 메모 삭제로 전송한다.
   Future<LedgerTransactionDto> updateTransaction({
     required String transactionId,
     String userId = 'local-user',
@@ -108,11 +132,13 @@ class LedgerApi {
     String? category,
     String? date,
     String? time,
+    String? memo,
   }) async {
     final body = <String, dynamic>{};
     if (amount != null) body['amount'] = amount;
     if (merchant != null) body['merchant'] = merchant;
     if (category != null) body['category'] = category;
+    if (memo != null) body['memo'] = memo;
 
     final occurredAt = _composeOccurredAt(date, time);
     if (occurredAt != null) body['occurred_at'] = occurredAt;

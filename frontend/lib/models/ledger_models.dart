@@ -53,6 +53,9 @@ class PendingTx {
   /// 백엔드 status(소문자): pending | needs_review 등. 표시 문구 분기용.
   final String status;
 
+  /// 사용자 자유 메모(있으면). 수정 다이얼로그 프리필용.
+  final String? memo;
+
   const PendingTx(
     this.id,
     this.merchant,
@@ -67,6 +70,7 @@ class PendingTx {
     this.date,
     this.time,
     this.status = 'pending',
+    this.memo,
   });
 
   /// 사용자 확인이 필요한(needs_review) 거래인지.
@@ -84,6 +88,7 @@ class PendingTx {
     String? date,
     String? time,
     String? status,
+    String? memo,
   }) {
     return PendingTx(
       id,
@@ -99,6 +104,7 @@ class PendingTx {
       date: date ?? this.date,
       time: time ?? this.time,
       status: status ?? this.status,
+      memo: memo ?? this.memo,
     );
   }
 }

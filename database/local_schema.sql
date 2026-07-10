@@ -235,6 +235,8 @@ CREATE TABLE IF NOT EXISTS ledger_transactions (
   is_recurring              INTEGER NOT NULL DEFAULT 0
                               CHECK (is_recurring IN (0,1)),
 
+  memo                      TEXT,          -- 사용자 자유 메모(선택)
+
   created_at                TEXT NOT NULL,
   updated_at                TEXT NOT NULL,
 

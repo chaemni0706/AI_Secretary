@@ -114,8 +114,8 @@ class LedgerTransactionDto {
   /// 내부 카테고리 한글 라벨(예: '카페', '식비', '구독_콘텐츠').
   final String category;
 
-  // NOTE: 백엔드 스키마에 memo 컬럼이 없어 memo 는 다루지 않는다.
-  // (거래 수정에서도 memo 입력/전송을 제거함 — 저장되는 것처럼 오인 방지.)
+  /// 사용자 자유 메모(백엔드 memo 컬럼). 없으면 null.
+  final String? memo;
 
   /// 'YYYY-MM-DD' (없을 수 있음).
   final String date;
@@ -149,6 +149,7 @@ class LedgerTransactionDto {
     required this.amount,
     required this.merchant,
     required this.category,
+    required this.memo,
     required this.date,
     required this.time,
     required this.occurredAt,
@@ -172,6 +173,7 @@ class LedgerTransactionDto {
       amount: readInt(json['amount']),
       merchant: readString(json['merchant']) ?? '',
       category: readString(json['category']) ?? '',
+      memo: readString(json['memo']),
       date: readString(json['date']) ?? '',
       time: readString(json['time']) ?? '',
       occurredAt: readDateTime(_pick(json, ['occurred_at', 'occurredAt'])),
@@ -192,12 +194,14 @@ class LedgerTransactionDto {
   /// 실제로 DB 에 저장된(=유효 ID 를 가진) 거래인지.
   bool get hasId => id != null && id!.isNotEmpty;
 
-  bool get isExpense =>
-      transactionType == 'expense' || transactionType == 'cancel';
+  bool get isExpense => transactionType == 'expense';
   bool get isIncome => transactionType == 'income';
 
-  /// 지출은 음수, 수입은 양수로 부호를 붙인 금액(UI 편의용).
-  int get signedAmount => isIncome ? amount : -amount;
+  /// 결제취소/환불. 앞선 지출을 되돌리는 유입성 거래로 취급한다.
+  bool get isCancel => transactionType == 'cancel';
+
+  /// 지출은 음수, 수입·결제취소(환불)는 양수로 부호를 붙인 금액(UI 편의용).
+  int get signedAmount => (isIncome || isCancel) ? amount : -amount;
 
   @override
   String toString() =>
@@ -270,6 +274,91 @@ class LedgerDashboardDto {
       'pending: ${pendingTransactions.length}, '
       'budgetAlerts: ${budgetAlerts.length}, '
       'recurring: ${recurringPreview.length})';
+}
+
+// ---------------------------------------------------------------------------
+// 2b) 월 전체 거래내역 DTO
+// ---------------------------------------------------------------------------
+
+/// `GET /ledger/transactions` 응답의 일자별 그룹 한 개(`by_date[i]`).
+class LedgerDayGroupDto {
+  /// 'YYYY-MM-DD'.
+  final String date;
+  final int expenseTotal;
+  final int incomeTotal;
+  final int netTotal;
+  final int transactionCount;
+  final List<LedgerTransactionDto> transactions;
+
+  const LedgerDayGroupDto({
+    required this.date,
+    required this.expenseTotal,
+    required this.incomeTotal,
+    required this.netTotal,
+    required this.transactionCount,
+    required this.transactions,
+  });
+
+  factory LedgerDayGroupDto.fromJson(Map<String, dynamic> json) {
+    return LedgerDayGroupDto(
+      date: readString(json['date']) ?? '',
+      expenseTotal: readInt(_pick(json, ['expense_total', 'expenseTotal'])),
+      incomeTotal: readInt(_pick(json, ['income_total', 'incomeTotal'])),
+      netTotal: readInt(_pick(json, ['net_total', 'netTotal'])),
+      transactionCount:
+          readInt(_pick(json, ['transaction_count', 'transactionCount'])),
+      transactions: _asList(json['transactions'])
+          .map(_asMap)
+          .where((m) => m != null)
+          .map((m) => LedgerTransactionDto.fromJson(m!))
+          .toList(),
+    );
+  }
+}
+
+/// `GET /ledger/transactions` 응답 data 에 대응.
+///
+/// 선택 날짜에 한정하지 않는 '월 전체' 거래내역. [byDate] 는 최신 날짜부터 정렬된
+/// 일자별 그룹, [transactions] 는 동일 데이터의 평면(최신순) 목록이다.
+class LedgerMonthTransactionsDto {
+  final String? month;
+  final Map<String, dynamic> summary;
+  final List<LedgerTransactionDto> transactions;
+  final List<LedgerDayGroupDto> byDate;
+  final Map<String, dynamic> raw;
+
+  const LedgerMonthTransactionsDto({
+    required this.month,
+    required this.summary,
+    required this.transactions,
+    required this.byDate,
+    required this.raw,
+  });
+
+  factory LedgerMonthTransactionsDto.fromJson(Map<String, dynamic> json) {
+    return LedgerMonthTransactionsDto(
+      month: readString(json['month']),
+      summary: _asMap(json['summary']) ?? const {},
+      transactions: _asList(json['transactions'])
+          .map(_asMap)
+          .where((m) => m != null)
+          .map((m) => LedgerTransactionDto.fromJson(m!))
+          .toList(),
+      byDate: _asList(_pick(json, ['by_date', 'byDate']))
+          .map(_asMap)
+          .where((m) => m != null)
+          .map((m) => LedgerDayGroupDto.fromJson(m!))
+          .toList(),
+      raw: json,
+    );
+  }
+
+  bool get isEmpty => transactions.isEmpty;
+
+  @override
+  String toString() =>
+      'LedgerMonthTransactionsDto(month: $month, days: ${byDate.length}, '
+      'transactions: ${transactions.length})';
 }
 
 // ---------------------------------------------------------------------------

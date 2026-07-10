@@ -37,6 +37,7 @@ class TransactionUpdateRequest(BaseModel):
     status: Optional[str] = Field(
         None, description="pending|confirmed|duplicate|deleted|needs_review"
     )
+    memo: Optional[str] = Field(None, description="사용자 자유 메모(빈 문자열이면 메모 삭제)")
 
 
 # --- Serialization ----------------------------------------------------------
@@ -75,6 +76,7 @@ def to_api_dict(tx) -> Dict[str, Any]:
         "duplicated_transaction_id": tx.duplicated_transaction_id,
         "items": _loads(tx.items_json, []),
         "is_recurring": bool(tx.is_recurring),
+        "memo": tx.memo,
         "created_at": tx.created_at,
         "updated_at": tx.updated_at,
     }

@@ -51,6 +51,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
   late DateTime _selectedDate; // 선택된 날짜(오늘 기준 시작)
   LedgerDashboardDto? _dashboard;
 
+  /// 거래내역 탭용 '월 전체' 거래(선택 날짜에 한정하지 않음). 대시보드와 함께 로드한다.
+  LedgerMonthTransactionsDto? _monthTx;
+
   // fallback(오프라인) 전용 로컬 대기 목록.
   final List<PendingTx> _localPending = List.of(MockLedgerData.initialPending);
 
@@ -117,15 +120,24 @@ class _LedgerScreenState extends State<LedgerScreen> {
       });
     }
     try {
-      final dto = await ledgerApi.dashboard(
-        userId: _userId,
-        year: _year,
-        month: _month,
-        selectedDate: _selectedDate,
-      );
+      // 대시보드(선택 날짜 중심)와 월 전체 거래내역을 병렬로 조회한다.
+      final results = await Future.wait([
+        ledgerApi.dashboard(
+          userId: _userId,
+          year: _year,
+          month: _month,
+          selectedDate: _selectedDate,
+        ),
+        ledgerApi.monthTransactions(
+          userId: _userId,
+          year: _year,
+          month: _month,
+        ),
+      ]);
       if (!mounted) return;
       setState(() {
-        _dashboard = dto;
+        _dashboard = results[0] as LedgerDashboardDto;
+        _monthTx = results[1] as LedgerMonthTransactionsDto;
         _usingFallback = false;
         _errorMessage = null;
         _loading = false;
@@ -137,6 +149,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         setState(() {
           _usingFallback = true;
           _dashboard = null;
+          _monthTx = null;
           _errorMessage = null;
           _loading = false;
         });
@@ -455,6 +468,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         category: result.category,
         date: (date == null || date.isEmpty) ? null : date,
         time: (time == null || time.isEmpty) ? null : time,
+        memo: result.memo,
       ),
       '거래를 수정했어요',
     );
@@ -486,6 +500,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final categoryCtl = TextEditingController(text: p.category);
     final dateCtl = TextEditingController(text: p.date ?? '');
     final timeCtl = TextEditingController(text: p.time ?? '');
+    final memoCtl = TextEditingController(text: p.memo ?? '');
     try {
       final ok = await showDialog<bool>(
         context: context,
@@ -522,6 +537,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     hintText: 'HH:MM',
                   ),
                 ),
+                TextField(
+                  controller: memoCtl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: '메모',
+                    hintText: '예: 친구랑 저녁, 경비 처리',
+                  ),
+                ),
               ],
             ),
           ),
@@ -543,12 +566,16 @@ class _LedgerScreenState extends State<LedgerScreen> {
       final category = categoryCtl.text.trim();
       final date = dateCtl.text.trim();
       final time = timeCtl.text.trim();
+      // memo: 원본과 다를 때만 전송(빈 문자열이면 삭제 의도로 전송, 동일하면 미전송).
+      final memoText = memoCtl.text.trim();
+      final memoChanged = memoText != (p.memo ?? '');
       return _EditResult(
         merchant: merchant.isEmpty ? null : merchant,
         amount: amount,
         category: category.isEmpty ? null : category,
         date: date.isEmpty ? null : date,
         time: time.isEmpty ? null : time,
+        memo: memoChanged ? memoText : null,
       );
     } finally {
       merchantCtl.dispose();
@@ -556,6 +583,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       categoryCtl.dispose();
       dateCtl.dispose();
       timeCtl.dispose();
+      memoCtl.dispose();
     }
   }
 
@@ -915,21 +943,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   List<Widget> _buildListView() {
     if (_usingApi) {
-      final txs = _dashboard!.selectedDayTransactions();
-      return [
-        LedgerAutoDetectCard(
-          pending: _pendingList,
-          submitting: _submitting,
-          onSimulate: _openNotificationComposer,
-          onConfirm: _confirmPending,
-          onEdit: _editPending,
-          onRemove: _removePending,
-        ),
-        const SizedBox(height: 14),
+      // 선택 날짜에 한정하지 않고 '월 전체' 거래를 일자별 그룹으로 보여준다.
+      // (결제 알림 자동 감지 카드는 목록 맨 아래로 배치한다.)
+      final groups = _monthTx?.dayGroups() ?? const <LedgerDayGroup>[];
+      final widgets = <Widget>[
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+          padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
           child: Text(
-            '$_month월 $_selectedDay일',
+            '$_month월 거래내역',
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -937,31 +958,46 @@ class _LedgerScreenState extends State<LedgerScreen> {
             ),
           ),
         ),
-        if (txs.isEmpty)
+      ];
+
+      if (groups.isEmpty) {
+        widgets.add(
           const GlassCard(
             padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             child: Center(
               child: Text(
-                '이 날은 기록된 소비가 없어요. 달력에서 다른 날짜를 선택해보세요.',
+                '이 달은 기록된 거래가 없어요.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
               ),
             ),
-          )
-        else
-          GlassCard(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                for (int i = 0; i < txs.length; i++)
-                  LedgerTransactionRow(
-                    tx: txs[i],
-                    showDivider: i != txs.length - 1,
-                  ),
-              ],
-            ),
           ),
-      ];
+        );
+      } else {
+        for (final g in groups) {
+          widgets.add(_buildDayGroupHeader(g));
+          widgets.add(
+            GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  for (int i = 0; i < g.transactions.length; i++)
+                    LedgerTransactionRow(
+                      tx: g.transactions[i],
+                      showDivider: i != g.transactions.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          );
+          widgets.add(const SizedBox(height: 12));
+        }
+      }
+
+      // 결제 알림 자동 감지 카드: 맨 아래.
+      widgets.add(const SizedBox(height: 6));
+      widgets.add(_autoDetectCard());
+      return widgets;
     }
 
     // 오프라인 fallback: mock 전체 월 거래를 일자별로 묶어 보여준다.
@@ -969,15 +1005,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
       ..sort((a, b) => b.compareTo(a));
 
     return [
-      LedgerAutoDetectCard(
-        pending: _pendingList,
-        submitting: _submitting,
-        onSimulate: _openNotificationComposer,
-        onConfirm: _confirmPending,
-        onEdit: _editPending,
-        onRemove: _removePending,
-      ),
-      const SizedBox(height: 14),
       for (final day in days) ...[
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
@@ -1004,7 +1031,63 @@ class _LedgerScreenState extends State<LedgerScreen> {
         ),
         const SizedBox(height: 12),
       ],
+      // 결제 알림 자동 감지 카드: 맨 아래.
+      const SizedBox(height: 6),
+      _autoDetectCard(),
     ];
+  }
+
+  /// 결제 알림 자동 감지 카드(거래내역 탭 하단 공용).
+  Widget _autoDetectCard() {
+    return LedgerAutoDetectCard(
+      pending: _pendingList,
+      submitting: _submitting,
+      onSimulate: _openNotificationComposer,
+      onConfirm: _confirmPending,
+      onEdit: _editPending,
+      onRemove: _removePending,
+    );
+  }
+
+  /// 거래내역 탭의 일자별 그룹 헤더(날짜 + 우측 지출/수입 합계).
+  Widget _buildDayGroupHeader(LedgerDayGroup g) {
+    final String rightLabel;
+    final Color rightColor;
+    if (g.expenseTotal > 0) {
+      rightLabel = '지출 ${LedgerStyles.formatWon(g.expenseTotal)}원';
+      rightColor = AppTheme.textPrimary;
+    } else if (g.incomeTotal > 0) {
+      rightLabel = '수입 ${LedgerStyles.formatWon(g.incomeTotal)}원';
+      rightColor = AppTheme.blue;
+    } else {
+      rightLabel = '';
+      rightColor = AppTheme.textSecondary;
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 6, 4, 8),
+      child: Row(
+        children: [
+          Text(
+            '${g.month}월 ${g.day}일',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const Spacer(),
+          if (rightLabel.isNotEmpty)
+            Text(
+              rightLabel,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: rightColor,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   String _dayTotalLabel(DayInfo info) {
@@ -1027,6 +1110,7 @@ class _EditResult {
   final String? category;
   final String? date;
   final String? time;
+  final String? memo;
 
   const _EditResult({
     this.merchant,
@@ -1034,6 +1118,7 @@ class _EditResult {
     this.category,
     this.date,
     this.time,
+    this.memo,
   });
 }
 

@@ -38,12 +38,16 @@
     "weak": ["브리핑", "하루 요약"]
   },
   "schedule_query": {
-    "_comment": "strong-only trigger — bare 'weak' hits (e.g. lone '일정') must never steal a schedule_create utterance like '병원 일정 추가해줘'.",
+    "_comment": "strong-only trigger — bare 'weak' hits (e.g. lone '일정') must never steal a schedule_create utterance like '병원 일정 추가해줘'. In addition to 'strong', a query SIGNAL fires when the utterance is interrogative about existing schedules and has NO create verb (voice_intent_router._schedule_query_signal): (ref_terms AND query_markers) OR ((ref_terms OR date_terms) AND whatson_markers). This stops queries like '내일 뭐 있어?', '모레 회의 언제야' from leaking into schedule_create via the date/time signal.",
     "strong": [
       "오늘 일정 뭐야", "오늘 뭐 있어", "내 일정 알려줘", "일정 보여줘",
       "오후 일정", "내일 일정", "일정 확인"
     ],
-    "weak": ["일정", "스케줄"]
+    "weak": ["일정", "스케줄"],
+    "ref_terms": ["일정", "스케줄", "스케쥴", "약속", "할 일", "할일", "회의", "미팅"],
+    "query_markers": ["뭐야", "있어", "있었", "있나", "없어", "없나", "언제", "알려줘", "보여줘", "확인", "몇 시", "몇시", "뭐 였", "뭐였"],
+    "whatson_markers": ["뭐 있", "뭐있", "뭐 해야", "뭐 해", "뭐하", "무슨 일정", "무슨 약속"],
+    "date_terms": ["오늘", "내일", "모레", "글피", "이번 주", "이번주", "다음 주", "다음주", "오전", "오후", "아침", "점심", "저녁", "주말", "이번 달", "다음 달", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
   },
   "reminder_setting": {
     "_comment": "Context-gated: requires_context_type must match the client-echoed last_action_context.type, otherwise this intent never fires (spec: bare '알려줘' alone must not be misclassified).",

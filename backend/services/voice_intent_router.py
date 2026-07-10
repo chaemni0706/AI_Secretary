@@ -100,6 +100,44 @@ def _is_reminder_decline(text: str, rules: dict) -> bool:
     return any(kw in text for kw in rules.get("reminder_setting", {}).get("decline", []))
 
 
+def _has_schedule_create_verb(text: str, rules: dict) -> bool:
+    """명시적 일정 '생성' 동사가 있는지. 조회 신호가 생성 발화를 가로채지 않도록 게이팅."""
+    cfg = rules.get("schedule_create", {})
+    return bool(_matched(text, cfg.get("strong", [])) or _matched(text, cfg.get("weak", [])))
+
+
+def _phrase_has_query_marker(phrase: str, rules: dict) -> bool:
+    """조회 strong 구절이 '질의' 성격을 지녔는지(뭐야/있어/알려줘/확인/뭐 있 …).
+    '내일 일정'·'오후 일정'처럼 날짜+일정 뿐인 애매한 구절은 False."""
+    cfg = rules.get("schedule_query", {})
+    markers = cfg.get("query_markers", []) + cfg.get("whatson_markers", [])
+    return any(m in phrase for m in markers)
+
+
+def _schedule_query_signal(text: str, rules: dict) -> List[str]:
+    """'strong' 키워드에 없더라도 기존 일정을 '묻는' 발화를 조회로 인식한다.
+
+    schedule_create 동사가 하나라도 있으면(추가/등록/잡아 등) 조회로 보지 않는다.
+    발동 조건(둘 중 하나):
+      1) 일정 지시어(ref_terms) + 질의 표지(query_markers)  예) "일정 알려줘", "회의 언제야"
+      2) (일정 지시어 또는 날짜어) + '뭐 있/뭐 해'류(whatson_markers)  예) "내일 뭐 있어"
+
+    날짜+일반표지(예: "내일 알려줘")만으로는 발동하지 않아 날씨 등 타 도메인 오분류를 피한다.
+    """
+    cfg = rules.get("schedule_query", {})
+    if _has_schedule_create_verb(text, rules):
+        return []
+    ref = _matched(text, cfg.get("ref_terms", []))
+    dates = _matched(text, cfg.get("date_terms", []))
+    markers = _matched(text, cfg.get("query_markers", []))
+    whatson = _matched(text, cfg.get("whatson_markers", []))
+    if ref and markers:
+        return ref + markers
+    if (ref or dates) and whatson:
+        return (ref or dates) + whatson
+    return []
+
+
 def _schedule_create_signal(text: str) -> bool:
     """A concrete date/time in the utterance is a strong schedule_create signal
     even without an explicit '추가해줘' verb. Reuses the existing, tested
@@ -239,11 +277,16 @@ def select_voice_intent(text: str, context: Optional[dict] = None) -> dict:
             matched_keywords["daily_briefing"] = hits
             return _result("daily_briefing", matched_keywords)
 
-        # 4. schedule_query (strong-only; see rules file comment)
+        # 4. schedule_query — strong 키워드 또는 '조회 질의 신호'(생성 동사 없음).
         cfg = rules["schedule_query"]
         hits = _matched(text, cfg["strong"])
-        if hits:
-            matched_keywords["schedule_query"] = hits
+        # 생성 동사가 있으면 애매한 strong(날짜+일정: "내일 일정 추가해줘")은 조회로 보지 않고
+        # 질의 표지를 가진 strong("오늘 일정 뭐야")만 인정한다.
+        if _has_schedule_create_verb(text, rules):
+            hits = [h for h in hits if _phrase_has_query_marker(h, rules)]
+        query_signal = _schedule_query_signal(text, rules)
+        if hits or query_signal:
+            matched_keywords["schedule_query"] = hits or query_signal
             return _result("schedule_query", matched_keywords)
 
         # 5. reminder_setting — context-gated.

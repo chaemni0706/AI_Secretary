@@ -122,18 +122,35 @@ async def scan_receipt_image(
 
 
 # --- aggregation helpers ----------------------------------------------------
+# CANCEL(결제취소/환불)은 앞선 지출을 되돌리는 거래이므로 '지출 차감'으로 집계한다
+# (예: 10,000원 결제 + 10,000원 취소 => 순지출 0). income 에는 넣지 않는다.
 def _income_expense_split(rows) -> Dict[str, int]:
-    exp = sum(r.amount for r in rows if (r.transaction_type or "").upper() == "EXPENSE")
-    inc = sum(r.amount for r in rows if (r.transaction_type or "").upper() == "INCOME")
-    return {"expense": exp, "income": inc}
+    exp = 0
+    inc = 0
+    for r in rows:
+        t = (r.transaction_type or "").upper()
+        amt = r.amount or 0
+        if t == "EXPENSE":
+            exp += amt
+        elif t == "CANCEL":
+            exp -= amt
+        elif t == "INCOME":
+            inc += amt
+    return {"expense": max(exp, 0), "income": inc}
 
 
 def _spent_by_category(rows) -> Dict[str, int]:
+    """카테고리별 순지출. CANCEL 은 동일 카테고리 지출을 차감하고, 0 이하가 되면 제외."""
     acc: Dict[str, int] = defaultdict(int)
     for r in rows:
-        if (r.transaction_type or "").upper() == "EXPENSE" and r.category:
-            acc[r.category] += r.amount
-    return dict(acc)
+        if not r.category:
+            continue
+        t = (r.transaction_type or "").upper()
+        if t == "EXPENSE":
+            acc[r.category] += r.amount or 0
+        elif t == "CANCEL":
+            acc[r.category] -= r.amount or 0
+    return {cat: amt for cat, amt in acc.items() if amt > 0}
 
 
 # --- 7-3 dashboard ----------------------------------------------------------
@@ -157,10 +174,14 @@ def dashboard(
         if not r.date:
             continue
         d = by_date[r.date]
-        if (r.transaction_type or "").upper() == "EXPENSE":
-            d["expense_total"] += r.amount
-        elif (r.transaction_type or "").upper() == "INCOME":
-            d["income_total"] += r.amount
+        t = (r.transaction_type or "").upper()
+        if t == "EXPENSE":
+            d["expense_total"] += r.amount or 0
+        elif t == "CANCEL":
+            # 결제취소는 해당 일 지출을 차감(순지출 기준, 음수 방지).
+            d["expense_total"] = max(0, d["expense_total"] - (r.amount or 0))
+        elif t == "INCOME":
+            d["income_total"] += r.amount or 0
         d["transaction_count"] += 1
     calendar = [
         {
@@ -252,6 +273,71 @@ def report(
     return success_response(message="월간 소비 리포트입니다.", data=data)
 
 
+# --- 7-4b month transactions (full list) ------------------------------------
+@router.get("/ledger/transactions", summary="월 전체 거래내역 조회")
+def list_transactions(
+    user_id: str = Query(...),
+    month: str = Query(..., description="'YYYY-MM'"),
+    status: Optional[str] = Query(
+        None,
+        description="쉼표구분 상태 필터(예: 'confirmed,pending'). 미지정 시 DELETED 제외 전체.",
+    ),
+    db: Session = Depends(get_db),
+):
+    """선택 날짜에 한정하지 않고 해당 월의 모든 거래를 조회한다.
+
+    - ``transactions``: 최신순(occurred_at desc) 평면 목록.
+    - ``by_date``: 일자별 그룹(날짜 내림차순, 그룹 내부도 최신순) + 일자별 합계.
+
+    집계(EXPENSE/INCOME 합)는 대시보드와 동일한 규칙을 따른다(CANCEL 은 별도 집계 안 함).
+    """
+    rows = repo.list_by_month(db, user_id=user_id, month=month)
+
+    if status:
+        wanted = {s.strip().upper() for s in status.split(",") if s.strip()}
+        if wanted:
+            rows = [r for r in rows if (r.status or "").upper() in wanted]
+
+    def _sort_key(r):
+        return (r.occurred_at or "", r.created_at or "")
+
+    split = _income_expense_split(rows)
+
+    by_date_map: Dict[str, List[Any]] = defaultdict(list)
+    for r in rows:
+        by_date_map[r.date or ""].append(r)
+
+    groups: List[Dict[str, Any]] = []
+    for d in sorted((k for k in by_date_map if k), reverse=True):
+        day_rows = sorted(by_date_map[d], key=_sort_key, reverse=True)
+        day_split = _income_expense_split(day_rows)
+        groups.append(
+            {
+                "date": d,
+                "expense_total": day_split["expense"],
+                "income_total": day_split["income"],
+                "net_total": day_split["income"] - day_split["expense"],
+                "transaction_count": len(day_rows),
+                "transactions": [to_api_dict(r) for r in day_rows],
+            }
+        )
+
+    flat = sorted(rows, key=_sort_key, reverse=True)
+
+    data = {
+        "month": month,
+        "summary": {
+            "month_expense": split["expense"],
+            "month_income": split["income"],
+            "balance": split["income"] - split["expense"],
+            "transaction_count": len(rows),
+        },
+        "transactions": [to_api_dict(r) for r in flat],
+        "by_date": groups,
+    }
+    return success_response(message="월 전체 거래내역입니다.", data=data)
+
+
 # --- 7-5 confirm ------------------------------------------------------------
 @router.post("/ledger/transactions/{transaction_id}/confirm", summary="거래 확정")
 def confirm_transaction(transaction_id: str, db: Session = Depends(get_db)):
@@ -271,6 +357,7 @@ def update_transaction(
     data = ledger_service.update(
         db, transaction_id, category=payload.category, merchant=payload.merchant,
         amount=payload.amount, occurred_at=payload.occurred_at, status=payload.status,
+        memo=payload.memo,
     )
     if data is None:
         raise HTTPException(status_code=404, detail="거래를 찾을 수 없습니다.")

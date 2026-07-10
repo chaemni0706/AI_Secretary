@@ -117,6 +117,7 @@ extension LedgerTransactionMapper on LedgerTransactionDto {
       date: date,
       time: _timeLabelOf(this),
       status: status, // pending | needs_review
+      memo: memo,
     );
   }
 
@@ -126,10 +127,10 @@ extension LedgerTransactionMapper on LedgerTransactionDto {
       _timeLabelOf(this),
       merchant,
       _initialOf(merchant),
-      signedAmount, // 원 단위 int, 지출 음수 / 수입 양수
+      signedAmount, // 원 단위 int, 지출 음수 / 수입·결제취소 양수
       category,
       _catKeyOf(category),
-      _methodOf(this),
+      isCancel ? '결제취소' : _methodOf(this),
       transactionId: id,
     );
   }
@@ -234,6 +235,68 @@ extension LedgerDashboardMapper on LedgerDashboardDto {
       out[day] = DayInfo(spend: expense, income: income);
     }
     return out;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 월 전체 거래내역 DTO → UI 모델
+// ---------------------------------------------------------------------------
+
+/// 거래내역 탭에서 렌더할 '하루' 단위 그룹(날짜 헤더 + 거래 리스트).
+class LedgerDayGroup {
+  /// 'YYYY-MM-DD'.
+  final String date;
+  final int month;
+  final int day;
+  final int expenseTotal;
+  final int incomeTotal;
+  final List<LedgerTx> transactions;
+
+  const LedgerDayGroup({
+    required this.date,
+    required this.month,
+    required this.day,
+    required this.expenseTotal,
+    required this.incomeTotal,
+    required this.transactions,
+  });
+}
+
+extension LedgerMonthTransactionsMapper on LedgerMonthTransactionsDto {
+  int get monthExpense => _readIntKeys(
+        summary,
+        ['month_expense', 'total_expense', 'monthly_expense', 'expense'],
+      );
+
+  int get monthIncome => _readIntKeys(
+        summary,
+        ['month_income', 'total_income', 'monthly_income', 'income'],
+      );
+
+  int get transactionCount {
+    final n = _readIntKeys(summary, ['transaction_count', 'count']);
+    return n > 0 ? n : transactions.length;
+  }
+
+  /// 일자별 그룹(최신 날짜 우선)으로 변환. 백엔드가 이미 by_date 를 내림차순으로
+  /// 정렬해 주지만, 방어적으로 여기서도 날짜 내림차순 보장한다.
+  List<LedgerDayGroup> dayGroups() {
+    final groups = <LedgerDayGroup>[];
+    for (final g in byDate) {
+      final parts = g.date.split('-');
+      final m = parts.length >= 2 ? int.tryParse(parts[1]) ?? 0 : 0;
+      final d = parts.length >= 3 ? int.tryParse(parts[2]) ?? 0 : 0;
+      groups.add(LedgerDayGroup(
+        date: g.date,
+        month: m,
+        day: d,
+        expenseTotal: g.expenseTotal,
+        incomeTotal: g.incomeTotal,
+        transactions: g.transactions.map((t) => t.toLedgerTx()).toList(),
+      ));
+    }
+    groups.sort((a, b) => b.date.compareTo(a.date));
+    return groups;
   }
 }
 

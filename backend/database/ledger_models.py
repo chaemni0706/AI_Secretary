@@ -65,6 +65,8 @@ class LedgerTransaction(Base):
     items_json = Column(Text)
     is_recurring = Column(Integer, nullable=False, default=0)
 
+    memo = Column(Text)  # 사용자 자유 메모(선택)
+
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
 

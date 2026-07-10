@@ -271,6 +271,7 @@ def update(
     db: Session, transaction_id: str, *, category: Optional[str] = None,
     merchant: Optional[str] = None, amount: Optional[int] = None,
     occurred_at: Optional[str] = None, status: Optional[str] = None,
+    memo: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     fields: Dict[str, Any] = {"updated_at": _now_iso()}
     if category is not None:
@@ -291,6 +292,9 @@ def update(
             fields["time"] = dt.strftime("%H:%M")
     if status is not None:
         fields["status"] = _STATUS_TO_DB.get(status.lower(), "PENDING")
+    if memo is not None:
+        # 빈 문자열이면 메모 삭제 의도로 보고 그대로 반영("" 저장).
+        fields["memo"] = memo
     tx = repo.update(db, transaction_id, **fields)
     return to_api_dict(tx) if tx else None
 

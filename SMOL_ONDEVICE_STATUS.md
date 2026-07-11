@@ -9,10 +9,10 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_session_load_verified`** (2026-07-11, Galaxy Z Flip3 실기기 검증)
-(이전: `smol_server_python_only` → `smol_android_runtime_stubbed` → `smol_android_runtime_integrated`(build) → **실기기에서 OrtSession 3종 로드 성공 검증**.)
-- ✅ 실기기(Galaxy Z Flip3, SM-F711N, arm64-v8a, Android 15)에서 q4f16 ONNX 3종 **OrtSession 로드 성공**(warmup 1117ms, OOM/크래시 없음).
-- ⏳ **이미지 추론(`verifyImage`)은 여전히 미구현**(전처리/토크나이저/디코더 생성) → 서버 fallback. **"온디바이스 완성" 아님.**
+**분류: `smol_android_decoder_step_verified`** (2026-07-11, Galaxy Z Flip3 실기기 spike)
+(이전: … → `smol_android_session_load_verified` → **verifyImage spike L1~L3 실기기 성공**(전처리+vision_encoder / embed_tokens / decoder 1-step). L4(KV-cache 생성 loop)는 blocked.)
+- ✅ L1 vision_encoder / L2 embed_tokens / L3 decoder 1-step 실기기 성공(§7 표).
+- ❌ L4 generation loop blocked(merged decoder KV-cache Cast 버그). **이미지 추론 미완 → 서버 fallback 유지. "온디바이스 완성" 아님.**
 
 ### 실기기 session-load smoke 결과 (2026-07-11)
 | 항목 | 값 |
@@ -84,9 +84,9 @@
 
 ## 5. 상태 요약
 
-- ✅ **onnxruntime-android 통합 + fallback-safe 브릿지 + local-first 배선 + APK 빌드**, 그리고 **실기기(Flip3) OrtSession 3종 로드 검증(warmup 1117ms, OOM/crash 없음)**.
-- ⏳ **`verifyImage` 이미지 추론(전처리/토크나이저/디코더 생성) 미구현** → 현재는 서버 fallback.
-- ❌ "온디바이스 완성" 아님(실기기 **이미지 추론** 성공 전까지). 현 분류: `smol_android_session_load_verified`.
+- ✅ onnxruntime-android 통합 + fallback-safe 브릿지 + local-first 배선 + APK 빌드 + **실기기 OrtSession 로드**, 그리고 **verifyImage spike L1~L3(vision_encoder/embed_tokens/decoder 1-step) 실기기 성공**(§7).
+- ⏳ **L4 generation loop blocked**(merged decoder KV-cache Cast 버그), image-merge/tokenizer/detokenize 미구현 → 서버 fallback.
+- ❌ "온디바이스 완성" 아님(실기기 **완전 추론/evidence** 전까지). 현 분류: `smol_android_decoder_step_verified`.
 - 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback / `review_required`(재촬영). exercise/study 만 local accept 적극 허용 가능.
 
 ## 6. 실기기 session-load smoke — 상태 & 수동 runbook (2026-07-11)
@@ -133,3 +133,42 @@ adb logcat | grep -iE "smol|onnx|ort|flutter"
 ### 성공/실패 기준
 - 성공: warmup `status=loaded`, `sessions_loaded=3`, vision_encoder/embed_tokens/decoder_merged 의 input/output names 반환, 앱 크래시 없음 → 상태 `smol_android_session_load_verified` 로 승격.
 - 실패(모델 못 찾음/ORT unsupported op/OOM/ABI) → 원인 기록 후 `smol_ondevice_blocked`. (tokenizer/preprocessor 누락은 warmup 실패 사유 아님 — verifyImage 단계 이슈.)
+
+## 7. verifyImage 추론 spike 결과 (2026-07-11, Galaxy Z Flip3 실기기)
+
+`SmolVlmBridge.verifyImage` 에 추론 경로 spike(Level 1~4) 구현 후 진단화면에서 실행(sample.jpg, task=water).
+**단순화(spike caveat):** 단일 512×512(anyres splitting 미적용), image_features 를 디코더에 병합하지 않은 **text-only**,
+tokenizer 미구현 → 고정 프롬프트 token ids 하드코딩(`[1,37964,260,2443,30]` = BOS+"Describe the image."). 항상 `fallback_required=true`.
+
+### ONNX signature (핵심)
+- vision_encoder: in `pixel_values f32[b,num_img,3,512,512]`, `pixel_attention_mask bool[b,num_img,512,512]` → out `image_features f32[N,64,960]`
+- embed_tokens: in `input_ids i64[b,seq]` → out `inputs_embeds f32[b,seq,960]`
+- decoder_model_merged: in `inputs_embeds f32`, `attention_mask i64`, `position_ids i64`, **32층×past_key_values.N.key/value fp16[b,5,past,64]** → out `logits f32[b,seq,49280]` + 32층 present.N (hidden 960, vocab 49280, 32 layers, 5 KV heads, head_dim 64)
+
+### Level 결과
+| Level | 결과 | 상세 |
+|---|---|---|
+| **L1 vision_encoder** | ✅ ok | image_features `[1,64,960]`, ~2.3s (전처리 rescale 1/255 + normalize(mean/std 0.5), pixel_attention_mask all-true) |
+| **L2 embed_tokens** | ✅ ok | inputs_embeds `[1,5,960]`, ~2ms |
+| **L3 decoder 1-step** | ✅ ok | 빈 KV prefill → logits `[1,5,49280]`, argmax token `198`, ~99ms |
+| **L4 generation loop** | ❌ blocked | 2번째 스텝(KV-cache 재투입) 시 `ORT_RUNTIME_EXCEPTION` |
+| 합계 | — | verifyImage 총 ~3.7s, 앱 PSS ~759MB, **OOM/crash 없음**, fallback 유지 |
+
+### L4 blocker (정확한 원인)
+```
+E onnxruntime: Non-zero status code returned while running Cast node.
+Name:'InsertedPrecisionFreeCast_/model/layers.1/attn/v_proj/repeat_kv/Reshape_4/output_0'
+Shape mismatch attempting to re-use buffer. {1,1,960} != {1,6,960}
+```
+- merged decoder(q4f16)에 export 단계에서 삽입된 `InsertedPrecisionFreeCast` 가, prefill(seq=6)→decode(seq=1) 로
+  sequence 길이가 바뀔 때 ORT 실행 프레임의 **버퍼 재사용**과 충돌한다.
+- `SessionOptions.setMemoryPatternOptimization(false)` 시도 → **효과 없음**(이 cast/reshape 는 모델 그래프에 내장, ORT 메모리패턴만의 문제 아님).
+
+### L4 해소 후보 (future)
+1. 디코더를 **precision-free cast 없이 재-export**(또는 fp32/int8 decoder), 혹은 non-merged(past/no-past 분리) 모델 사용.
+2. decode step 을 **고정 길이로 패딩**(seq 변동 제거)해 버퍼 재사용 shape 를 고정.
+3. **최신 ONNX Runtime**(버퍼 재사용 shape 검증 개선 버전) 시도.
+4. transformers.js 의 SmolVLM ORT 파이프라인(동일 export)이 참고: image-merge/tokenizer/chat_template 포함 필요.
+
+### 남은 작업(추론 완성까지)
+- 위 L4 해소 + tokenizer/chat_template(현재 하드코딩) + **image_features → inputs_embeds 병합**(image token 위치) + anyres splitting + detokenize → evidence JSON(서버 schema). 완성 시 `smol_android_runtime_verified`.

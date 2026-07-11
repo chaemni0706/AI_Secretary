@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -27,7 +28,18 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
   String _output = '버튼을 눌러 온디바이스 SmolVLM 상태를 확인하세요.';
   bool _busy = false;
 
+  // verifyImage spike 용 이미지 경로(앱 private dir 에 push 한 sample). getModelInfo 의 model_dir 참고.
+  final _imgPathCtl = TextEditingController(
+    text: '/data/user/0/com.example.frontend/files/models/smolvlm/sample.jpg',
+  );
+
   final _encoder = const JsonEncoder.withIndent('  ');
+
+  @override
+  void dispose() {
+    _imgPathCtl.dispose();
+    super.dispose();
+  }
 
   Future<void> _run(String label, Future<Object?> Function() action) async {
     setState(() {
@@ -71,8 +83,8 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              '온디바이스 SmolVLM ONNX session-load smoke (dev-only). '
-              '실제 추론은 미구현 — 서버 fallback 을 사용합니다.',
+              '온디바이스 SmolVLM ONNX 진단 (dev-only). warmup=session load, '
+              'verifyImage=추론 spike(Level 1~4). 실제 인증은 서버 fallback.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
@@ -93,6 +105,26 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
                   child: const Text('warmup'),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _imgPathCtl,
+              style: const TextStyle(fontSize: 12),
+              decoration: const InputDecoration(
+                labelText: 'verifyImage 이미지 경로(앱 filesDir 권장)',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.tonal(
+              onPressed: _busy
+                  ? null
+                  : () => _run('verifyImage spike (L1~4)', () => _verifier.verifyImage(
+                        imageFile: File(_imgPathCtl.text.trim()),
+                        task: 'water',
+                      )),
+              child: const Text('verifyImage spike 실행'),
             ),
             const SizedBox(height: 16),
             Expanded(

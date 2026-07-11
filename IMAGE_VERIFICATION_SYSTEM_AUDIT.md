@@ -4,6 +4,12 @@
 작성자: Claude Code (Phase 0 상태 감사)
 대상: VLM 기반 이미지 인증 시스템 (SmolVLM local-first + Server fallback VLM + Rule Engine)
 
+> **후속 진행(2026-07-11):** Phase 0 감사 이후 end-to-end 파이프라인 안정화 + fallback 모델 확정 완료.
+> - fallback 후보 비교(A.X vs Qwen2.5-VL-7B) → **Qwen2.5-VL-7B + guard 채택**.
+> - full-test 잔여 FP=6 전수 재분류 → **VLM-eligible visual scope 기준 FP=0 → CONFIRM_ELIGIBLE_SCOPE**.
+> - `verified(water)` → secondary_review 정책, Smol 온디바이스 인터페이스/스텁(`smol_android_runtime_stubbed`).
+> - 상세: **`VLM_FALLBACK_STABILIZATION_REPORT.md`**, **`SMOL_ONDEVICE_STATUS.md`**.
+
 ---
 
 ## 0. 요약 (TL;DR)

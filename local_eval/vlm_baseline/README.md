@@ -16,8 +16,20 @@
 | A.X-4.0-VL-Light + guard | 9 | 8/1/0 | 0.95 | 4/4 | 4.5s | 탈락 |
 | **Qwen2.5-VL-7B + guard (채택)** | **6** | 6/0/0 | 0.85 | **0/0** | 6.6s | DO_NOT_CONFIRM(FP>0) |
 
-→ **Qwen2.5-VL-7B 채택**(FP 6<9, study/exercise FP=0, 엔진오류·파싱 0). 잔여 FP=6 은 변기물/오염수/옅은 맥주/borderline
-= **외관상 물과 구분 불가**(외관 기반 인증의 근본 실링). Qwen3-VL-8B 는 승인 시 추가 비교 가능(개선 여지 제한적).
+→ **Qwen2.5-VL-7B 채택**(FP 6<9, study/exercise FP=0, 엔진오류·파싱 0). 잔여 FP=6 은 변기물/오염수/맥주+물/borderline
+= **외관상 물과 구분 불가**(외관 기반 인증의 근본 실링).
+
+### VLM-eligible visual scope 확정 (2026-07-11)
+잔여 FP=6 전수 재분류(`fp_scope_review.csv`, visual_model_error=0) → **eligible subset(165) FP=0 → CONFIRM_ELIGIBLE_SCOPE**.
+재계산: `recompute_metrics_with_scope.py` → `metrics_scope_adjusted.json`.
+
+> Qwen2.5-VL-7B + guard is selected as the default server fallback model for VLM-based image verification.
+> The model is confirmed only within the VLM-eligible visual scope. Water cases requiring non-visual context,
+> such as contamination, toilet water, or visually indistinguishable alcohol, are excluded from VLM-only
+> automatic confirmation and must be handled by secondary_review or context-based rules.
+
+- **secondary_review 정책**: `verified(water)` → `review_required=true`(비시각 맥락 리스크). exercise/study 는 FP=0 자동 확정.
+- **Smol 온디바이스**: ONNX q4f16 자산 + Dart/Kotlin 스텁 구현(`smol_android_runtime_stubbed`) → 루트 `SMOL_ONDEVICE_STATUS.md`.
 
 ### FP=0 hard guard (`vlm_fp_guard.py`)
 Rule Engine core 미수정. Rule Engine 이 `verified` 를 내도 **A.X 의 `reason` 자유텍스트**를 스캔해

@@ -32,7 +32,7 @@ REGISTRY = {
         "loader": "auto_trust",
         "dtype": "bfloat16",
         "trust_remote_code": True,
-        "note": "text backbone qwen2, vision tower 포함. ~15G.",
+        "note": "[DEPRECATED candidate] Gate C FP=9(아이스티/커피 오인)+engine_error 4. qwen25_7b 로 대체됨. 참고 보존.",
     },
     # 채택된 fallback(bf16 다운로드 완료). end-to-end 기본값.
     "qwen25_7b": {

@@ -51,6 +51,15 @@ class VerificationResult {
   bool get isRejected => result == 'rejected';
   bool get isRetakeRequired => result == 'retake_required';
 
+  /// VLM-eligible scope 밖(비시각 맥락)일 수 있어 secondary_review 가 필요한지.
+  /// 백엔드 `data.review_required` 를 우선하고, 없으면 water verified 를 보수적으로 review 로 본다.
+  bool get reviewRequired =>
+      raw['review_required'] == true || (result == 'verified' && verificationType == 'water');
+
+  /// review 사유 (예: water_non_visual_context_risk).
+  String get reviewReason =>
+      (raw['review_reason'] ?? (reviewRequired ? 'water_non_visual_context_risk' : '')).toString();
+
   /// 사용자에게 보여줄 한 줄 메시지.
   String get displayMessage {
     switch (result) {

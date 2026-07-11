@@ -78,14 +78,38 @@ def _blank(task, image_id=""):
     return {"task": task, "image_id": image_id, "final_result": "retake_required",
             "engine_used": "fail_safe", "fallback_used": False,
             "local_result": "unknown", "fallback_result": None,
+            "review_required": False, "review_reason": "",
             "rule_reason": "", "rule_trace": [], "evidence": {},
             "debug": {"local_engine": "smol", "fallback_engine": FALLBACK_MODEL_KEY,
                       "local_parse_status": "", "fallback_parse_status": "",
                       "local_error": "", "fallback_error": "", "guard_reason": ""}}
 
 
+def _apply_review_policy(out):
+    """VLM-eligible scope 밖(비시각 맥락)일 수 있는 verified 를 secondary_review 로 라우팅.
+
+    확정 근거: full-test 잔여 FP 는 전부 water 에서만, 그리고 변기물/오염수(non_visual_context)·
+    맥주+물 동시(label_review)·borderline 처럼 **외관만으론 PASS 물과 구분 불가**한 케이스였다.
+    추론 시 이를 사전 판별할 시각 신호가 없으므로, **verified(water) 는 자동 확정하지 않고 review_required 로**
+    표시해 앱이 secondary_review(사람/GPS·맥락 rule)로 보낸다. exercise/study 는 full-test FP=0 → 그대로 자동 확정.
+    Rule Engine core 미수정; orchestrator layer 정책.
+    """
+    if out.get("final_result") == "verified" and out.get("task") == "water":
+        out["review_required"] = True
+        out["review_reason"] = "water_non_visual_context_risk"
+    return out
+
+
 def verify_image_with_vlm_fallback(image_path, task, force_fallback=False, no_qwen=False,
                                    image_id="", mock_smol=None, mock_qwen=None):
+    """공개 진입점: 핵심 파이프라인 실행 후 secondary_review 정책 적용."""
+    out = _verify_core(image_path, task, force_fallback=force_fallback, no_qwen=no_qwen,
+                       image_id=image_id, mock_smol=mock_smol, mock_qwen=mock_qwen)
+    return _apply_review_policy(out)
+
+
+def _verify_core(image_path, task, force_fallback=False, no_qwen=False,
+                 image_id="", mock_smol=None, mock_qwen=None):
     out = _blank(task, image_id)
     # 1) Smol local
     lo = run_smol_local_path(image_path, task, mock_smol=mock_smol)

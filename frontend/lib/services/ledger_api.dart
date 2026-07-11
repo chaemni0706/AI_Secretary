@@ -8,9 +8,40 @@ import 'api_client.dart';
 /// **data 만** 받아 DTO 로 파싱한다. 실패는 삼키지 않고 [ApiException] 이 그대로
 /// 화면까지 올라간다. 응답 형태가 예상과 다르면 [FormatException] 을 던진다.
 class LedgerApi {
-  const LedgerApi();
+  LedgerApi();
 
   static const String _base = '$apiPrefix/ledger';
+
+  // --- 조회 캐시(월 키 기준) -------------------------------------------------
+  // 대시보드에서 여러 위젯이 같은 달의 report/dashboard 를 동시에 요청하면 진행
+  // 중인 요청을 공유(dedup)하고 짧은 TTL 동안 재사용한다. 거래 확정/수정/삭제/
+  // 시뮬레이트/시드 시 캐시를 비워 stale 을 방지한다.
+  static const Duration _cacheTtl = Duration(seconds: 30);
+  final Map<String, _Cached<LedgerReportDto>> _reportCache = {};
+  final Map<String, Future<LedgerReportDto>> _reportInflight = {};
+  final Map<String, _Cached<LedgerDashboardDto>> _dashboardCache = {};
+  final Map<String, Future<LedgerDashboardDto>> _dashboardInflight = {};
+
+  /// 캐시된 월간 리포트(있고 만료 전이면 즉시 반환). UI 즉시 표시용.
+  LedgerReportDto? cachedReport({
+    String userId = 'local-user',
+    required int year,
+    required int month,
+  }) {
+    final hit = _reportCache[_monthKey(userId, year, month)];
+    return (hit != null && !hit.isExpired(_cacheTtl)) ? hit.value : null;
+  }
+
+  /// 모든 조회 캐시 무효화(거래 변경 후 호출).
+  void invalidateCache() {
+    _reportCache.clear();
+    _reportInflight.clear();
+    _dashboardCache.clear();
+    _dashboardInflight.clear();
+  }
+
+  String _monthKey(String userId, int year, int month) =>
+      '$userId|${_formatMonth(year, month)}';
 
   // ------------------------------------------------------------------------
   // 조회
@@ -24,7 +55,27 @@ class LedgerApi {
     required int year,
     required int month,
     DateTime? selectedDate,
-  }) async {
+    bool forceRefresh = false,
+  }) {
+    final key =
+        '${_monthKey(userId, year, month)}|${selectedDate != null ? _formatDate(selectedDate) : '-'}';
+    if (!forceRefresh) {
+      final hit = _dashboardCache[key];
+      if (hit != null && !hit.isExpired(_cacheTtl)) return Future.value(hit.value);
+      final pending = _dashboardInflight[key];
+      if (pending != null) return pending;
+    }
+    final future = _fetchDashboard(userId, year, month, selectedDate).then((dto) {
+      _dashboardCache[key] = _Cached(dto);
+      return dto;
+    }).whenComplete(() => _dashboardInflight.remove(key));
+    _dashboardInflight[key] = future;
+    return future;
+  }
+
+  Future<LedgerDashboardDto> _fetchDashboard(
+    String userId, int year, int month, DateTime? selectedDate,
+  ) async {
     final query = <String, dynamic>{
       'user_id': userId,
       'month': _formatMonth(year, month),
@@ -37,11 +88,30 @@ class LedgerApi {
   }
 
   /// 월간 소비 리포트: `GET /ledger/report`
+  ///
+  /// [forceRefresh] 는 캐시를 건너뛰고 서버를 다시 조회한다(당겨서 새로고침 등).
   Future<LedgerReportDto> report({
     String userId = 'local-user',
     required int year,
     required int month,
-  }) async {
+    bool forceRefresh = false,
+  }) {
+    final key = _monthKey(userId, year, month);
+    if (!forceRefresh) {
+      final hit = _reportCache[key];
+      if (hit != null && !hit.isExpired(_cacheTtl)) return Future.value(hit.value);
+      final pending = _reportInflight[key];
+      if (pending != null) return pending;
+    }
+    final future = _fetchReport(userId, year, month).then((dto) {
+      _reportCache[key] = _Cached(dto);
+      return dto;
+    }).whenComplete(() => _reportInflight.remove(key));
+    _reportInflight[key] = future;
+    return future;
+  }
+
+  Future<LedgerReportDto> _fetchReport(String userId, int year, int month) async {
     final data = await apiClient.getData(
       '$_base/report',
       query: {'user_id': userId, 'month': _formatMonth(year, month)},
@@ -98,6 +168,7 @@ class LedgerApi {
       '$_base/notifications/simulate',
       body: body,
     );
+    invalidateCache();
     return LedgerNotificationResultDto.fromJson(
       _expectMap(data, 'notifications/simulate'),
     );
@@ -115,6 +186,7 @@ class LedgerApi {
     final data = await apiClient.postData(
       '$_base/transactions/$transactionId/confirm',
     );
+    invalidateCache();
     return LedgerTransactionDto.fromJson(_expectMap(data, 'confirm'));
   }
 
@@ -147,6 +219,7 @@ class LedgerApi {
       '$_base/transactions/$transactionId',
       body: body,
     );
+    invalidateCache();
     return LedgerTransactionDto.fromJson(_expectMap(data, 'update'));
   }
 
@@ -156,6 +229,7 @@ class LedgerApi {
     String userId = 'local-user',
   }) async {
     await apiClient.deleteData('$_base/transactions/$transactionId');
+    invalidateCache();
   }
 
   // ------------------------------------------------------------------------
@@ -165,6 +239,7 @@ class LedgerApi {
   /// mock 데이터 시드(idempotent): `POST /ledger/mock/seed`
   Future<void> seedMock({String userId = 'local-user'}) async {
     await apiClient.postData('$_base/mock/seed', query: {'user_id': userId});
+    invalidateCache();
   }
 
   // ------------------------------------------------------------------------
@@ -205,4 +280,13 @@ class LedgerApi {
 }
 
 /// 간편 접근용 전역 인스턴스(기존 서비스들과 동일한 패턴).
-const LedgerApi ledgerApi = LedgerApi();
+/// 캐시 상태를 갖게 되어 const 대신 단일 인스턴스로 둔다.
+final LedgerApi ledgerApi = LedgerApi();
+
+/// TTL 캐시 항목: 값과 저장 시각을 함께 보관한다.
+class _Cached<T> {
+  final T value;
+  final DateTime at;
+  _Cached(this.value) : at = DateTime.now();
+  bool isExpired(Duration ttl) => DateTime.now().difference(at) >= ttl;
+}

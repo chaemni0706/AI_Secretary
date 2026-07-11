@@ -634,7 +634,7 @@ class ScheduleToggleOptionRow extends StatelessWidget {
         alignment: Alignment.centerRight,
         child: Switch.adaptive(
           value: value,
-          activeColor: AppTheme.blue,
+          activeThumbColor: AppTheme.blue,
           onChanged: onChanged,
         ),
       ),

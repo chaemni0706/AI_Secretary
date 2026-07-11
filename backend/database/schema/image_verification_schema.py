@@ -13,9 +13,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 VerificationType = Literal["gym", "study", "medicine", "water", "wakeup", "exercise"]
 VerificationResult = Literal["verified", "retake_required", "rejected"]
-# secondary_review 운영 상태. final_result enum(VerificationResult)과 별개(자동확정 흐름 미변경).
-ReviewStatus = Literal["none", "pending", "approved", "rejected", "needs_retake"]
-ReviewDecision = Literal["approved", "rejected", "needs_retake"]
 ExerciseActivityType = Literal["gym", "running", "swimming", "yoga", "pilates", "home_workout"]
 StudyVisualEvidence = Literal[
     "open_textbook",
@@ -164,42 +161,12 @@ class ImageVerificationData(BaseModel):
         description="verified 이지만 비시각 맥락 확인이 필요해 자동 확정 대신 secondary_review 로 보내야 하는지",
     )
     review_reason: str = Field(default="", description="review 사유(예: water_non_visual_context_risk)")
-    # 운영 상태(secondary_review queue). 최종 UI 판단은 final_result 가 아니라 review_status 를 우선한다.
-    review_status: ReviewStatus = Field(
-        default="none",
-        description="none|pending|approved|rejected|needs_retake (review_required=false 면 none)",
-    )
-    # review queue 등록 시 부여되는 id(조회/결정 처리용). 미등록이면 null.
-    verification_id: Optional[str] = Field(default=None, description="secondary_review queue record id")
 
 
 class ImageVerificationResponse(BaseModel):
     success: bool = True
     message: str = "OK"
     data: Optional[ImageVerificationData] = None
-
-
-class ReviewRecord(BaseModel):
-    """secondary_review queue 항목(목록/상세 조회용)."""
-    id: str
-    verification_type: VerificationType
-    result: VerificationResult
-    score: int
-    review_required: bool = True
-    review_reason: str = ""
-    review_status: ReviewStatus = "pending"
-    review_decision: Optional[ReviewDecision] = None
-    review_note: str = ""
-    reviewer_id: Optional[str] = None
-    created_at: str
-    reviewed_at: Optional[str] = None
-    rule_evidence: list[RuleEvidence] = Field(default_factory=list)
-
-
-class ReviewDecisionRequest(BaseModel):
-    decision: ReviewDecision
-    note: str = ""
-    reviewer_id: Optional[str] = None
 
 
 class MockVisionAnalysisRequest(BaseModel):

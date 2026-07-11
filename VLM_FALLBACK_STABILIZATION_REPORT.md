@@ -192,18 +192,3 @@ exercise verified → `"review_required": false, "review_reason": ""` (자동 �
 ### 테스트
 `tests/test_image_verification_review_policy.py`(5 cases): water verified→review, water rejected/exercise verified→no review,
 응답 필드 노출, schema 기본값 하위호환. → 기존 53 + 신규 5 = **58 passed**(회귀 없음).
-
----
-
-## 10. Secondary review 운영 큐 (2026-07-11)
-
-`verified(water)` 를 자동 최종 성공으로 처리하지 않고 **pending → approved/rejected/needs_retake** 운영 상태로 추적.
-상세: **`SECONDARY_REVIEW_FLOW.md`**.
-
-- schema: `ImageVerificationData` 에 `review_status`(none|pending|approved|rejected|needs_retake), `verification_id` 추가. enum 불변.
-- **DB 영속화(2026-07-11 완료, B안=별도 테이블)**: `image_verification_reviews`(local_schema.sql, ledger 와 동일 append-only) +
-  `image_verification_review_models.py` + `secondary_review_repository.py` + DB-backed `secondary_review_service.py`(Session 주입).
-  Alembic 없음 — SQL 파일 단일 소스. verify 라우트 등록은 defensive(DB 미초기화여도 판정 반환).
-- API: `POST /image-verifications`(review_required 면 DB pending 등록+id), `GET …/reviews/pending`, `GET …/reviews/{id}`, `POST …/reviews/{id}/decision` (모두 `Depends(get_db)`).
-- 정책: 최종 성공 판단은 `review_status==approved`. 이미지 인증을 소비하는 포인트/챌린지 로직 없음(감사) → 향후 추가 시 pending water 는 성공/보상 제외.
-- tests: `test_secondary_review_queue.py`(9, isolated temp SQLite + get_db override) — 등록/목록/상세/결정 영속화/404/exercise 미등록. 이미지 인증 스위트 354 passed 회귀 없음. 상세: **`SECONDARY_REVIEW_FLOW.md`**.

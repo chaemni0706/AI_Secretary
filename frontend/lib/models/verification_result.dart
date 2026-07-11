@@ -61,40 +61,13 @@ class VerificationResult {
   String get reviewReason =>
       (raw['review_reason'] ?? (reviewRequired ? 'water_non_visual_context_risk' : '')).toString();
 
-  /// 운영 상태: none | pending | approved | rejected | needs_retake.
-  /// 백엔드 `data.review_status` 를 우선하고, 없으면 review_required 로 유추한다.
-  String get reviewStatus {
-    final s = raw['review_status'];
-    if (s is String && s.isNotEmpty) return s;
-    return reviewRequired ? 'pending' : 'none';
-  }
-
-  /// review queue record id(결정 조회/처리용). 없으면 null.
-  String? get verificationId => raw['verification_id']?.toString();
-
-  bool get isReviewPending => reviewStatus == 'pending';
-  bool get isReviewApproved => reviewStatus == 'approved';
-  bool get isReviewRejected => reviewStatus == 'rejected';
-  bool get isReviewNeedsRetake => reviewStatus == 'needs_retake';
-
-  /// verified 이지만 검수 대기(자동 확정하지 말 것).
-  bool get needsSecondaryReview =>
-      result == 'verified' && reviewRequired && reviewStatus == 'pending';
+  /// verified 이지만 비시각 맥락 확인이 필요한 상태(앱은 자동 확정하지 말 것).
+  bool get needsSecondaryReview => result == 'verified' && reviewRequired;
 
   /// 사용자에게 보여줄 한 줄 메시지.
   String get displayMessage {
-    // review 대상은 review_status 를 우선한다(자동 확정 아님).
-    if (reviewRequired) {
-      switch (reviewStatus) {
-        case 'pending':
-          return '거의 다 됐어요. 추가 확인이 필요해요 🔎 (검수 대기)';
-        case 'approved':
-          return '검수 완료 — 인증이 승인되었어요 👍';
-        case 'rejected':
-          return '검수 완료 — 인증이 반려되었어요.';
-        case 'needs_retake':
-          return '재촬영이 필요해요. 다시 촬영해 주세요 📷';
-      }
+    if (needsSecondaryReview) {
+      return '거의 다 됐어요. 추가 확인이 필요해요 🔎';
     }
     switch (result) {
       case 'verified':

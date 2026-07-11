@@ -49,17 +49,10 @@ _REVIEW_TASKS = frozenset({"water"})
 
 
 def apply_secondary_review_policy(data: ImageVerificationData) -> ImageVerificationData:
-    """verified 이지만 VLM-eligible visual scope 밖일 수 있는 결과에 review_required + review_status=pending 부여.
-
-    review_required=false 인 결과(exercise/study verified, rejected, retake 등)는 review_status=none 유지(기본값).
-    """
+    """verified 이지만 VLM-eligible visual scope 밖일 수 있는 결과에 review_required 를 부여."""
     if data.result == "verified" and data.verification_type in _REVIEW_TASKS:
         return data.model_copy(
-            update={
-                "review_required": True,
-                "review_reason": "water_non_visual_context_risk",
-                "review_status": "pending",
-            }
+            update={"review_required": True, "review_reason": "water_non_visual_context_risk"}
         )
     return data
 

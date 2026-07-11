@@ -2,25 +2,20 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from backend.core.response import success_response
 from backend.services import routine_service
 
 router = APIRouter(prefix="/api/v1/routines", tags=["routines"])
 
 
-class MedicineCategoryInput(BaseModel):
-    dose_amount: Optional[float] = None
-    dose_unit: Optional[str] = None
-    frequency_per_day: Optional[int] = None
-    duration_days: Optional[int] = None
-    normalized_text: Optional[str] = ""
-
-
 class MedicineRoutineInput(BaseModel):
     medicine_name: str
-    category: MedicineCategoryInput
+    dose: Optional[str] = ""
+    frequency_per_day: Optional[int] = None
+    duration_days: Optional[int] = None
 
 
 class MedicineRoutineCreateRequest(BaseModel):
@@ -31,15 +26,23 @@ class MedicineRoutineCreateRequest(BaseModel):
 @router.post("/medicine")
 def create_medicine_routines(request: MedicineRoutineCreateRequest):
     medicines = [m.model_dump() for m in request.medicines]
-    routines = routine_service.create_medicine_routines(medicines, request.start_date)
+    try:
+        routines = routine_service.create_medicine_routines(medicines, request.start_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    return {
-        "message": "복약 루틴이 추가되었습니다.",
-        "routine_count": len(routines),
-        "routines": routines,
-    }
+    return success_response(
+        message="복약 루틴이 추가되었습니다.",
+        data={
+            "routine_count": len(routines),
+            "routines": routines,
+        },
+    )
 
 
 @router.get("/medicine")
 def get_medicine_routines():
-    return {"routines": routine_service.get_all_routines()}
+    return success_response(
+        message="복약 루틴 목록입니다.",
+        data={"routines": routine_service.get_all_routines()},
+    )

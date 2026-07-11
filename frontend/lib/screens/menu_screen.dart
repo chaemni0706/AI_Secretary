@@ -11,6 +11,7 @@ import 'voice_schedule_screen.dart';
 import 'mock_call_alert_screen.dart';
 import 'user_preference_screen.dart';
 import 'image_verification_screen.dart';
+import 'medicine_ocr_screen.dart';
 
 class MenuScreen extends StatelessWidget {
   final bool isDrawer;
@@ -136,6 +137,13 @@ class MenuScreen extends StatelessWidget {
         title: '이미지 인증',
         subtitle: '물·운동·공부 사진 인증',
         onTap: () => _openService(context, const ImageVerificationScreen()),
+      ),
+      _MenuItem(
+        icon: Icons.medication_outlined,
+        color: AppTheme.blue,
+        title: '약봉투 OCR 분석',
+        subtitle: '약봉투 촬영해 복약 루틴 등록',
+        onTap: () => _openService(context, const MedicineOcrScreen()),
       ),
       _MenuItem(
         icon: Icons.backpack_outlined,

@@ -6,6 +6,7 @@ import uuid
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
+from backend.core.response import success_response
 from backend.services import medicine_ocr_service
 
 router = APIRouter(prefix="/api/v1/medicine", tags=["medicine"])
@@ -28,7 +29,7 @@ async def analyze_medicine_image(file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             f.write(contents)
 
-        medicines = medicine_ocr_service.analyze_medicine_image(temp_path)
+        analysis = medicine_ocr_service.analyze_medicine_image(temp_path)
     except RuntimeError as exc:
         # paddleocr 미설치 등 optional dependency 부재 → 앱은 죽지 않고 명확히 안내
         return JSONResponse(
@@ -48,12 +49,17 @@ async def analyze_medicine_image(file: UploadFile = File(...)):
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    return {
-        "source_type": "medicine_ocr",
-        "record_type": "medicine",
-        "image_file": file.filename,
-        "medicines": medicines,
-        "status": "pending_user_confirmation",
-        "needs_user_confirmation": True,
-        "warning": "약 정보는 OCR 기반 추출 결과이므로 사용자 확인 후 일정 또는 루틴에 저장해야 합니다.",
-    }
+    return success_response(
+        message="약봉투 이미지 분석이 완료되었습니다.",
+        data={
+            "source_type": "medicine_ocr",
+            "record_type": "medicine",
+            "image_file": file.filename,
+            "dispensed_date": analysis["dispensed_date"],
+            "dispensed_date_note": analysis["dispensed_date_note"],
+            "medicines": analysis["medicines"],
+            "status": "pending_user_confirmation",
+            "needs_user_confirmation": True,
+            "warning": "약 정보는 OCR 기반 추출 결과이므로 사용자 확인 후 일정 또는 루틴에 저장해야 합니다.",
+        },
+    )

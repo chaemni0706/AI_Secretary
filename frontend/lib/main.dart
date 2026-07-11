@@ -10,11 +10,13 @@ import 'screens/widget_dashboard_screen.dart';
 import 'screens/ledger_screen.dart';
 import 'screens/my_page_screen.dart';
 import 'screens/image_verification_screen.dart';
+import 'screens/medicine_ocr_screen.dart';
 import 'data/dashboard_navigation.dart';
 import 'services/briefing_scheduler_service.dart';
 import 'services/preference_store.dart';
 import 'services/schedule_api.dart';
 import 'theme/app_theme.dart';
+import 'widgets/camera_action_sheet.dart';
 import 'widgets/draggable_assistant_fab.dart';
 
 /// 알림 탭 시 화면 이동에 쓰는 루트 네비게이터 키(전화형 알림 화면으로 이동).
@@ -152,12 +154,30 @@ class _MainNavigatorState extends State<MainNavigator> {
                 icon: Icons.photo_camera_outlined,
                 tooltip: '카메라',
                 color: AppTheme.teal,
-                onTap: () {
-                  Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ImageVerificationScreen(),
-                    ),
+                onTap: () async {
+                  final rootNavigator = Navigator.of(
+                    context,
+                    rootNavigator: true,
                   );
+                  final choice = await showCameraActionSheet(context);
+                  switch (choice) {
+                    case CameraActionChoice.medicineRoutine:
+                      rootNavigator.push(
+                        MaterialPageRoute(
+                          builder: (_) => const MedicineOcrScreen(),
+                        ),
+                      );
+                      break;
+                    case CameraActionChoice.verificationPhoto:
+                      rootNavigator.push(
+                        MaterialPageRoute(
+                          builder: (_) => const ImageVerificationScreen(),
+                        ),
+                      );
+                      break;
+                    case null:
+                      break;
+                  }
                 },
               ),
               AssistantMenuAction(

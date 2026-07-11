@@ -117,14 +117,27 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            FilledButton.tonal(
-              onPressed: _busy
-                  ? null
-                  : () => _run('verifyImage spike (L1~4)', () => _verifier.verifyImage(
-                        imageFile: File(_imgPathCtl.text.trim()),
-                        task: 'water',
-                      )),
-              child: const Text('verifyImage spike 실행'),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: _busy
+                        ? null
+                        : () => _run('verifyImage spike (L1~4)', () => _verifier.verifyImage(
+                              imageFile: File(_imgPathCtl.text.trim()),
+                              task: 'water',
+                            )),
+                    child: const Text('verifyImage spike'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: _busy ? null : () => _run('L4 experiment (opt-level sweep)', _verifier.l4Experiment),
+                    child: const Text('L4 experiment'),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Expanded(

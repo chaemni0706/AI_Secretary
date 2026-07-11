@@ -382,6 +382,118 @@ class SmolVlmBridge(private val context: Context) {
 
     private fun errStr(e: Throwable): String = "${e.javaClass.simpleName}: ${(e.message ?: "").take(200)}"
 
+    /**
+     * L4 blocker 실험: cached generation loop 을 **decoder OrtSession 의 graph optimization level 별**로 시도.
+     * 실패 노드 `InsertedPrecisionFreeCast_...` 는 원본 그래프에 없고 **ORT 최적화가 삽입**한 것이므로,
+     * NO_OPT/BASIC 로 내리면 삽입이 사라져 loop 가 될 수 있는지 검증한다. (text-only, 이미지 불필요)
+     */
+    private fun l4Experiment(): HashMap<String, Any?> {
+        if (!isModelAvailable()) {
+            return hashMapOf("success" to false, "engine" to "smol_ondevice", "status" to "unavailable", "fallback_required" to true)
+        }
+        val env = OrtEnvironment.getEnvironment()
+        val results = HashMap<String, Any?>()
+        var embedS: OrtSession? = null
+        try {
+            embedS = env.createSession(File(modelDir(), "embed_tokens_q4f16.onnx").absolutePath, OrtSession.SessionOptions())
+            val levels = listOf(
+                "ALL_OPT" to OrtSession.SessionOptions.OptLevel.ALL_OPT,
+                "EXTENDED_OPT" to OrtSession.SessionOptions.OptLevel.EXTENDED_OPT,
+                "BASIC_OPT" to OrtSession.SessionOptions.OptLevel.BASIC_OPT,
+                "NO_OPT" to OrtSession.SessionOptions.OptLevel.NO_OPT,
+            )
+            for ((name, lvl) in levels) {
+                val cl = ArrayList<AutoCloseable>()
+                try {
+                    val o = OrtSession.SessionOptions()
+                    o.setOptimizationLevel(lvl)
+                    try { o.setMemoryPatternOptimization(false) } catch (_: Throwable) {}
+                    val decS = env.createSession(File(modelDir(), "decoder_model_merged_q4f16.onnx").absolutePath, o)
+                    cl.add(decS)
+                    results["cached@$name"] = generationLoop(env, embedS, decS, cl, maxNew = 3)
+                } catch (e: Throwable) {
+                    results["cached@$name"] = hashMapOf("ok" to false, "error" to errStr(e))
+                } finally {
+                    for (c in cl.reversed()) try { c.close() } catch (_: Throwable) {}
+                }
+            }
+        } catch (e: Throwable) {
+            return hashMapOf("success" to false, "engine" to "smol_ondevice", "status" to "error",
+                "fallback_required" to true, "message" to errStr(e), "experiments" to results)
+        } finally {
+            try { embedS?.close() } catch (_: Throwable) {}
+        }
+        // Case D: 고정 길이 패딩(no-cache). 모든 decoder.run 을 동일 shape[1,PAD] 로 → 버퍼 재사용 mismatch 회피.
+        run {
+            val cl = ArrayList<AutoCloseable>()
+            var eS: OrtSession? = null; var dS: OrtSession? = null
+            try {
+                eS = env.createSession(File(modelDir(), "embed_tokens_q4f16.onnx").absolutePath, OrtSession.SessionOptions())
+                dS = env.createSession(File(modelDir(), "decoder_model_merged_q4f16.onnx").absolutePath, OrtSession.SessionOptions())
+                cl.add(eS); cl.add(dS)
+                results["padded_nocache@ALL_OPT(PAD=16)"] = paddedNoCacheLoop(env, eS, dS, padLen = 16, maxNew = 5)
+            } catch (e: Throwable) {
+                results["padded_nocache@ALL_OPT(PAD=16)"] = hashMapOf("ok" to false, "error" to errStr(e))
+            } finally {
+                for (c in cl.reversed()) try { c.close() } catch (_: Throwable) {}
+            }
+        }
+        val anyOk = results.values.any { (it as? Map<*, *>)?.get("ok") == true }
+        return hashMapOf(
+            "success" to false, "engine" to "smol_ondevice", "status" to "l4_experiment",
+            "fallback_required" to true, "any_loop_ok" to anyOk, "experiments" to results,
+            "note" to "cached(opt-level별) + padded-no-cache. InsertedPrecisionFreeCast 는 opt level 무관(q4 export 내재).",
+        )
+    }
+
+    /**
+     * Case D: **고정 길이 패딩 + no-cache** greedy 생성. 매 스텝 decoder.run 의 입력 shape 를 [1,padLen] 로 고정해
+     * (past 는 항상 빈 fp16) ORT 의 버퍼 재사용 shape mismatch(InsertedPrecisionFreeCast)를 회피 시도.
+     * 느림(매 스텝 전체 재계산)이나 짧은 생성엔 실용적일 수 있다. text-only.
+     */
+    private fun paddedNoCacheLoop(
+        env: OrtEnvironment, embedS: OrtSession, decS: OrtSession, padLen: Int, maxNew: Int,
+    ): HashMap<String, Any?> {
+        val t0 = System.currentTimeMillis()
+        val PAD_ID = 2L
+        val tokens = ArrayList<Long>().apply { PROMPT_IDS.forEach { add(it) } }
+        val generated = ArrayList<Long>()
+        var steps = 0
+        while (steps < maxNew && tokens.size <= padLen) {
+            val real = tokens.size
+            // pad input_ids to padLen
+            val ids = LongArray(padLen) { if (it < real) tokens[it] else PAD_ID }
+            val cl = ArrayList<AutoCloseable>()
+            try {
+                val idT = OnnxTensor.createTensor(env, LongBuffer.wrap(ids), longArrayOf(1, padLen.toLong())); cl.add(idT)
+                val er = embedS.run(mapOf("input_ids" to idT)); cl.add(er)
+                val emb = er.get("inputs_embeds").get() as OnnxTensor
+                val inputs = HashMap<String, OnnxTensor>()
+                inputs["inputs_embeds"] = emb
+                val am = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(padLen) { if (it < real) 1L else 0L }), longArrayOf(1, padLen.toLong())); cl.add(am)
+                val pos = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(padLen) { it.toLong() }), longArrayOf(1, padLen.toLong())); cl.add(pos)
+                inputs["attention_mask"] = am; inputs["position_ids"] = pos
+                for (i in 0 until N_LAYERS) for (kv in listOf("key", "value")) {
+                    val t = emptyFp16Past(env); cl.add(t); inputs["past_key_values.$i.$kv"] = t
+                }
+                val r = decS.run(inputs); cl.add(r)
+                val logits = r.get("logits").get() as OnnxTensor
+                val vocab = logits.info.shape[2].toInt()
+                val next = argmaxAt(logits.floatBuffer, (real - 1) * vocab, vocab)
+                generated.add(next.toLong()); tokens.add(next.toLong())
+                if (next.toLong() == EOS_ID) break
+                steps++
+            } finally {
+                for (c in cl.reversed()) try { c.close() } catch (_: Throwable) {}
+            }
+        }
+        return hashMapOf(
+            "ok" to true, "generated_token_ids" to generated, "count" to generated.size,
+            "pad_len" to padLen, "ms" to (System.currentTimeMillis() - t0),
+            "note" to "fixed-length padded no-cache; detokenize 미구현(token ids only).",
+        )
+    }
+
     fun register(flutterEngine: FlutterEngine) {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -394,6 +506,7 @@ class SmolVlmBridge(private val context: Context) {
                         "verifyImage" -> result.success(
                             verifyImage(call.argument("imagePath"), call.argument("task"))
                         )
+                        "l4Experiment" -> result.success(l4Experiment())
                         // 하위호환(기존 Dart 오케스트레이터)
                         "isAvailable" -> result.success(isModelAvailable())
                         "inferEvidence" -> {

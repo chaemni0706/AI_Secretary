@@ -9,10 +9,10 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_decoder_step_verified`** (2026-07-11, Galaxy Z Flip3 실기기 spike)
-(이전: … → `smol_android_session_load_verified` → **verifyImage spike L1~L3 실기기 성공**(전처리+vision_encoder / embed_tokens / decoder 1-step). L4(KV-cache 생성 loop)는 blocked.)
-- ✅ L1 vision_encoder / L2 embed_tokens / L3 decoder 1-step 실기기 성공(§7 표).
-- ❌ L4 generation loop blocked(merged decoder KV-cache Cast 버그). **이미지 추론 미완 → 서버 fallback 유지. "온디바이스 완성" 아님.**
+**분류: `smol_android_generation_spike_no_cache_verified`** (2026-07-11, Galaxy Z Flip3 실기기)
+(이전: … → `smol_android_decoder_step_verified` → **L4 generation loop 를 고정길이 패딩 no-cache 로 해소**.)
+- ✅ L1 vision_encoder / L2 embed_tokens / L3 decoder 1-step (§7) + **L4 generation loop 성공(고정길이 패딩 no-cache, 5 tokens 788ms)** (§8).
+- ❌ **KV-cache(cached) 증분 loop 은 여전히 blocked**(q4f16 export 내재 cast, opt level 무관). image-merge/tokenizer/detokenize/anyres 미구현 → 서버 fallback 유지. **"온디바이스 인증 완성" 아님.**
 
 ### 실기기 session-load smoke 결과 (2026-07-11)
 | 항목 | 값 |
@@ -85,8 +85,9 @@
 ## 5. 상태 요약
 
 - ✅ onnxruntime-android 통합 + fallback-safe 브릿지 + local-first 배선 + APK 빌드 + **실기기 OrtSession 로드**, 그리고 **verifyImage spike L1~L3(vision_encoder/embed_tokens/decoder 1-step) 실기기 성공**(§7).
-- ⏳ **L4 generation loop blocked**(merged decoder KV-cache Cast 버그), image-merge/tokenizer/detokenize 미구현 → 서버 fallback.
-- ❌ "온디바이스 완성" 아님(실기기 **완전 추론/evidence** 전까지). 현 분류: `smol_android_decoder_step_verified`.
+- ✅ **L4 generation loop 성공(고정길이 패딩 no-cache, 5 tokens 788ms)** — cached KV-cache loop 은 q4 export 내재 cast 로 blocked(§8).
+- ⏳ image-merge/tokenizer/detokenize/anyres 미구현 → 서버 fallback.
+- ❌ "온디바이스 인증 완성" 아님(실기기 **완전 추론/evidence** 전까지). 현 분류: `smol_android_generation_spike_no_cache_verified`.
 - 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback / `review_required`(재촬영). exercise/study 만 local accept 적극 허용 가능.
 
 ## 6. 실기기 session-load smoke — 상태 & 수동 runbook (2026-07-11)
@@ -172,3 +173,40 @@ Shape mismatch attempting to re-use buffer. {1,1,960} != {1,6,960}
 
 ### 남은 작업(추론 완성까지)
 - 위 L4 해소 + tokenizer/chat_template(현재 하드코딩) + **image_features → inputs_embeds 병합**(image token 위치) + anyres splitting + detokenize → evidence JSON(서버 schema). 완성 시 `smol_android_runtime_verified`.
+
+## 8. L4 generation loop blocker — 원인 & 해소 (2026-07-11, Flip3 실기기)
+
+### 근본 원인
+L4 실패 노드 `InsertedPrecisionFreeCast_/model/layers.1/attn/v_proj/repeat_kv/Reshape_4/output_0` 는
+**ORT graph optimization 산물이 아니라 q4f16 decoder export 에 내재**(NO_OPT 에서도 동일 노드로 실패).
+증분 디코딩 시 prefill(seq=N)→decode(seq=1) 로 shape 가 바뀌며 ORT 가 이 cast 출력 버퍼를 재사용하다
+`Shape mismatch attempting to re-use buffer {1,6,960}!={1,1,960}` 로 실패.
+
+### 실험 (decoder OrtSession opt-level sweep + 패딩 전략)
+| 실험 | 결과 |
+|---|---|
+| cached@ALL_OPT | ❌ Cast 에러 |
+| cached@EXTENDED_OPT | ❌ Cast 에러 |
+| cached@BASIC_OPT | ❌ Cast 에러 |
+| cached@NO_OPT | ❌ **Cast 에러 동일** (→ 최적화 산물 아님, export 내재 확정) |
+| **padded_nocache@ALL_OPT (PAD=16)** | ✅ **ok — 5 tokens `[…,198,504,2443,314]`, 788ms** |
+
+`setMemoryPatternOptimization(false)` 도 무효. `any_loop_ok=true` 는 **패딩 no-cache** 로 달성.
+
+### 해소 방법(구현·검증됨): 고정길이 패딩 + no-cache
+- 매 스텝 decoder.run 입력 shape 를 `[1,PAD]`(PAD=16) 로 **고정**(pad token=2, attention_mask 로 실제 토큰만 표시,
+  past_key_values 는 항상 빈 fp16) → ORT 버퍼 재사용 shape mismatch 를 회피.
+- 결과: 1~5 token greedy 생성 성공, 앱 크래시/OOM 없음. **단점**: KV-cache 미사용(매 스텝 전체 재계산)이라 느림 —
+  짧은 evidence 프롬프트엔 실용적, 긴 생성엔 비효율.
+- 메모리: 실험이 decoder 세션을 5개(4 opt + 1 padded) 로드해 PSS ~1.35GB 로 치솟았으나(실구현은 **세션 1개 재사용**),
+  OOM/crash 없음.
+
+### 권장 export/구현 전략
+1. **단기(현 자산)**: 패딩 no-cache(PAD=적정값)로 짧은 evidence 생성. 세션 1개 재사용 + max_new 작게.
+2. **KV-cache 복원 원하면**: decoder 를 **precision-free cast 없이 재-export**(또는 fp32/int8 decoder, non-merged
+   past/no-past 분리). transformers.js SmolVLM ONNX 파이프라인이 동일 export 라 cache feeding 방식 참고.
+3. 최신 ONNX Runtime(버퍼 재사용 shape 검증 개선)에서 cached loop 재시도.
+
+### 다음 작업(추론 완성까지)
+패딩 no-cache 위에 **image_features→inputs_embeds 병합**(image token 위치) + tokenizer/chat_template(현재 하드코딩)
++ detokenize + anyres → evidence JSON(서버 schema). 완성 시 `smol_android_runtime_verified`.

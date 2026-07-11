@@ -7,7 +7,7 @@
 > **후속 진행(2026-07-11):** Phase 0 감사 이후 end-to-end 파이프라인 안정화 + fallback 모델 확정 완료.
 > - fallback 후보 비교(A.X vs Qwen2.5-VL-7B) → **Qwen2.5-VL-7B + guard 채택**.
 > - full-test 잔여 FP=6 전수 재분류 → **VLM-eligible visual scope 기준 FP=0 → CONFIRM_ELIGIBLE_SCOPE**.
-> - `verified(water)` → 자동 확정 차단(`review_required=true` → 앱 재촬영 안내). 관리자 검수 큐는 범위 밖(future work). Smol 온디바이스 = onnxruntime-android 통합 + **Flip3 실기기 verifyImage spike L1~L3 성공**(vision/embed/decoder 1-step)(`smol_android_decoder_step_verified`, L4 KV-cache loop blocked→서버 fallback).
+> - `verified(water)` → 자동 확정 차단(`review_required=true` → 앱 재촬영 안내). 관리자 검수 큐는 범위 밖(future work). Smol 온디바이스 = onnxruntime-android 통합 + **Flip3 실기기 verifyImage spike L1~L4 성공**(vision/embed/decoder 1-step + generation loop via 패딩 no-cache)(`smol_android_generation_spike_no_cache_verified`, cached KV-cache loop 은 q4 export cast 로 blocked→서버 fallback).
 > - 상세: **`VLM_FALLBACK_STABILIZATION_REPORT.md`**, **`SMOL_ONDEVICE_STATUS.md`**.
 
 ---

@@ -11,10 +11,12 @@ import '../services/smol_ondevice_verifier.dart';
 /// - `getModelInfo`: 모델 파일 경로/존재/총 크기
 /// - `isModelAvailable`: 필수 파일 존재 여부
 /// - `warmup`: OrtSession 3종 로드 + input/output names + latency
-/// - `verifyImage`: (현재 미구현 → fallback_required, 정상 동작 확인용)
+/// - `verifyImage`: 추론 spike(L1~L4: vision/embed/decoder-step/padded no-cache gen)
+/// - `imageTextGen`: 이미지→텍스트 생성 spike(image merge + 패딩 no-cache 생성 + detokenize)
 ///
-/// **주의:** 실제 이미지 추론은 아직 미구현이다. 이 화면은 온디바이스 런타임 로드 검증용이며
-/// 일반 사용자 플로우와 분리된 dev 도구다. 모델 파일(~356MB)은 앱 `filesDir/models/smolvlm/` 에 있어야 한다
+/// **주의:** 실기기 이미지→텍스트 생성까지 검증됨(spike). 단 evidence JSON/Rule Engine 연결은
+/// 미구현이며 실제 인증은 서버 fallback 이 담당한다. 이 화면은 온디바이스 런타임 검증용 dev 도구로
+/// 일반 사용자 플로우와 분리돼 있다. 모델 파일(~356MB)은 앱 `filesDir/models/smolvlm/` 에 있어야 한다
 /// (배치 방법은 루트 `SMOL_ONDEVICE_STATUS.md` 참조).
 class SmolDiagnosticsScreen extends StatefulWidget {
   const SmolDiagnosticsScreen({super.key});
@@ -138,6 +140,15 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: _busy
+                  ? null
+                  : () => _run('image+text 생성 spike', () => _verifier.imageTextGen(
+                        imageFile: File(_imgPathCtl.text.trim()),
+                      )),
+              child: const Text('image+text 생성 (detokenize)'),
             ),
             const SizedBox(height: 16),
             Expanded(

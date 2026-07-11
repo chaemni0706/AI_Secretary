@@ -9,10 +9,12 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONObject
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import java.nio.LongBuffer
+import java.nio.charset.StandardCharsets
 
 /**
  * 온디바이스 SmolVLM-500M(q4f16 ONNX Runtime) 1차 evidence 브릿지.
@@ -51,6 +53,25 @@ class SmolVlmBridge(private val context: Context) {
         const val EOS_ID = 49279L
         // 고정 프롬프트 "Describe the image." 의 token ids(BOS 포함). tokenizer 미구현 spike 용.
         val PROMPT_IDS = longArrayOf(1L, 37964L, 260L, 2443L, 30L)
+
+        // --- image-text generation 용 (SmolVLM processor 출력, do_image_splitting=false) ---
+        const val HIDDEN = 960
+        const val IMG_TOKEN_ID = 49190L
+        const val IMG_POS_START = 5     // image_token 64개 시작 위치
+        const val IMG_FEAT_COUNT = 64   // vision_encoder image_features 토큰 수
+        // "<|im_start|>User:<image>×64 Describe the drink briefly.<end_of_utterance>\nAssistant:" 의 input_ids(len 80).
+        // (prefix 5) + (image_token 64 @ 위치 5..68) + (suffix 11). image_features 를 이미지 위치 임베딩에 치환 후 no-cache 생성.
+        val PROMPT_IMG_IDS: LongArray = run {
+            val prefix = longArrayOf(1L, 11126L, 42L, 49189L, 49152L)
+            val suffix = longArrayOf(49189L, 37964L, 260L, 5968L, 13099L, 30L, 49279L, 198L, 9519L, 9531L, 42L)
+            LongArray(prefix.size + IMG_FEAT_COUNT + suffix.size) { i ->
+                when {
+                    i < prefix.size -> prefix[i]
+                    i < prefix.size + IMG_FEAT_COUNT -> IMG_TOKEN_ID
+                    else -> suffix[i - prefix.size - IMG_FEAT_COUNT]
+                }
+            }
+        }
     }
 
     private fun modelDir(): File = File(context.filesDir, "models/smolvlm")
@@ -494,6 +515,170 @@ class SmolVlmBridge(private val context: Context) {
         )
     }
 
+    // ---- image + text generation spike -------------------------------------
+    private fun floatsOf(t: OnnxTensor, n: Int): FloatArray {
+        val out = FloatArray(n)
+        val fb = t.floatBuffer
+        fb.rewind()
+        fb.get(out, 0, minOf(n, fb.remaining()))
+        return out
+    }
+
+    /**
+     * 이미지+텍스트 짧은 생성 spike: vision_encoder → embed(prompt) → image_features 를 image_token 위치 임베딩에 병합
+     * → 고정길이 패딩 no-cache 로 N tokens greedy 생성 → detokenize. text 는 approximate(하드코딩 프롬프트/단일 512).
+     * fallback_required=true 유지(서버 fallback). 완성 인증 아님.
+     */
+    private fun imageTextGeneration(imagePath: String?, maxNew: Int, padLen: Int): HashMap<String, Any?> {
+        if (!isModelAvailable()) return hashMapOf("success" to false, "status" to "unavailable", "fallback_required" to true, "engine" to "smol_ondevice")
+        if (imagePath == null || !File(imagePath).exists()) return hashMapOf("success" to false, "status" to "no_image", "fallback_required" to true, "engine" to "smol_ondevice")
+        val env = OrtEnvironment.getEnvironment()
+        val levels = HashMap<String, Any?>()
+        val cl = ArrayList<AutoCloseable>()
+        val t0 = System.currentTimeMillis()
+        try {
+            val opts = OrtSession.SessionOptions()
+            val visionS = env.createSession(File(modelDir(), "vision_encoder_q4f16.onnx").absolutePath, opts); cl.add(visionS)
+            val embedS = env.createSession(File(modelDir(), "embed_tokens_q4f16.onnx").absolutePath, opts); cl.add(embedS)
+            val decS = env.createSession(File(modelDir(), "decoder_model_merged_q4f16.onnx").absolutePath, opts); cl.add(decS)
+
+            // 1) vision_encoder → image_features [1,64,960]
+            val (pv, mask) = preprocess(env, imagePath); cl.add(pv); cl.add(mask)
+            val rV = visionS.run(mapOf("pixel_values" to pv, "pixel_attention_mask" to mask)); cl.add(rV)
+            val feat = rV.get("image_features").get() as OnnxTensor
+            levels["vision_encoder"] = "ok ${feat.info.shape.toList()}"
+            val featArr = floatsOf(feat, IMG_FEAT_COUNT * HIDDEN)
+
+            // 2) embed prompt(image placeholder 포함) → [1,80,960]
+            val promptIds = PROMPT_IMG_IDS
+            val baseLen = promptIds.size
+            val idT = OnnxTensor.createTensor(env, LongBuffer.wrap(promptIds), longArrayOf(1, baseLen.toLong())); cl.add(idT)
+            val rE = embedS.run(mapOf("input_ids" to idT)); cl.add(rE)
+            val embT = rE.get("inputs_embeds").get() as OnnxTensor
+            levels["embed_tokens"] = "ok ${embT.info.shape.toList()}"
+            val seqEmb = floatsOf(embT, baseLen * HIDDEN)
+
+            // 3) merge: image_token(위치 5..68) 임베딩을 image_features 로 치환
+            for (i in 0 until IMG_FEAT_COUNT) {
+                System.arraycopy(featArr, i * HIDDEN, seqEmb, (IMG_POS_START + i) * HIDDEN, HIDDEN)
+            }
+            levels["image_merge"] = "ok (${IMG_FEAT_COUNT} tokens @${IMG_POS_START})"
+
+            if (baseLen + maxNew > padLen) {
+                return hashMapOf("success" to false, "status" to "padlen_too_small", "fallback_required" to true,
+                    "engine" to "smol_ondevice", "message" to "padLen($padLen) < baseLen($baseLen)+maxNew($maxNew)", "levels" to levels)
+            }
+
+            // 4) 고정길이 패딩 no-cache greedy 생성
+            val buf = FloatArray(padLen * HIDDEN) // zero-padded
+            System.arraycopy(seqEmb, 0, buf, 0, seqEmb.size)
+            var curLen = baseLen
+            val gen = ArrayList<Long>()
+            var loopErr: String? = null
+            for (step in 0 until maxNew) {
+                val stepCl = ArrayList<AutoCloseable>()
+                try {
+                    val eT = OnnxTensor.createTensor(env, FloatBuffer.wrap(buf.copyOf()), longArrayOf(1, padLen.toLong(), HIDDEN.toLong())); stepCl.add(eT)
+                    val am = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(padLen) { if (it < curLen) 1L else 0L }), longArrayOf(1, padLen.toLong())); stepCl.add(am)
+                    val pos = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(padLen) { it.toLong() }), longArrayOf(1, padLen.toLong())); stepCl.add(pos)
+                    val inputs = HashMap<String, OnnxTensor>()
+                    inputs["inputs_embeds"] = eT; inputs["attention_mask"] = am; inputs["position_ids"] = pos
+                    for (i in 0 until N_LAYERS) for (kv in listOf("key", "value")) {
+                        val t = emptyFp16Past(env); stepCl.add(t); inputs["past_key_values.$i.$kv"] = t
+                    }
+                    val r = decS.run(inputs); stepCl.add(r)
+                    val logits = r.get("logits").get() as OnnxTensor
+                    val vocab = logits.info.shape[2].toInt()
+                    val next = argmaxAt(logits.floatBuffer, (curLen - 1) * vocab, vocab)
+                    gen.add(next.toLong())
+                    if (next.toLong() == EOS_ID) break
+                    // 다음 토큰 임베딩 → buf 에 append
+                    val nT = OnnxTensor.createTensor(env, LongBuffer.wrap(longArrayOf(next.toLong())), longArrayOf(1, 1)); stepCl.add(nT)
+                    val nr = embedS.run(mapOf("input_ids" to nT)); stepCl.add(nr)
+                    val nvec = floatsOf(nr.get("inputs_embeds").get() as OnnxTensor, HIDDEN)
+                    if ((curLen + 1) * HIDDEN <= buf.size) System.arraycopy(nvec, 0, buf, curLen * HIDDEN, HIDDEN)
+                    curLen++
+                } catch (e: Throwable) {
+                    loopErr = errStr(e); break
+                } finally {
+                    for (c in stepCl.reversed()) try { c.close() } catch (_: Throwable) {}
+                }
+            }
+            if (loopErr != null && gen.isEmpty()) {
+                levels["generation_loop"] = "blocked: $loopErr"
+                return hashMapOf("success" to false, "status" to "generation_blocked", "fallback_required" to true,
+                    "engine" to "smol_ondevice", "levels" to levels, "error" to loopErr)
+            }
+            levels["generation_loop"] = "ok ${gen.size} tokens" + (loopErr?.let { " (stopped: $it)" } ?: "")
+
+            // 5) detokenize
+            val text = try { detokenize(gen) } catch (e: Throwable) { null }
+            levels["detokenize"] = if (text != null) "ok" else "blocked"
+
+            return hashMapOf(
+                "success" to false, "engine" to "smol_ondevice", "status" to "image_text_generation_ok",
+                "fallback_required" to true,
+                "generated_token_ids" to gen, "generated_text" to (text ?: ""),
+                "count" to gen.size, "latency_ms" to (System.currentTimeMillis() - t0),
+                "levels" to levels,
+                "note" to "image+text no-cache 생성 spike. single-512(anyres 미적용), 프롬프트 하드코딩 → 텍스트 approximate.",
+            )
+        } catch (e: Throwable) {
+            return hashMapOf("success" to false, "engine" to "smol_ondevice", "status" to "error",
+                "fallback_required" to true, "message" to errStr(e), "levels" to levels)
+        } finally {
+            for (c in cl.reversed()) try { c.close() } catch (_: Throwable) {}
+        }
+    }
+
+    // ---- detokenize (GPT2 byte-level BPE) -----------------------------------
+    private var idToToken: HashMap<Int, String>? = null
+
+    private val byteDecoder: HashMap<Char, Int> by lazy {
+        val bs = ArrayList<Int>()
+        for (i in 0x21..0x7E) bs.add(i)
+        for (i in 0xA1..0xAC) bs.add(i)
+        for (i in 0xAE..0xFF) bs.add(i)
+        val cs = ArrayList<Int>(bs)
+        var n = 0
+        for (b in 0..255) if (!bs.contains(b)) { bs.add(b); cs.add(256 + n); n++ }
+        val m = HashMap<Char, Int>()
+        for (i in bs.indices) m[cs[i].toChar()] = bs[i]
+        m
+    }
+
+    private fun loadIdToToken(): HashMap<Int, String> {
+        idToToken?.let { return it }
+        val map = HashMap<Int, String>()
+        val root = JSONObject(File(modelDir(), "tokenizer.json").readText())
+        val vocab = root.getJSONObject("model").getJSONObject("vocab")
+        val it = vocab.keys()
+        while (it.hasNext()) { val tokn = it.next(); map[vocab.getInt(tokn)] = tokn }
+        if (root.has("added_tokens")) {
+            val arr = root.getJSONArray("added_tokens")
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i); map[o.getInt("id")] = o.getString("content")
+            }
+        }
+        idToToken = map
+        return map
+    }
+
+    /** generated token ids → text. 특수토큰(<...>)은 건너뛰고, BPE 토큰은 GPT2 byte-level 디코드. */
+    private fun detokenize(ids: List<Long>): String {
+        val map = loadIdToToken()
+        val bytes = ArrayList<Byte>()
+        for (id in ids) {
+            val tok = map[id.toInt()] ?: continue
+            if (tok.startsWith("<") && tok.endsWith(">")) continue // 특수토큰 skip
+            for (ch in tok) {
+                val b = byteDecoder[ch]
+                if (b != null) bytes.add(b.toByte()) else bytes.add(ch.code.toByte())
+            }
+        }
+        return String(bytes.toByteArray(), StandardCharsets.UTF_8)
+    }
+
     fun register(flutterEngine: FlutterEngine) {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -507,6 +692,11 @@ class SmolVlmBridge(private val context: Context) {
                             verifyImage(call.argument("imagePath"), call.argument("task"))
                         )
                         "l4Experiment" -> result.success(l4Experiment())
+                        "imageTextGen" -> result.success(
+                            imageTextGeneration(call.argument("imagePath"),
+                                (call.argument<Int>("maxNew")) ?: 12,
+                                (call.argument<Int>("padLen")) ?: 96)
+                        )
                         // 하위호환(기존 Dart 오케스트레이터)
                         "isAvailable" -> result.success(isModelAvailable())
                         "inferEvidence" -> {

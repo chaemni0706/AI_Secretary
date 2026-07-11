@@ -9,10 +9,12 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_generation_spike_no_cache_verified`** (2026-07-11, Galaxy Z Flip3 실기기)
-(이전: … → `smol_android_decoder_step_verified` → **L4 generation loop 를 고정길이 패딩 no-cache 로 해소**.)
-- ✅ L1 vision_encoder / L2 embed_tokens / L3 decoder 1-step (§7) + **L4 generation loop 성공(고정길이 패딩 no-cache, 5 tokens 788ms)** (§8).
-- ❌ **KV-cache(cached) 증분 loop 은 여전히 blocked**(q4f16 export 내재 cast, opt level 무관). image-merge/tokenizer/detokenize/anyres 미구현 → 서버 fallback 유지. **"온디바이스 인증 완성" 아님.**
+**분류: `smol_android_image_text_generation_spike_verified`** (2026-07-12, Galaxy Z Flip3 실기기)
+(이전: … → `smol_android_generation_spike_no_cache_verified` → **이미지→텍스트 생성 성공**.)
+- ✅ **실기기에서 이미지 입력 기반 짧은 텍스트 생성 성공**: vision_encoder → embed → **image_features 병합** → 패딩 no-cache 생성 → **detokenize**.
+  샘플(노란 차 이미지)에 대해 **generated_text = "A glass of yellow liquid."** (의미 정확), 7 tokens, 8070ms, PSS ~437MB, OOM/crash 없음 (§9).
+- ⏳ **여전히 spike/diagnostics 전용**(프롬프트 하드코딩, single-512 anyres 미적용, 서버 evidence schema 미연결) → `fallback_required=true` 유지, 서버 fallback + water local accept 금지 유지.
+- ❌ cached KV-cache loop 은 여전히 blocked(q4 export cast, §8). **"온디바이스 인증 완성" 아님.**
 
 ### 실기기 session-load smoke 결과 (2026-07-11)
 | 항목 | 값 |
@@ -85,9 +87,9 @@
 ## 5. 상태 요약
 
 - ✅ onnxruntime-android 통합 + fallback-safe 브릿지 + local-first 배선 + APK 빌드 + **실기기 OrtSession 로드**, 그리고 **verifyImage spike L1~L3(vision_encoder/embed_tokens/decoder 1-step) 실기기 성공**(§7).
-- ✅ **L4 generation loop 성공(고정길이 패딩 no-cache, 5 tokens 788ms)** — cached KV-cache loop 은 q4 export 내재 cast 로 blocked(§8).
-- ⏳ image-merge/tokenizer/detokenize/anyres 미구현 → 서버 fallback.
-- ❌ "온디바이스 인증 완성" 아님(실기기 **완전 추론/evidence** 전까지). 현 분류: `smol_android_generation_spike_no_cache_verified`.
+- ✅ **L4 generation loop(패딩 no-cache) + image merge + detokenize → 이미지→텍스트 생성 실기기 성공**("A glass of yellow liquid", §8/§9). cached KV-cache loop 은 q4 export cast 로 blocked.
+- ⏳ evidence JSON/동적 tokenizer/anyres 미구현, 인증 미연결 → 서버 fallback.
+- ❌ "온디바이스 인증 완성" 아님(evidence→Rule Engine 연결 전까지). 현 분류: `smol_android_image_text_generation_spike_verified`.
 - 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback / `review_required`(재촬영). exercise/study 만 local accept 적극 허용 가능.
 
 ## 6. 실기기 session-load smoke — 상태 & 수동 runbook (2026-07-11)
@@ -210,3 +212,40 @@ L4 실패 노드 `InsertedPrecisionFreeCast_/model/layers.1/attn/v_proj/repeat_k
 ### 다음 작업(추론 완성까지)
 패딩 no-cache 위에 **image_features→inputs_embeds 병합**(image token 위치) + tokenizer/chat_template(현재 하드코딩)
 + detokenize + anyres → evidence JSON(서버 schema). 완성 시 `smol_android_runtime_verified`.
+
+## 9. 이미지→텍스트 생성 spike (2026-07-12, Flip3 실기기 성공)
+
+패딩 no-cache 생성 위에 **tokenizer(detokenize) + image_features 병합**을 붙여 실기기에서 이미지 기반 짧은 텍스트 생성 검증.
+
+### 구성
+- **프롬프트/이미지 토큰**: SmolVLM processor(do_image_splitting=false) 출력 input_ids(len 80) 하드코딩.
+  구조: `<|im_start|>User:<image>×64 Describe the drink briefly.<end_of_utterance>\nAssistant:`.
+  image_token(`49190`) 64개가 위치 5..68 (config `image_token_id=49190`).
+- **image merge**: vision_encoder `image_features[1,64,960]` 를 embed_tokens 출력 `inputs_embeds[1,80,960]` 의
+  image_token 위치(5..68) 임베딩에 **치환**(System.arraycopy). = SmolVLM 의 이미지 임베딩 주입 방식.
+- **생성**: 고정길이 패딩 no-cache(PAD=96) greedy, EOS(`49279`=<end_of_utterance>)에서 정지.
+- **detokenize**: `tokenizer.json` 의 model.vocab(49152) + added_tokens(145) 로 id→token, **GPT2 byte-level BPE** 역디코드
+  (bytes_to_unicode 역맵), 특수토큰(`<...>`) skip.
+
+### 실기기 결과 (sample = water_020.jpg, 노란 차/주스 한 잔)
+| level | 결과 |
+|---|---|
+| vision_encoder | ok `[1,64,960]` |
+| embed_tokens | ok `[1,80,960]` |
+| **image_merge** | ok (64 tokens @5) |
+| **generation_loop** | ok **7 tokens** `[330,4433,282,5724,5553,30,49279]` (EOS 정지) |
+| **detokenize** | ok |
+| **generated_text** | **`"A glass of yellow liquid."`** ← 이미지(노란 액체) 의미 정확 |
+| latency | **8070 ms** (vision + 7-token no-cache 생성) |
+| memory | 앱 PSS ~437MB, **OOM/crash 없음** |
+| fallback_required | true (diagnostics 전용, 인증 미연결) |
+
+→ **온디바이스 이미지→일관 텍스트 생성 파이프라인이 실기기에서 실제로 동작**함을 검증. image merge/tokenizer/detokenize 모두 정상.
+
+### 남은 작업(인증 완성까지)
+1. **evidence JSON 생성**: 자유 텍스트 대신 서버와 동일한 evidence schema(visible_objects/positive_evidence/blockers/uncertainty…)로
+   출력하도록 프롬프트/파싱 설계 → 기존 Rule Engine 매핑 연결.
+2. **동적 tokenizer**: 현재 프롬프트 input_ids 하드코딩 → tokenizer(encode) 온디바이스 구현(또는 고정 프롬프트 유지).
+3. **anyres splitting**: 다중 타일(정확도↑). 현재 single-512.
+4. **성능**: no-cache 라 8s. KV-cache 복원(decoder 재-export) 또는 PAD/토큰수 축소.
+5. 완성·검증 후 `smol_android_runtime_verified` + 앱 local accept(단, water 는 정책상 여전히 서버/review).

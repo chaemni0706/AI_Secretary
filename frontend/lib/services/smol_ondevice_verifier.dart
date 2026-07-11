@@ -86,6 +86,21 @@ class SmolOndeviceVerifier {
     }
   }
 
+  /// image+text 짧은 생성 spike(dev): vision→embed→image merge→no-cache 생성→detokenize. fallback-safe.
+  Future<Map<String, dynamic>?> imageTextGen({required File imageFile, int maxNew = 12, int padLen = 96}) async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('imageTextGen', {
+        'imagePath': imageFile.path,
+        'maxNew': maxNew,
+        'padLen': padLen,
+      });
+    } on MissingPluginException {
+      return {'success': false, 'status': 'unavailable', 'fallback_required': true};
+    } on PlatformException catch (e) {
+      return {'success': false, 'status': 'error', 'fallback_required': true, 'message': e.message};
+    }
+  }
+
   /// 오케스트레이터용: **로컬 채택 가능한 evidence** 가 나오면 map 을, 아니면 null 을 반환(→ 서버 fallback).
   /// 현재 네이티브 추론이 미구현이라 항상 null(fallback) — 온디바이스 추론이 붙으면 evidence map 반환.
   Future<Map<String, dynamic>?> inferEvidence({

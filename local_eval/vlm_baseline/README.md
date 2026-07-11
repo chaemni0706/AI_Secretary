@@ -28,7 +28,8 @@
 > such as contamination, toilet water, or visually indistinguishable alcohol, are excluded from VLM-only
 > automatic confirmation and must be handled by secondary_review or context-based rules.
 
-- **secondary_review 정책**: `verified(water)` → `review_required=true`(비시각 맥락 리스크). exercise/study 는 FP=0 자동 확정.
+- **secondary_review 정책 + 운영 큐**: `verified(water)` → `review_required=true`, `review_status=pending`(비시각 맥락 리스크).
+  backend 큐/API(pending 목록·상세·결정) → 루트 `SECONDARY_REVIEW_FLOW.md`. exercise/study 는 FP=0 자동 확정.
 - **Smol 온디바이스**: ONNX q4f16 자산 + Dart/Kotlin 스텁 구현(`smol_android_runtime_stubbed`) → 루트 `SMOL_ONDEVICE_STATUS.md`.
 
 ### FP=0 hard guard (`vlm_fp_guard.py`)

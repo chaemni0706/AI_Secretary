@@ -192,3 +192,16 @@ exercise verified → `"review_required": false, "review_reason": ""` (자동 �
 ### 테스트
 `tests/test_image_verification_review_policy.py`(5 cases): water verified→review, water rejected/exercise verified→no review,
 응답 필드 노출, schema 기본값 하위호환. → 기존 53 + 신규 5 = **58 passed**(회귀 없음).
+
+---
+
+## 10. Secondary review 운영 큐 (2026-07-11)
+
+`verified(water)` 를 자동 최종 성공으로 처리하지 않고 **pending → approved/rejected/needs_retake** 운영 상태로 추적.
+상세: **`SECONDARY_REVIEW_FLOW.md`**.
+
+- schema: `ImageVerificationData` 에 `review_status`(none|pending|approved|rejected|needs_retake), `verification_id` 추가. enum 불변.
+- store: `backend/services/secondary_review_service.py` `SecondaryReviewStore`(in-memory, 기존 wakeup 선례와 동일 PoC — 프로덕션은 DB 백킹 필요).
+- API: `POST /image-verifications`(review_required 면 pending 등록+id), `GET …/reviews/pending`, `GET …/reviews/{id}`, `POST …/reviews/{id}/decision`.
+- 정책: 최종 성공 판단은 `review_status==approved`. 현재 이미지 인증을 소비하는 포인트/챌린지 로직은 없음(감사 확인) → 향후 추가 시 pending water 는 성공/보상 제외.
+- tests: `test_secondary_review_queue.py`(8) — 등록/목록/상세/결정(approved·rejected·needs_retake)/404/exercise 미등록. 회귀 없음.

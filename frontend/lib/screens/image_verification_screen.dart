@@ -284,9 +284,14 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
                 '${r.score != null ? '  ·  점수: ${r.score}' : ''}'),
             if (r.needsSecondaryReview) ...[
               const SizedBox(height: 6),
+              const Text(
+                '물 인증은 이미지상 통과 가능성이 있지만, 물의 종류나 촬영 맥락 확인이 필요해 '
+                '검수 대기 상태로 전환되었어요. 검수 완료 후 최종 인증 여부가 반영됩니다.',
+                style: TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
+              ),
               Text(
-                '외관만으로는 확정이 어려워 추가 확인이 필요해요 (${r.reviewReason}).',
-                style: const TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
+                '상태: 검수 대기 · 사유: ${r.reviewReason}',
+                style: const TextStyle(fontSize: 11, color: Color(0xFFB0812A)),
               ),
             ],
             if (r.reasons.isNotEmpty) ...[

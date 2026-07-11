@@ -7,7 +7,7 @@
 > **후속 진행(2026-07-11):** Phase 0 감사 이후 end-to-end 파이프라인 안정화 + fallback 모델 확정 완료.
 > - fallback 후보 비교(A.X vs Qwen2.5-VL-7B) → **Qwen2.5-VL-7B + guard 채택**.
 > - full-test 잔여 FP=6 전수 재분류 → **VLM-eligible visual scope 기준 FP=0 → CONFIRM_ELIGIBLE_SCOPE**.
-> - `verified(water)` → 자동 확정 차단(`review_required=true` → 앱 재촬영 안내). 관리자 검수 큐는 범위 밖(future work). Smol 온디바이스 = onnxruntime-android 통합 + **이미지→텍스트 생성 + generated_text→Rule Engine 호환 evidence 변환**(diagnostics-only; water task 실기기 검증: 노란차→`[non_water_beverage]` blocker, study 코드경로 검증; study-positive/exercise 는 실기기 data-dir EROFS 로 host-mirror 결정론 검증)(`smol_android_evidence_spike_partial`, evidence→Rule Engine 자동판정·앱 인증 미연결→서버 fallback + water local accept 금지 유지).
+> - `verified(water)` → 자동 확정 차단(`review_required=true` → 앱 재촬영 안내). 관리자 검수 큐는 범위 밖(future work). Smol 온디바이스 = onnxruntime-android 통합 + **이미지→텍스트 생성 + generated_text→Rule Engine 호환 evidence 변환**(diagnostics-only; 실기기 6장 task 스모크 완료(gallery picker=image_picker→cache 로 EROFS/FUSE 우회): water 생성·evidence 정확(맑은물→visible_water, 주스→non_water_beverage), study/exercise 는 하드코딩 water-프롬프트로 생성 부정확→파서 보수 fallback(false-accept 0), payload backend Rule Engine 투입 확인)(`smol_android_evidence_spike_partial`, evidence→Rule Engine 자동판정·앱 인증 미연결→서버 fallback + water local accept 금지 유지).
 > - 상세: **`VLM_FALLBACK_STABILIZATION_REPORT.md`**, **`SMOL_ONDEVICE_STATUS.md`**.
 
 ---

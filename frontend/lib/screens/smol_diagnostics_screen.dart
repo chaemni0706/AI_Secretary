@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/smol_ondevice_verifier.dart';
 
@@ -44,6 +45,20 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
   void dispose() {
     _imgPathCtl.dispose();
     super.dispose();
+  }
+
+  /// 갤러리에서 이미지 선택(dev). image_picker 는 선택 파일을 앱 캐시로 복사해 반환하므로
+  /// 앱 프로세스가 바로 읽을 수 있다(실기기 data-dir EROFS / 외부 dir FUSE 격리 우회).
+  Future<void> _pickFromGallery() async {
+    try {
+      final XFile? x = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (x == null) return;
+      if (!mounted) return;
+      setState(() => _imgPathCtl.text = x.path);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _output = '갤러리 선택 실패: $e');
+    }
   }
 
   Future<void> _run(String label, Future<Object?> Function() action) async {
@@ -110,6 +125,12 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
                   child: const Text('warmup'),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            FilledButton.tonalIcon(
+              onPressed: _busy ? null : _pickFromGallery,
+              icon: const Icon(Icons.photo_library, size: 18),
+              label: const Text('갤러리에서 이미지 선택 (EROFS/FUSE 우회)'),
             ),
             const SizedBox(height: 8),
             TextField(

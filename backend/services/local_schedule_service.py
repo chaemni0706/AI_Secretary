@@ -35,6 +35,7 @@ def _to_read(item) -> ScheduleRead:
         memo=item.description,
         status=pm.status_from_db(item.status),
         source=pm.source_from_db(item.source_type),
+        is_all_day=bool(ev.is_all_day) if ev else False,
         travel_time_minutes=ev.travel_time_minutes if ev else None,
         created_at=item.created_at,
         updated_at=item.updated_at,
@@ -45,6 +46,10 @@ def create_schedule(
     db: Session, payload: ScheduleCreate, *, user_id: str, calendar_id: str
 ) -> ScheduleRead:
     item_id = uuid.uuid4().hex
+    # 하루 종일: is_all_day 플래그가 켜졌거나 start_time 이 없으면 all-day 로 저장하고
+    # start_at 은 00:00 으로 채운다(event_details.start_at 은 NOT NULL).
+    is_all_day = 1 if (payload.is_all_day or payload.start_time is None) else 0
+    start_time = payload.start_time or "00:00"
     item = repo.create_planner_item(
         db, item_id=item_id, user_id=user_id, item_type="EVENT",
         title=payload.title, description=payload.memo, category=payload.category,
@@ -53,8 +58,9 @@ def create_schedule(
     )
     repo.create_event_detail(
         db, item_id=item_id, calendar_id=calendar_id,
-        start_at=pm.combine_date_time(payload.date, payload.start_time),
+        start_at=pm.combine_date_time(payload.date, start_time),
         end_at=pm.combine_date_time(payload.date, payload.end_time),
+        is_all_day=is_all_day,
         location_text=payload.location,
         travel_time_minutes=payload.travel_time_minutes,
     )
@@ -113,6 +119,8 @@ def update_schedule(
             ev.end_at = pm.combine_date_time(new_date, pm.time_from_dt(ev.end_at))
         if payload.location is not None:
             ev.location_text = payload.location
+        if payload.is_all_day is not None:
+            ev.is_all_day = 1 if payload.is_all_day else 0
         if payload.travel_time_minutes is not None:
             ev.travel_time_minutes = payload.travel_time_minutes
         db.flush()

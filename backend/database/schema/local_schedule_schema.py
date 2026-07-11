@@ -15,13 +15,15 @@ from pydantic import BaseModel, ConfigDict, Field
 class ScheduleCreate(BaseModel):
     title: str
     date: str = Field(..., description="'YYYY-MM-DD'")
-    start_time: str = Field(..., description="'HH:mm'")
+    # 하루 종일 일정은 start_time 없이 저장 가능(서버가 00:00 로 채우고 is_all_day=1).
+    start_time: Optional[str] = Field(None, description="'HH:mm' (하루 종일이면 생략 가능)")
     end_time: Optional[str] = Field(None, description="'HH:mm'")
     category: Optional[str] = None
     priority: str = "medium"
     location: Optional[str] = None
     memo: Optional[str] = None
     source: str = "user"
+    is_all_day: bool = Field(False, description="하루 종일 일정 여부")
     travel_time_minutes: Optional[int] = None
 
     model_config = ConfigDict(
@@ -52,6 +54,7 @@ class ScheduleUpdate(BaseModel):
     memo: Optional[str] = None
     status: Optional[str] = None
     source: Optional[str] = None
+    is_all_day: Optional[bool] = None
     travel_time_minutes: Optional[int] = None
 
     model_config = ConfigDict(
@@ -78,6 +81,7 @@ class ScheduleRead(BaseModel):
     memo: Optional[str] = None
     status: str
     source: str
+    is_all_day: bool = False
     travel_time_minutes: Optional[int] = None
     created_at: str
     updated_at: str

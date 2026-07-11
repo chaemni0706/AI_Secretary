@@ -24,6 +24,7 @@ class ScheduleModel {
   final String? memo;
   final String status;
   final String source;
+  final bool isAllDay;
   final int? travelTimeMinutes;
 
   const ScheduleModel({
@@ -39,6 +40,7 @@ class ScheduleModel {
     this.memo,
     this.status = 'scheduled',
     this.source = 'user',
+    this.isAllDay = false,
     this.travelTimeMinutes,
   });
 
@@ -57,6 +59,7 @@ class ScheduleModel {
       memo: json['memo'] as String?,
       status: (json['status'] ?? 'scheduled').toString(),
       source: (json['source'] ?? 'user').toString(),
+      isAllDay: json['is_all_day'] == true,
       travelTimeMinutes: json['travel_time_minutes'] as int?,
     );
   }
@@ -118,6 +121,7 @@ class ScheduleModel {
     String? priority,
     String? location,
     String? memo,
+    bool? isAllDay,
   }) {
     return ScheduleModel(
       id: id,
@@ -132,6 +136,7 @@ class ScheduleModel {
       memo: memo ?? this.memo,
       status: status,
       source: source,
+      isAllDay: isAllDay ?? this.isAllDay,
       travelTimeMinutes: travelTimeMinutes,
     );
   }

@@ -31,6 +31,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
 
   String _category = ScheduleStyles.categoryOrder.last;
   String _priority = 'medium';
+  bool _isAllDay = false;
   bool _saving = false;
   bool _datePickerOpen = false;
   bool _startTimePickerOpen = false;
@@ -57,6 +58,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
     _memoController.text = schedule.memo ?? '';
     _category = ScheduleStyles.categoryLabel(schedule.category);
     _priority = schedule.priority;
+    _isAllDay = schedule.isAllDay;
     _focusedDate =
         ScheduleDateParser.parse(_dateController.text) ?? DateTime.now();
   }
@@ -148,13 +150,15 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
     return {
       'title': _titleController.text.trim(),
       'date': _dateController.text.trim(),
-      'start_time': _startTimeController.text.trim(),
-      'end_time': optional(_endTimeController.text),
+      // 하루 종일이면 시간은 보내지 않는다(서버가 00:00·is_all_day=1 로 저장).
+      'start_time': _isAllDay ? null : optional(_startTimeController.text),
+      'end_time': _isAllDay ? null : optional(_endTimeController.text),
       'category': _category,
       'priority': _priority,
       'location': optional(_locationController.text),
       'memo': optional(_memoController.text),
       'source': widget.initialSchedule?.source ?? 'user',
+      'is_all_day': _isAllDay,
     };
   }
 
@@ -172,22 +176,25 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
       return;
     }
     if (!_normalizeDateInput(showError: true)) return;
-    if (startTime.isEmpty) {
-      _showMessage('시작 시간을 입력해 주세요.');
-      return;
-    }
-    if (_minutesOfDay(startTime) == null) {
-      _showMessage('시작 시간은 HH:mm 형식으로 입력해 주세요.');
-      return;
-    }
-    final endTime = _endTimeController.text.trim();
-    if (endTime.isNotEmpty && _minutesOfDay(endTime) == null) {
-      _showMessage('종료 시간은 HH:mm 형식으로 입력해 주세요.');
-      return;
-    }
-    if (!_isTimeOrderValid()) {
-      _showMessage('종료 시간은 시작 시간보다 늦어야 합니다.');
-      return;
+    // 하루 종일 일정은 시간 입력/검증을 건너뛴다.
+    if (!_isAllDay) {
+      if (startTime.isEmpty) {
+        _showMessage('시작 시간을 입력해 주세요.');
+        return;
+      }
+      if (_minutesOfDay(startTime) == null) {
+        _showMessage('시작 시간은 HH:mm 형식으로 입력해 주세요.');
+        return;
+      }
+      final endTime = _endTimeController.text.trim();
+      if (endTime.isNotEmpty && _minutesOfDay(endTime) == null) {
+        _showMessage('종료 시간은 HH:mm 형식으로 입력해 주세요.');
+        return;
+      }
+      if (!_isTimeOrderValid()) {
+        _showMessage('종료 시간은 시작 시간보다 늦어야 합니다.');
+        return;
+      }
     }
 
     setState(() => _saving = true);
@@ -262,23 +269,26 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                     onDateSelected: _selectDate,
                     onNormalize: () => _normalizeDateInput(),
                   ),
-                  ScheduleTimePickerRow(
-                    controller: _startTimeController,
-                    label: '시작',
-                    icon: Icons.schedule_outlined,
-                    expanded: _startTimePickerOpen,
-                    onExpandedChanged: (_) => _closePickersExcept('start'),
-                    onTimeSelected: _selectStartTime,
-                  ),
-                  ScheduleTimePickerRow(
-                    controller: _endTimeController,
-                    label: '종료',
-                    icon: Icons.schedule_send_outlined,
-                    expanded: _endTimePickerOpen,
-                    onExpandedChanged: (_) => _closePickersExcept('end'),
-                    onTimeSelected: _selectEndTime,
-                    showDivider: false,
-                  ),
+                  // 하루 종일이면 시작/종료 시간 선택을 숨긴다.
+                  if (!_isAllDay) ...[
+                    ScheduleTimePickerRow(
+                      controller: _startTimeController,
+                      label: '시작',
+                      icon: Icons.schedule_outlined,
+                      expanded: _startTimePickerOpen,
+                      onExpandedChanged: (_) => _closePickersExcept('start'),
+                      onTimeSelected: _selectStartTime,
+                    ),
+                    ScheduleTimePickerRow(
+                      controller: _endTimeController,
+                      label: '종료',
+                      icon: Icons.schedule_send_outlined,
+                      expanded: _endTimePickerOpen,
+                      onExpandedChanged: (_) => _closePickersExcept('end'),
+                      onTimeSelected: _selectEndTime,
+                      showDivider: false,
+                    ),
+                  ],
                 ],
               ),
               ScheduleFormSection(
@@ -313,26 +323,27 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                 ],
               ),
               ScheduleFormSection(
-                children: const [
-                  ScheduleDisabledOptionRow(
+                children: [
+                  const ScheduleDisabledOptionRow(
                     icon: Icons.group_outlined,
                     label: '참석자',
                     value: '추후 지원',
                   ),
-                  ScheduleDisabledOptionRow(
+                  const ScheduleDisabledOptionRow(
                     icon: Icons.notifications_outlined,
                     label: '알림',
                     value: '추후 지원',
                   ),
-                  ScheduleDisabledOptionRow(
+                  const ScheduleDisabledOptionRow(
                     icon: Icons.repeat,
                     label: '반복',
                     value: '추후 지원',
                   ),
-                  ScheduleDisabledOptionRow(
+                  ScheduleToggleOptionRow(
                     icon: Icons.wb_sunny_outlined,
                     label: '하루 종일',
-                    value: '추후 지원',
+                    value: _isAllDay,
+                    onChanged: (v) => setState(() => _isAllDay = v),
                     showDivider: false,
                   ),
                 ],

@@ -607,6 +607,41 @@ class ScheduleDisabledOptionRow extends StatelessWidget {
   }
 }
 
+/// 켜고 끌 수 있는 옵션 행(예: 하루 종일). 우측에 Switch 를 둔다.
+class ScheduleToggleOptionRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final bool showDivider;
+
+  const ScheduleToggleOptionRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.showDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ScheduleFormRow(
+      icon: icon,
+      label: label,
+      showDivider: showDivider,
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Switch.adaptive(
+          value: value,
+          activeColor: AppTheme.blue,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
 class ScheduleFormSubmitButton extends StatelessWidget {
   final bool saving;
   final String label;

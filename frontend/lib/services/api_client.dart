@@ -19,7 +19,7 @@ String _resolveBaseUrl() {
     final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
     return 'http://$host:8000';
   }
-  return 'http://192.168.0.73:8000';
+  return 'http://172.30.1.14:8000';
 }
 
 /// API 공통 prefix (`/health` 제외).
@@ -61,7 +61,9 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
+        // 서버 미도달(연결 거부/잘못된 IP/오프라인)은 빠르게 판정해 온디바이스
+        // 폴백으로 전환한다. 서버 처리 시간은 receiveTimeout 으로 별도 확보.
+        connectTimeout: const Duration(seconds: 4),
         receiveTimeout: const Duration(seconds: 10),
         // 공통 헤더: JSON 요청/응답 + 클라이언트 타임존(서버가 상대날짜 해석에 참고 가능).
         headers: {

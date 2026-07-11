@@ -55,6 +55,24 @@ class ParseResult {
 }
 
 class ScheduleApi {
+  // --- 전체 목록(날짜 미지정) 캐시 -------------------------------------------
+  // 콜드 스타트 시 main() 과 CalendarScreen 이 거의 동시에 list() 를 호출한다.
+  // 진행 중 요청을 공유(in-flight dedup)해 중복 네트워크 호출을 없애고, 짧은
+  // TTL 캐시로 연속 호출을 재사용한다. 캐시는 생성/수정/삭제 시 무효화한다.
+  static const Duration _cacheTtl = Duration(seconds: 30);
+  List<ScheduleModel>? _cachedAll;
+  DateTime? _cachedAt;
+  Future<List<ScheduleModel>>? _inFlightAll;
+
+  /// 캐시된 전체 목록(있으면 즉시 반환, 없으면 null). UI 즉시 표시용.
+  List<ScheduleModel>? get cachedAll => _cachedAll;
+
+  /// 캐시 무효화(일정 변경 후 호출).
+  void invalidateCache() {
+    _cachedAll = null;
+    _cachedAt = null;
+  }
+
   /// 1) 자연어 파싱: `POST /api/v1/ai/schedule/parse`
   ///
   /// [inputType] 은 `"text"` 또는 `"voice"`. 음성 비서 화면에서는 `"voice"` 로
@@ -102,6 +120,7 @@ class ScheduleApi {
         if (intent != null) 'intent': intent,
       },
     );
+    invalidateCache();
     return ScheduleModel.fromJson(data as Map<String, dynamic>);
   }
 
@@ -111,6 +130,7 @@ class ScheduleApi {
       '$apiPrefix/local/schedules',
       body: payload,
     );
+    invalidateCache();
     return ScheduleModel.fromJson(data as Map<String, dynamic>);
   }
 
@@ -123,16 +143,45 @@ class ScheduleApi {
       '$apiPrefix/local/schedules/$scheduleId',
       body: payload,
     );
+    invalidateCache();
     return ScheduleModel.fromJson(data as Map<String, dynamic>);
   }
 
   /// 일정 삭제: `DELETE /api/v1/local/schedules/{id}`
   Future<void> delete(String scheduleId) async {
     await apiClient.deleteData('$apiPrefix/local/schedules/$scheduleId');
+    invalidateCache();
   }
 
   /// 목록: `GET /api/v1/local/schedules`
-  Future<List<ScheduleModel>> list({String? date}) async {
+  ///
+  /// [date] 미지정(전체 목록)일 때만 캐시/dedup 을 적용한다. [forceRefresh] 로
+  /// 캐시를 건너뛰고 서버를 다시 조회할 수 있다(당겨서 새로고침 등).
+  Future<List<ScheduleModel>> list({String? date, bool forceRefresh = false}) {
+    if (date != null) return _fetch(date: date);
+
+    if (!forceRefresh) {
+      final at = _cachedAt;
+      if (_cachedAll != null &&
+          at != null &&
+          DateTime.now().difference(at) < _cacheTtl) {
+        return Future.value(_cachedAll!);
+      }
+      // 이미 진행 중인 동일 요청이 있으면 그 Future 를 공유한다.
+      final pending = _inFlightAll;
+      if (pending != null) return pending;
+    }
+
+    final future = _fetch().then((schedules) {
+      _cachedAll = schedules;
+      _cachedAt = DateTime.now();
+      return schedules;
+    }).whenComplete(() => _inFlightAll = null);
+    _inFlightAll = future;
+    return future;
+  }
+
+  Future<List<ScheduleModel>> _fetch({String? date}) async {
     final data = await apiClient.getData(
       '$apiPrefix/local/schedules',
       query: date != null ? {'date': date} : null,

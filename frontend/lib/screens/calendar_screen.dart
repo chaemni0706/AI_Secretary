@@ -85,9 +85,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _weekAnchor.subtract(Duration(days: (page - _weekPageOffset) * 7));
 
   Future<void> _loadSchedules() async {
+    // 캐시가 있으면 스피너 없이 즉시 그리고, 뒤에서 서버 결과로 갱신한다.
+    final cached = scheduleApi.cachedAll;
     if (mounted) {
       setState(() {
-        _loading = true;
+        if (cached != null) {
+          _all = cached;
+          _loading = false;
+        } else {
+          _loading = true;
+        }
         _error = null;
       });
     }

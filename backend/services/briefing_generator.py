@@ -60,6 +60,15 @@ DEFAULT_BRIEFING_RULES: dict = {
     "todo_checklist_suffix": "챙기기",
     "other_schedule_daypart_suffix": "에는 ",
     "limits": {"max_key_points": 5},
+    # 날씨 안내/준비 팁 문구(있을 때만 사용). 임계값은 weather_thresholds 로 조정.
+    "weather_templates": {
+        "info": "오늘 날씨는 {info}예요.",
+        "rain": "오늘은 {precip} 소식이 있어요{pop_suffix}. 우산을 챙기세요.",
+        "cold": "오늘은 쌀쌀해요(최고 {temp_max}℃). 따뜻하게 입으세요.",
+        "hot": "오늘은 더워요(최고 {temp_max}℃). 수분을 챙기세요.",
+        "pop_suffix": "(강수확률 {pop}%)",
+    },
+    "weather_thresholds": {"rain_pop": 60, "cold_max_temp": 5, "hot_max_temp": 30},
 }
 
 
@@ -213,6 +222,56 @@ def _todo_stem(title: str) -> str:
     return title.strip()
 
 
+def _fmt_temp(v) -> str:
+    """숫자 온도를 정수 문자열로. 값이 없거나 변환 실패 시 빈 문자열."""
+    try:
+        return str(int(round(float(v))))
+    except (TypeError, ValueError):
+        return ""
+
+
+def _weather_key_point(weather, brules: dict) -> Optional[str]:
+    """오늘 날씨 요약을 한 문장으로. 우선순위: 강수 > 추위/더위 > 일반 안내.
+
+    weather 가 없거나 표시할 정보가 없으면 None(브리핑에 날씨 줄을 넣지 않음).
+    """
+    if weather is None:
+        return None
+    wt = brules.get("weather_templates", {})
+    th = brules.get("weather_thresholds", {})
+
+    precip = (getattr(weather, "precipitation", None) or "").strip()
+    is_precip = precip not in ("", "없음")
+    pop = getattr(weather, "max_pop", None)
+    pop_high = isinstance(pop, int) and pop >= th.get("rain_pop", 60)
+
+    # 1) 비/눈 예보 또는 높은 강수확률 → 우산 팁.
+    if is_precip or pop_high:
+        precip_word = precip if is_precip else "비"
+        pop_suffix = wt["pop_suffix"].format(pop=pop) if isinstance(pop, int) else ""
+        return wt["rain"].format(precip=precip_word, pop_suffix=pop_suffix)
+
+    # 2) 최고기온 기준 추위/더위 팁.
+    tmax = getattr(weather, "temp_max", None)
+    if isinstance(tmax, (int, float)):
+        if tmax <= th.get("cold_max_temp", 5):
+            return wt["cold"].format(temp_max=_fmt_temp(tmax))
+        if tmax >= th.get("hot_max_temp", 30):
+            return wt["hot"].format(temp_max=_fmt_temp(tmax))
+
+    # 3) 그 외 일반 안내(하늘/기온이 있을 때만).
+    sky = getattr(weather, "sky", None)
+    temp_c = getattr(weather, "temp_c", None)
+    parts: List[str] = []
+    if sky:
+        parts.append(sky)
+    if temp_c is not None and _fmt_temp(temp_c):
+        parts.append(f"{_fmt_temp(temp_c)}℃")
+    if parts:
+        return wt["info"].format(info=", ".join(parts))
+    return None
+
+
 def _summary_schedule_phrase(s: BriefingSchedule) -> str:
     dp = _daypart(s.start_time)
     if not dp or s.title.startswith(dp):
@@ -333,6 +392,11 @@ def generate_briefing(req: DailyBriefingRequest, preferences: Optional[dict] = N
         key_points.append(k_tpl["other_schedule"].format(
             daypart_prefix=prefix, title=s.title, subject_particle=_i_ga(s.title)
         ))
+
+    # 날씨 안내는 맨 앞에 배치(있을 때만). max_key_points 트림보다 먼저 넣어 보장.
+    weather_kp = _weather_key_point(getattr(req, "weather", None), brules)
+    if weather_kp:
+        key_points.insert(0, weather_kp)
 
     if isinstance(max_kp, int) and max_kp > 0:
         key_points = key_points[:max_kp]

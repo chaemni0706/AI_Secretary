@@ -12,10 +12,12 @@ import '../services/smol_ondevice_verifier.dart';
 /// - `isModelAvailable`: 필수 파일 존재 여부
 /// - `warmup`: OrtSession 3종 로드 + input/output names + latency
 /// - `verifyImage`: 추론 spike(L1~L4: vision/embed/decoder-step/padded no-cache gen)
-/// - `imageTextGen`: 이미지→텍스트 생성 spike(image merge + 패딩 no-cache 생성 + detokenize)
+/// - `imageTextGen`: 이미지→텍스트 생성 + task별 evidence 변환 spike
+///   (image merge + 패딩 no-cache 생성 + detokenize + [SmolEvidenceParser] → Rule Engine 호환 payload)
 ///
-/// **주의:** 실기기 이미지→텍스트 생성까지 검증됨(spike). 단 evidence JSON/Rule Engine 연결은
-/// 미구현이며 실제 인증은 서버 fallback 이 담당한다. 이 화면은 온디바이스 런타임 검증용 dev 도구로
+/// **주의:** 실기기 이미지→텍스트 생성 + evidence 변환까지 검증됨(diagnostics-only spike). 단 evidence→Rule Engine
+/// 자동 판정/앱 인증 연결은 미구현이며 실제 인증은 서버 fallback 이 담당한다(water local accept 금지 유지).
+/// 이 화면은 온디바이스 런타임 검증용 dev 도구로
 /// 일반 사용자 플로우와 분리돼 있다. 모델 파일(~356MB)은 앱 `filesDir/models/smolvlm/` 에 있어야 한다
 /// (배치 방법은 루트 `SMOL_ONDEVICE_STATUS.md` 참조).
 class SmolDiagnosticsScreen extends StatefulWidget {
@@ -29,6 +31,7 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
   static const _verifier = SmolOndeviceVerifier();
   String _output = '버튼을 눌러 온디바이스 SmolVLM 상태를 확인하세요.';
   bool _busy = false;
+  String _task = 'water'; // evidence 변환 대상 task(water/study/exercise)
 
   // verifyImage spike 용 이미지 경로(앱 private dir 에 push 한 sample). getModelInfo 의 model_dir 참고.
   final _imgPathCtl = TextEditingController(
@@ -142,13 +145,34 @@ class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
               ],
             ),
             const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  const Text('evidence task: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const SizedBox(width: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'water', label: Text('water')),
+                      ButtonSegment(value: 'study', label: Text('study')),
+                      ButtonSegment(value: 'exercise', label: Text('exercise')),
+                    ],
+                    selected: {_task},
+                    onSelectionChanged: _busy ? null : (s) => setState(() => _task = s.first),
+                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             FilledButton(
               onPressed: _busy
                   ? null
-                  : () => _run('image+text 생성 spike', () => _verifier.imageTextGen(
+                  : () => _run('image+text→evidence spike ($_task)', () => _verifier.imageTextGen(
                         imageFile: File(_imgPathCtl.text.trim()),
+                        task: _task,
                       )),
-              child: const Text('image+text 생성 (detokenize)'),
+              child: const Text('image+text→evidence (Rule Engine payload)'),
             ),
             const SizedBox(height: 16),
             Expanded(

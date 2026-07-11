@@ -526,10 +526,10 @@ class SmolVlmBridge(private val context: Context) {
 
     /**
      * 이미지+텍스트 짧은 생성 spike: vision_encoder → embed(prompt) → image_features 를 image_token 위치 임베딩에 병합
-     * → 고정길이 패딩 no-cache 로 N tokens greedy 생성 → detokenize. text 는 approximate(하드코딩 프롬프트/단일 512).
-     * fallback_required=true 유지(서버 fallback). 완성 인증 아님.
+     * → 고정길이 패딩 no-cache 로 N tokens greedy 생성 → detokenize → [SmolEvidenceParser] 로 task별 evidence 변환.
+     * text 는 approximate(하드코딩 프롬프트/단일 512). fallback_required=true 유지(서버 fallback). 완성 인증 아님.
      */
-    private fun imageTextGeneration(imagePath: String?, maxNew: Int, padLen: Int): HashMap<String, Any?> {
+    private fun imageTextGeneration(imagePath: String?, task: String, maxNew: Int, padLen: Int): HashMap<String, Any?> {
         if (!isModelAvailable()) return hashMapOf("success" to false, "status" to "unavailable", "fallback_required" to true, "engine" to "smol_ondevice")
         if (imagePath == null || !File(imagePath).exists()) return hashMapOf("success" to false, "status" to "no_image", "fallback_required" to true, "engine" to "smol_ondevice")
         val env = OrtEnvironment.getEnvironment()
@@ -615,13 +615,23 @@ class SmolVlmBridge(private val context: Context) {
             val text = try { detokenize(gen) } catch (e: Throwable) { null }
             levels["detokenize"] = if (text != null) "ok" else "blocked"
 
+            // 6) evidence 변환(diagnostics-only): generated_text → schema evidence code + Rule Engine 호환 payload.
+            //    Smol 결과는 최종 인증으로 채택하지 않는다(fallback_required=true 유지).
+            val evidence = try { SmolEvidenceParser.parse(task, text) } catch (e: Throwable) {
+                hashMapOf<String, Any?>("parse_status" to "failed", "reason" to "parser error: ${errStr(e)}")
+            }
+            levels["evidence_parse"] = evidence["parse_status"]
+
             return hashMapOf(
                 "success" to false, "engine" to "smol_ondevice", "status" to "image_text_generation_ok",
-                "fallback_required" to true,
+                "fallback_required" to true, "task" to task,
                 "generated_token_ids" to gen, "generated_text" to (text ?: ""),
                 "count" to gen.size, "latency_ms" to (System.currentTimeMillis() - t0),
                 "levels" to levels,
-                "note" to "image+text no-cache 생성 spike. single-512(anyres 미적용), 프롬프트 하드코딩 → 텍스트 approximate.",
+                "evidence" to evidence,
+                "local_accept_candidate" to (evidence["local_accept_candidate"] ?: false),
+                "local_reject_candidate" to (evidence["local_reject_candidate"] ?: false),
+                "note" to "image+text no-cache 생성 spike + evidence 변환(diagnostics-only). single-512(anyres 미적용), 프롬프트 하드코딩 → 텍스트 approximate.",
             )
         } catch (e: Throwable) {
             return hashMapOf("success" to false, "engine" to "smol_ondevice", "status" to "error",
@@ -694,6 +704,7 @@ class SmolVlmBridge(private val context: Context) {
                         "l4Experiment" -> result.success(l4Experiment())
                         "imageTextGen" -> result.success(
                             imageTextGeneration(call.argument("imagePath"),
+                                (call.argument<String>("task")) ?: "water",
                                 (call.argument<Int>("maxNew")) ?: 12,
                                 (call.argument<Int>("padLen")) ?: 96)
                         )

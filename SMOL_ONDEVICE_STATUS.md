@@ -9,12 +9,14 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_image_text_generation_spike_verified`** (2026-07-12, Galaxy Z Flip3 실기기)
-(이전: … → `smol_android_generation_spike_no_cache_verified` → **이미지→텍스트 생성 성공**.)
-- ✅ **실기기에서 이미지 입력 기반 짧은 텍스트 생성 성공**: vision_encoder → embed → **image_features 병합** → 패딩 no-cache 생성 → **detokenize**.
-  샘플(노란 차 이미지)에 대해 **generated_text = "A glass of yellow liquid."** (의미 정확), 7 tokens, 8070ms, PSS ~437MB, OOM/crash 없음 (§9).
-- ⏳ **여전히 spike/diagnostics 전용**(프롬프트 하드코딩, single-512 anyres 미적용, 서버 evidence schema 미연결) → `fallback_required=true` 유지, 서버 fallback + water local accept 금지 유지.
-- ❌ cached KV-cache loop 은 여전히 blocked(q4 export cast, §8). **"온디바이스 인증 완성" 아님.**
+**분류: `smol_android_evidence_spike_partial`** (2026-07-12, Galaxy Z Flip3 실기기)
+(이전: … → `smol_android_generation_spike_no_cache_verified` → `smol_android_image_text_generation_spike_verified` → **generated_text → evidence code 변환 연결(부분)**.)
+- ✅ **generated_text → Rule Engine 호환 evidence 변환 성공(diagnostics-only)**: [SmolEvidenceParser](frontend/android/app/src/main/kotlin/com/example/frontend/SmolEvidenceParser.kt) 가 자유형 생성 텍스트를 task별 schema evidence code + `rule_engine_payload`(VisionAnalysis dict)로 변환. Smol 결과는 **최종 인증으로 채택하지 않음**(§10).
+- ✅ **water task 실기기 end-to-end 검증**: 노란 차 이미지 → `"A glass of yellow liquid."` → `evidence_codes=[non_water_beverage]`, `blockers=[non_water_beverage]`, `local_accept_candidate=false`, `parse_status=clean`, `water_visual_evidence=[non_water_beverage]` (8224ms). **water colored-liquid blocker 정상 작동**.
+- ✅ **study task 실기기 코드경로 검증**(water 이미지 위, 텍스트 불일치): `task=study`, `evidence_codes=[uncertain_screen_content]`, `parse_status=weak`, `local_accept_candidate=false` (7800ms) — routing + weak/uncertain 처리 + 오탐지 없음 확인.
+- ⚠️ **partial 사유**: 실기기 데이터 디렉터리가 `adb install -r` 후 run-as write **EROFS** + 외부 dir **FUSE 격리**로 신규 test 이미지 배포 불가 → study-positive/exercise/clear-water 의 **온디바이스 생성**은 deferred. 해당 케이스는 파서 결정론 검증(host mirror, §10)으로 대체(두 케이스가 온디바이스 결과와 정확히 일치 → mirror 충실성 확인).
+- ⏳ spike/diagnostics 전용(프롬프트 하드코딩, single-512 anyres 미적용, 서버 evidence schema 자동 투입 미연결) → `fallback_required=true` 유지, 서버 fallback + water local accept 금지 유지.
+- ❌ cached KV-cache loop blocked(q4 export cast, §8). evidence→Rule Engine 자동 판정·앱 인증 화면 연결 안 됨. **"온디바이스 인증 완성" 아님.**
 
 ### 실기기 session-load smoke 결과 (2026-07-11)
 | 항목 | 값 |
@@ -243,9 +245,46 @@ L4 실패 노드 `InsertedPrecisionFreeCast_/model/layers.1/attn/v_proj/repeat_k
 → **온디바이스 이미지→일관 텍스트 생성 파이프라인이 실기기에서 실제로 동작**함을 검증. image merge/tokenizer/detokenize 모두 정상.
 
 ### 남은 작업(인증 완성까지)
-1. **evidence JSON 생성**: 자유 텍스트 대신 서버와 동일한 evidence schema(visible_objects/positive_evidence/blockers/uncertainty…)로
-   출력하도록 프롬프트/파싱 설계 → 기존 Rule Engine 매핑 연결.
+1. **evidence 자동 투입**: 현재 `rule_engine_payload`(VisionAnalysis dict)는 생성하지만 backend evaluate_image_verification 자동 호출·앱 인증 결과 반영은 미연결(diagnostics 표시만). local-first accept 배선은 다음 단계.
 2. **동적 tokenizer**: 현재 프롬프트 input_ids 하드코딩 → tokenizer(encode) 온디바이스 구현(또는 고정 프롬프트 유지).
 3. **anyres splitting**: 다중 타일(정확도↑). 현재 single-512.
 4. **성능**: no-cache 라 8s. KV-cache 복원(decoder 재-export) 또는 PAD/토큰수 축소.
 5. 완성·검증 후 `smol_android_runtime_verified` + 앱 local accept(단, water 는 정책상 여전히 서버/review).
+
+
+## 10. generated_text → evidence 변환 spike (2026-07-12, Flip3 실기기 부분 성공)
+
+**목표:** on-device `generated_text` 를 task별 **기존 Rule Engine 호환 evidence code**(schema enum) + `rule_engine_payload`(VisionAnalysis dict)로 변환(diagnostics-only). **Smol 결과를 최종 인증으로 채택하지 않는다** — `fallback_required=true`, water local accept 금지 유지.
+
+구현: [SmolEvidenceParser.kt](frontend/android/app/src/main/kotlin/com/example/frontend/SmolEvidenceParser.kt)(rule-based, task별 positive/blocker/uncertain 토큰표) → [imageTextGeneration](frontend/android/app/src/main/kotlin/com/example/frontend/SmolVlmBridge.kt) 6단계에서 호출. 진단 화면 task 선택기(water/study/exercise) 추가.
+
+### 정책
+- **water**: colored/yellow/brown/tea/coffee/juice/beer/soda/milk… → `non_water_beverage` blocker(강). `non_water_beverage` 감지 시 `visible_water`/`visible_clear_liquid` positive 취소(모순 방지). **`local_accept_candidate` 항상 false**(정책).
+- **study/exercise**: positive 있고 blocker 없고 uncertainty≠high 이면 `local_accept_candidate=true`(단 진단 표시용, 채택 안 함). blocker → `local_reject_candidate=true`.
+- 근거 없음/모호 → `parse_status=weak`, `uncertainty=high`, schema uncertain code 부여.
+
+### 실기기 결과
+| task | 이미지 | raw_text(생성) | evidence_codes | accept | reject | parse | ms |
+|---|---|---|---|---|---|---|---|
+| water | sample(노란 차) | "A glass of yellow liquid." | `[non_water_beverage]` | false | **true** | clean | 8224 |
+| study | 위 water 이미지(불일치) | "A glass of yellow liquid." | `[uncertain_screen_content]` | false | false | weak | 7800 |
+
+water: `rule_engine_payload.water_visual_evidence=[non_water_beverage]` → backend Rule Engine 투입 시 `water_priority:non_water_beverage` → **rejected**(정합). 앱 크래시/OOM 없음.
+
+### parser 결정론 검증(host mirror — Kotlin 토큰표 1:1)
+실기기 데이터 디렉터리 EROFS(§1)로 신규 이미지 배포 불가 → 아래는 **파서 로직**을 host 에서 재현(온디바이스 생성 아님). 위 실기기 2케이스가 mirror 예측과 **정확히 일치** → mirror 충실성 확인.
+| task | 텍스트(예시) | evidence_codes | accept | reject |
+|---|---|---|---|---|
+| water | "A glass of water on a table." | `[visible_water]` | false(정책) | false |
+| water | "A cup of coffee." | `[non_water_beverage]` | false | true |
+| study | "reading a textbook with handwritten notes." | `[open_textbook, handwritten_notes]` | true | false |
+| study | "playing a video game." | `[gaming_content]` | false | true |
+| exercise | "running on a treadmill at the gym." | `[exercise_pose_visible, gym_environment, treadmill_present]` | true | false |
+| exercise | "sitting on a sofa." | `[unrelated_environment]` | false | true |
+
+### 왜 아직 일반 사용자 인증 화면에 연결 안 하나
+- Smol 단독 최종 인증은 final171 FP=9 이력(특히 water) → 위험. 본 spike 는 **evidence 생성/매핑 검증**까지만.
+- 생성 텍스트가 approximate(프롬프트 하드코딩·single-512·no-cache) → 신뢰도 부족 → 서버 Qwen fallback 이 최종 담당.
+
+### 다음 단계
+diagnostics 에서 task별 정확도 충분 확인 → local-first accept 배선(단 water 는 서버/정책 유지) → `rule_engine_payload` backend 자동 투입 → 검증 후 `smol_android_runtime_verified`.

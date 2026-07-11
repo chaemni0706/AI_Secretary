@@ -86,11 +86,18 @@ class SmolOndeviceVerifier {
     }
   }
 
-  /// image+text 짧은 생성 spike(dev): vision→embed→image merge→no-cache 생성→detokenize. fallback-safe.
-  Future<Map<String, dynamic>?> imageTextGen({required File imageFile, int maxNew = 12, int padLen = 96}) async {
+  /// image+text 짧은 생성 spike(dev): vision→embed→image merge→no-cache 생성→detokenize
+  /// → task별 evidence 변환(Rule Engine 호환 payload 포함). **진단 전용, 최종 인증 아님.** fallback-safe.
+  Future<Map<String, dynamic>?> imageTextGen({
+    required File imageFile,
+    String task = 'water',
+    int maxNew = 12,
+    int padLen = 96,
+  }) async {
     try {
       return await _channel.invokeMapMethod<String, dynamic>('imageTextGen', {
         'imagePath': imageFile.path,
+        'task': task,
         'maxNew': maxNew,
         'padLen': padLen,
       });

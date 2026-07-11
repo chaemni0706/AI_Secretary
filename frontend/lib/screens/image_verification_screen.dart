@@ -253,9 +253,9 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Widget _resultCard(VerificationResult r) {
-    // secondary_review(비시각 맥락 확인 필요)는 verified 와 구분해 amber 로 표시(자동 확정 아님).
-    final (color, icon) = r.needsSecondaryReview
-        ? (const Color(0xFFF9A825), Icons.help_outline)
+    // 자동 인증 확정 불가(needsRetake)는 verified 와 구분해 amber 로 표시(자동 성공 아님 → 재촬영 안내).
+    final (color, icon) = r.needsRetake
+        ? (const Color(0xFFF9A825), Icons.camera_alt_outlined)
         : switch (r.result) {
             'verified' => (const Color(0xFF2E7D32), Icons.check_circle),
             'retake_required' => (const Color(0xFFEF6C00), Icons.refresh),
@@ -282,12 +282,16 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
             const SizedBox(height: 8),
             Text('타입: ${r.verificationType}  ·  판정: ${r.result}'
                 '${r.score != null ? '  ·  점수: ${r.score}' : ''}'),
-            if (r.needsSecondaryReview) ...[
+            if (r.needsRetake) ...[
               const SizedBox(height: 6),
-              Text(
-                '외관만으로는 확정이 어려워 추가 확인이 필요해요 (${r.reviewReason}).',
-                style: const TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
+              const Text(
+                '사진상 물처럼 보이지만 물의 종류나 촬영 맥락을 확실히 판단하기 어려워 '
+                '자동 인증할 수 없어요. 다른 사진으로 다시 촬영해 주세요.',
+                style: TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
               ),
+              const SizedBox(height: 4),
+              const Text('위 “카메라 촬영” 으로 다시 시도할 수 있어요.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB0812A))),
             ],
             if (r.reasons.isNotEmpty) ...[
               const SizedBox(height: 10),

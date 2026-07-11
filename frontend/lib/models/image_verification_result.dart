@@ -63,11 +63,15 @@ class ImageVerificationResult {
   bool get isRejected => finalResult == 'rejected';
   bool get isRetakeRequired => finalResult == 'retake_required';
 
-  /// verified 이지만 비시각 맥락 확인이 필요한 상태(앱은 자동 확정하지 말 것).
-  bool get needsSecondaryReview => finalResult == 'verified' && reviewRequired;
+  /// verified 이지만 자동 인증 확정이 어려운 상태(자동 성공 처리 금지 → 재촬영 안내).
+  /// review_required 는 "관리자 검수 대기"가 아니라 "자동 확정 불가 → 다른 사진으로 재촬영" 을 의미한다.
+  bool get needsRetake => finalResult == 'verified' && reviewRequired;
+
+  /// (하위호환) 이전 이름. needsRetake 와 동일 의미.
+  bool get needsSecondaryReview => needsRetake;
 
   String get displayMessage {
-    if (needsSecondaryReview) return '거의 다 됐어요. 추가 확인이 필요해요 🔎';
+    if (needsRetake) return '자동 인증이 어렵습니다. 다른 사진으로 다시 촬영해 주세요 📷';
     switch (finalResult) {
       case 'verified':
         return '인증 성공! 잘 하셨어요 👍';

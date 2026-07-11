@@ -10,7 +10,8 @@
 - **최종 fallback = Qwen2.5-VL-7B-Instruct(bf16) + FP guard.** (A.X-4.0-VL-Light 와 full-test 비교 후 채택.)
 - **full-test(171) 전체 FP=6 → `DO_NOT_CONFIRM`.** 그러나 잔여 FP 는 전부 **외관상 물과 구분 불가**(변기물/오염수/맥주+물/borderline)로, VLM-eligible visual scope 밖.
 - **VLM-eligible visual subset(165장) 기준 FP=0 → `CONFIRM_ELIGIBLE_SCOPE`.** 이 범위에서 **Qwen2.5-VL-7B fallback 확정**(AUTO-CONFIRM 조건 충족). 전체 현실 world 완전 자동화가 아니라 **"VLM-eligible scope baseline confirmed"**.
-- 운영 정책: **verified(water) 는 자동 확정하지 않고 `review_required`(secondary_review)** 로. exercise/study 는 FP=0 자동 확정. error/parse_failed → verified = **0**(안전).
+- 운영 정책: **verified(water) 는 자동 확정하지 않고 `review_required=true`** 로 표시 → 앱은 자동 성공으로 보지 않고 **"자동 인증 불가 → 다른 사진으로 재촬영"** 안내. exercise/study 는 FP=0 자동 확정. error/parse_failed → verified = **0**(안전).
+  (관리자 승인/반려 큐는 이번 범위 아님 — §9 참조.)
 - **Smol 온디바이스**: ONNX q4f16 자산 확보(~356MB) + Dart/Kotlin 인터페이스·브릿지 스텁 + 서버 fallback 계약 구현 → 상태 `smol_android_runtime_stubbed`. 실디바이스 ONNX 추론은 미완(문서화). → `SMOL_ONDEVICE_STATUS.md`.
 
 ### 두 후보 full-test(171) 비교
@@ -40,9 +41,9 @@ full-test 잔여 FP=6 을 전수(이미지 직접 확인) 재분류: **visual_mo
 > such as contamination, toilet water, or visually indistinguishable alcohol, are excluded from VLM-only
 > automatic confirmation and must be handled by secondary_review or context-based rules.**
 
-### secondary_review 정책 (orchestrator, Rule Engine core 미수정)
+### review_required 정책 (orchestrator, Rule Engine core 미수정)
 추론 시 eligible/out-of-scope 를 사전 판별할 시각 신호가 없으므로, **verified(water) 는 자동 확정하지 않고
-`review_required=true`(review_reason=`water_non_visual_context_risk`)** 로 표시 → 앱이 secondary_review 로 라우팅.
+`review_required=true`(review_reason=`water_non_visual_context_risk`)** 로 표시 → 앱은 자동 성공 대신 **재촬영 안내**.
 exercise/study 는 full-test FP=0 이라 그대로 자동 확정. 반환 schema 에 `review_required`/`review_reason` 추가.
 
 ## 1. 최종 아키텍처 (구현 완료)
@@ -154,10 +155,15 @@ fallback_result/rule_reason/rule_trace/evidence/debug(guard_reason 포함). 기�
 
 ---
 
-## 9. Backend/API secondary_review 통합 (2026-07-11)
+## 9. review_required = "자동 확정 불가 → 재촬영" (2026-07-11)
 
 `verified(water)` 를 자동 확정하지 않고 `review_required` 로 표시하는 정책을 **backend service/API layer** 에 반영.
 **Rule Engine core 미수정**(enum `verified/retake_required/rejected` 유지). schema 에 `review_required`/`review_reason` 필드만 추가(기본값 → 하위호환).
+
+> **의미(중요):** `review_required=true` 는 **"관리자 검수 대기"가 아니라 "자동 인증 확정 불가 → 사용자가 다른 사진으로 재촬영"** 을 뜻한다.
+> 앱은 이 결과를 자동 성공으로 처리하지 않고 재촬영 UX 로 안내한다.
+> DB-backed review queue + 관리자 pending/decision(approved/rejected/needs_retake) 흐름은 한 번 구현했다가 **범위 밖으로 revert** 했다
+> (앱에 관리자 검수 페이지 계획 없음). → **future work**(별도 합의 시). 현재 응답에는 `review_required`/`review_reason` 만 존재한다.
 
 - schema: `ImageVerificationData` 에 `review_required: bool=False`, `review_reason: str=""` 추가.
 - service: `apply_secondary_review_policy(data)` — `result==verified AND verification_type==water` → `review_required=true`,
@@ -183,11 +189,11 @@ fallback_result/rule_reason/rule_trace/evidence/debug(guard_reason 포함). 기�
 ```
 exercise verified → `"review_required": false, "review_reason": ""` (자동 확정).
 
-### Frontend 반영
-- `verification_result.dart`: `reviewRequired`/`reviewReason`/`needsSecondaryReview` getter, `isVerified` 는 review 시 false,
-  `displayMessage` 는 "추가 확인이 필요해요" 반환.
-- `image_verification_screen.dart`: `needsSecondaryReview` 이면 amber(help) 카드 + "외관만으로는 확정이 어려워 추가 확인이 필요해요" 문구.
-- (온디바이스 경로) `image_verification_service.dart`/`image_verification_result.dart` 도 동일 필드 지원.
+### Frontend 반영 (재촬영 UX)
+- `verification_result.dart`: `reviewRequired`/`reviewReason`/`needsRetake`(=needsSecondaryReview 하위호환) getter, `isVerified` 는 review 시 false,
+  `displayMessage` 는 **"자동 인증이 어렵습니다. 다른 사진으로 다시 촬영해 주세요 📷"** 반환.
+- `image_verification_screen.dart`: `needsRetake` 이면 amber(카메라) 카드 + "사진상 물처럼 보이지만 … 자동 인증할 수 없어요. 다른 사진으로 다시 촬영해 주세요." + "위 카메라 촬영으로 다시 시도" 안내. (기존 카메라 촬영 버튼 재사용)
+- (온디바이스 경로) `image_verification_service.dart`/`image_verification_result.dart` 도 동일 필드/`needsRetake` 지원.
 
 ### 테스트
 `tests/test_image_verification_review_policy.py`(5 cases): water verified→review, water rejected/exercise verified→no review,

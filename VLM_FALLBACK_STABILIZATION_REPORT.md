@@ -12,7 +12,7 @@
 - **VLM-eligible visual subset(165장) 기준 FP=0 → `CONFIRM_ELIGIBLE_SCOPE`.** 이 범위에서 **Qwen2.5-VL-7B fallback 확정**(AUTO-CONFIRM 조건 충족). 전체 현실 world 완전 자동화가 아니라 **"VLM-eligible scope baseline confirmed"**.
 - 운영 정책: **verified(water) 는 자동 확정하지 않고 `review_required=true`** 로 표시 → 앱은 자동 성공으로 보지 않고 **"자동 인증 불가 → 다른 사진으로 재촬영"** 안내. exercise/study 는 FP=0 자동 확정. error/parse_failed → verified = **0**(안전).
   (관리자 승인/반려 큐는 이번 범위 아님 — §9 참조.)
-- **Smol 온디바이스**: onnxruntime-android 통합 + `SmolVlmBridge`(OrtSession 로드/fallback-safe) + local-first 배선 + **Android APK 빌드 성공(libonnxruntime.so 번들)** → 상태 `smol_android_runtime_integrated`(build-verified). 실기기 추론은 `verifyImage` 전처리/생성 미구현으로 미완(서버 fallback). → `SMOL_ONDEVICE_STATUS.md`.
+- **Smol 온디바이스**: onnxruntime-android 통합 + `SmolVlmBridge`(OrtSession 로드/fallback-safe) + local-first 배선 + **Android APK 빌드 성공(libonnxruntime.so 번들)** → 상태 `smol_android_runtime_integrated`(build-verified). 실기기 추론은 `verifyImage` 전처리/생성 미구현으로 미완(서버 fallback). 실기기 session-load 검증용 **dev 진단 화면 + 수동 runbook** 추가(이 세션 실기기 미연결로 smoke 미수행). → `SMOL_ONDEVICE_STATUS.md`.
 
 ### 두 후보 full-test(171) 비교
 | fallback | FP | 진짜FAIL water FP | BORDERLINE FP | study FP | water recall | error/parse_fail | latency avg |

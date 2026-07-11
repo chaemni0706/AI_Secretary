@@ -73,3 +73,50 @@
 - ⏳ 실기기 session-load/이미지 추론 미검증, `verifyImage` 전처리/생성 파이프라인 미구현 → 현재는 서버 fallback.
 - ❌ "온디바이스 완성" 아님(실기기 이미지 추론 성공 전까지). 현 분류: `smol_android_runtime_integrated`.
 - 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback / `review_required`(재촬영). exercise/study 만 local accept 적극 허용 가능.
+
+## 6. 실기기 session-load smoke — 상태 & 수동 runbook (2026-07-11)
+
+### 상태(이 세션)
+- **실기기 미연결**(`adb devices` 비어 있음, USB Samsung/Android 미검출) → 실기기 session-load smoke **미수행**.
+- 대신 **dev-only 진단 화면**을 추가해, 기기 연결 시 즉시 warmup(OrtSession 로드)을 돌릴 수 있게 함:
+  [smol_diagnostics_screen.dart](frontend/lib/screens/smol_diagnostics_screen.dart)
+  (진입: 이미지 인증 화면 AppBar 의 memory 아이콘 — `kDebugMode` 에서만 노출).
+- APK 재빌드 성공(진단 화면 포함) — 컴파일/패키징 검증.
+
+### 수동 runbook (Galaxy Z Flip3 연결 후)
+```bash
+# 0) 기기 인식
+adb devices                 # device 목록에 Flip3 확인
+adb shell getprop ro.product.model      # SM-F711* 등
+adb shell getprop ro.product.cpu.abi    # arm64-v8a
+
+# 1) debug APK 설치 (package = com.example.frontend)
+adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
+
+# 2) 모델 배치: 원본 → /sdcard → run-as 로 앱 filesDir 로 복사 (git/assets 미포함)
+PKG=com.example.frontend
+adb shell rm -rf /sdcard/Download/smolvlm_tmp
+adb shell mkdir -p /sdcard/Download/smolvlm_tmp
+adb push /data/models/SmolVLM-500M-Instruct/onnx/vision_encoder_q4f16.onnx        /sdcard/Download/smolvlm_tmp/
+adb push /data/models/SmolVLM-500M-Instruct/onnx/embed_tokens_q4f16.onnx          /sdcard/Download/smolvlm_tmp/
+adb push /data/models/SmolVLM-500M-Instruct/onnx/decoder_model_merged_q4f16.onnx  /sdcard/Download/smolvlm_tmp/
+adb push /data/models/SmolVLM-500M-Instruct/tokenizer.json           /sdcard/Download/smolvlm_tmp/
+adb push /data/models/SmolVLM-500M-Instruct/config.json              /sdcard/Download/smolvlm_tmp/
+adb push /data/models/SmolVLM-500M-Instruct/preprocessor_config.json /sdcard/Download/smolvlm_tmp/
+adb shell run-as $PKG mkdir -p files/models/smolvlm
+adb shell "run-as $PKG sh -c 'cp /sdcard/Download/smolvlm_tmp/* files/models/smolvlm/'"
+adb shell run-as $PKG ls -l files/models/smolvlm     # 6개 파일(3 onnx + 3 config) 확인
+# (run-as 는 debug APK 에서만 동작. 실패 시 앱 최초 실행 시 다운로드/복사 로직 필요.)
+
+# 3) 앱에서 진단 실행
+#    앱 실행 → "이미지 인증" 화면 → AppBar 오른쪽 memory 아이콘 → getModelInfo / isModelAvailable / warmup
+#    warmup 결과 JSON 에서 status=loaded, sessions_loaded=3, io.<file>.inputs/outputs, latency(ms) 확인
+
+# 4) logcat (선택)
+adb logcat -c
+adb logcat | grep -iE "smol|onnx|ort|flutter"
+```
+
+### 성공/실패 기준
+- 성공: warmup `status=loaded`, `sessions_loaded=3`, vision_encoder/embed_tokens/decoder_merged 의 input/output names 반환, 앱 크래시 없음 → 상태 `smol_android_session_load_verified` 로 승격.
+- 실패(모델 못 찾음/ORT unsupported op/OOM/ABI) → 원인 기록 후 `smol_ondevice_blocked`. (tokenizer/preprocessor 누락은 warmup 실패 사유 아님 — verifyImage 단계 이슈.)

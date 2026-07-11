@@ -1,0 +1,123 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+
+import '../services/smol_ondevice_verifier.dart';
+
+/// **개발용(dev-only)** 온디바이스 SmolVLM ONNX 진단 화면.
+///
+/// 실기기(Galaxy Z Flip3 등)에서 SmolVLM ONNX 3종(q4f16)의 **session-load smoke** 를 수행한다.
+/// - `getModelInfo`: 모델 파일 경로/존재/총 크기
+/// - `isModelAvailable`: 필수 파일 존재 여부
+/// - `warmup`: OrtSession 3종 로드 + input/output names + latency
+/// - `verifyImage`: (현재 미구현 → fallback_required, 정상 동작 확인용)
+///
+/// **주의:** 실제 이미지 추론은 아직 미구현이다. 이 화면은 온디바이스 런타임 로드 검증용이며
+/// 일반 사용자 플로우와 분리된 dev 도구다. 모델 파일(~356MB)은 앱 `filesDir/models/smolvlm/` 에 있어야 한다
+/// (배치 방법은 루트 `SMOL_ONDEVICE_STATUS.md` 참조).
+class SmolDiagnosticsScreen extends StatefulWidget {
+  const SmolDiagnosticsScreen({super.key});
+
+  @override
+  State<SmolDiagnosticsScreen> createState() => _SmolDiagnosticsScreenState();
+}
+
+class _SmolDiagnosticsScreenState extends State<SmolDiagnosticsScreen> {
+  static const _verifier = SmolOndeviceVerifier();
+  String _output = '버튼을 눌러 온디바이스 SmolVLM 상태를 확인하세요.';
+  bool _busy = false;
+
+  final _encoder = const JsonEncoder.withIndent('  ');
+
+  Future<void> _run(String label, Future<Object?> Function() action) async {
+    setState(() {
+      _busy = true;
+      _output = '$label 실행 중...';
+    });
+    final sw = Stopwatch()..start();
+    Object? result;
+    String? error;
+    try {
+      result = await action();
+    } catch (e) {
+      error = e.toString();
+    }
+    sw.stop();
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      final buf = StringBuffer()
+        ..writeln('[$label]  (${sw.elapsedMilliseconds} ms)')
+        ..writeln(error != null ? 'ERROR: $error' : _pretty(result));
+      _output = buf.toString();
+    });
+  }
+
+  String _pretty(Object? v) {
+    try {
+      return _encoder.convert(v);
+    } catch (_) {
+      return v.toString();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Smol 온디바이스 진단 (dev)')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '온디바이스 SmolVLM ONNX session-load smoke (dev-only). '
+              '실제 추론은 미구현 — 서버 fallback 을 사용합니다.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: _busy ? null : () => _run('isModelAvailable', _verifier.isModelAvailable),
+                  child: const Text('isModelAvailable'),
+                ),
+                FilledButton(
+                  onPressed: _busy ? null : () => _run('getModelInfo', _verifier.getModelInfo),
+                  child: const Text('getModelInfo'),
+                ),
+                FilledButton(
+                  onPressed: _busy ? null : () => _run('warmup (OrtSession load)', _verifier.warmup),
+                  child: const Text('warmup'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF11161C),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    _output,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: Color(0xFFD6E2F0),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

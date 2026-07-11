@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -7,6 +8,7 @@ import '../models/verification_result.dart';
 import '../services/api_client.dart' show baseUrl, ApiException;
 import '../services/camera_capture_service.dart';
 import '../services/verification_api.dart';
+import 'smol_diagnostics_screen.dart';
 
 /// 이미지 인증 화면.
 ///
@@ -105,7 +107,20 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('이미지 인증')),
+      appBar: AppBar(
+        title: const Text('이미지 인증'),
+        actions: [
+          // dev-only: 온디바이스 SmolVLM ONNX session-load 진단(일반 사용자 플로우와 분리).
+          if (kDebugMode)
+            IconButton(
+              tooltip: 'Smol 온디바이스 진단 (dev)',
+              icon: const Icon(Icons.memory),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SmolDiagnosticsScreen()),
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

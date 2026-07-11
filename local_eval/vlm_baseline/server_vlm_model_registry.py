@@ -34,14 +34,14 @@ REGISTRY = {
         "trust_remote_code": True,
         "note": "text backbone qwen2, vision tower 포함. ~15G.",
     },
-    # 다운로드 승인 후에만(현재 미보유). 참고용 등록.
+    # 채택된 fallback(bf16 다운로드 완료). end-to-end 기본값.
     "qwen25_7b": {
         "display": "Qwen2.5-VL-7B-Instruct (bf16)",
         "model_path": "/data/models/Qwen2.5-VL-7B-Instruct",
         "loader": "qwen2_5_vl",
         "dtype": "bfloat16",
         "trust_remote_code": False,
-        "note": "미다운로드(~16G). AWQ 7B 는 금지(Triton 이력). bf16 만.",
+        "note": "선택된 fallback(2026-07-11). bf16 16G 다운로드 완료. AWQ 금지(Triton). Gate C FP=6.",
     },
     "qwen3_8b": {
         "display": "Qwen3-VL-8B-Instruct",

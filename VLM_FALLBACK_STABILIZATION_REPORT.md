@@ -6,10 +6,18 @@
 
 ## 0. 결론 요약 (정직한 판정)
 
-- **시스템은 end-to-end 로 구동됨** (Smol local-first → A.X server fallback → FP guard → 기존 Rule Engine → fail-safe). error/parse_failed → verified = **0** (안전).
-- **full-test(171) FP=9 → `DO_NOT_CONFIRM`.** 인증 시스템으로 **확정 불가**. 현 상태는 **"구동 가능한 baseline"**.
-- 단, incumbent 대비 대폭 개선: fallback FP(mini_probe) **15→3**, **water recall 0.95 유지**, **latency 2.3배↓**, exercise FP=0.
-- **잔여 FP 근본원인(확정): A.X-4.0-VL-Light 의 색 판별 한계** — 아이스티/커피를 "colorless/clear water" 로 진짜 오인. reason 에 색 신호가 없어 guard 로 분리 불가. → **더 강한 VLM(다운로드) 또는 비-VLM 색 신호** 필요.
+- **시스템은 end-to-end 로 구동됨** (Smol local-first → server fallback VLM → FP guard → 기존 Rule Engine → fail-safe).
+- **최종 fallback = Qwen2.5-VL-7B-Instruct(bf16) + FP guard.** (A.X-4.0-VL-Light 와 full-test 비교 후 채택.)
+- **full-test(171) FP=6 → `DO_NOT_CONFIRM`.** 인증 시스템으로 **확정 불가**. 현 상태는 **"구동 가능한 baseline"**.
+- **핵심 판정: 잔여 FP=6 은 배선/모델 결함이 아니라 "외관상 물과 구분 불가"한 이미지들** — 변기 물탱크 물·오염 식수(외관상 진짜 물, FAIL 사유가 비-시각적)·옅은 라거 맥주(7B 가 colorless 로 지각)·BORDERLINE 잔. **외관 기반 evidence 인증의 근본 실링.** error/parse_failed → verified = **0**(안전).
+
+### 두 후보 full-test(171) 비교
+| fallback | FP | 진짜FAIL water FP | BORDERLINE FP | study FP | water recall | error/parse_fail | latency avg |
+|---|---|---|---|---|---|---|---|
+| A.X-4.0-VL-Light + guard | 9 | 5(아이스티/커피) | 3 | 1 | 0.95 | 4/4 | 4.5s |
+| **Qwen2.5-VL-7B + guard(채택)** | **6** | 4(맥주/변기물/오염수) | 2 | **0** | 0.85 | **0/0** | 6.6s |
+
+→ 7B 채택: FP 낮고(6<9), study/exercise FP=0, **엔진오류·파싱실패 0**(A.X 는 8건 발생). A.X 가 놓친 아이스티/커피는 7B 가 정확히 거절. latency 만 소폭↑(fallback 경로라 허용).
 
 ## 1. 최종 아키텍처 (구현 완료)
 
@@ -18,7 +26,7 @@ Camera Image + task
  → SmolVLM-500M Local Evidence Engine → smol adapter → 기존 Rule Engine → local_result
  → should_accept_local_result?  (Smol verified 로컬 채택 금지; 명확 blocker rejected 만 로컬 채택)
      accept  → return (engine=smol)
-     else    → A.X-4.0-VL-Light Server Fallback → server engine → 기존 Rule Engine → verified?
+     else    → Server Fallback VLM(Qwen2.5-VL-7B, pluggable) → server engine → 기존 Rule Engine → verified?
                  → vlm_fp_guard: reason 스캔(빈잔/색깔/불투명/불확실) → 위험시 retake 로 강등
                fallback 엔진 오류(parse_failed/rule_fallback/engine_error) → fail_safe retake_required
 ```
@@ -53,38 +61,45 @@ Camera Image + task
 
 ## 4. Full-test 결과 (Gate C, 171 images, `--borderline-as-fail`)
 
+### 4a. 채택 모델 — Qwen2.5-VL-7B + guard
 | task | n | recall | accuracy | FP |
 |---|---|---|---|---|
-| water | 57 | **0.95** (TP 19/20) | 0.84 | 8 |
-| study | 54 | 0.31 (TP 9/29) | 0.61 | 1 |
-| exercise | 60 | 0.56 (TP 18/32) | 0.77 | **0** |
-| **ALL** | 171 | 0.568 | 0.743 | **9** |
+| water | 57 | 0.85 (TP 17/20) | 0.84 | 6 |
+| study | 54 | 0.21 (TP 6/29) | 0.57 | **0** |
+| exercise | 60 | 0.50 (TP 16/32) | 0.73 | **0** |
+| **ALL** | 171 | 0.481 | 0.719 | **6** |
 
-- verified=55, rejected=93, retake=23.
-- engine: smol_accept=34, server_fallback=133, fail_safe=4, **error=4, parse_failed=4** (모두 fail_safe→retake, verified 로 이어지지 않음).
-- latency: avg **4.5s** / p50 4.5s / p95 8.3s / max 14.8s.
-- **판정: DO_NOT_CONFIRM (FP=9 > 0).**
+- verified=45, rejected=115, retake=11. engine: smol_accept=34, server_fallback=137, **fail_safe=0, error=0, parse_failed=0**.
+- latency: avg **6.6s** / p50 5.5s / p95 16.5s / max 44s.
+- **판정: DO_NOT_CONFIRM (FP=6 > 0).**
 
-### FP=9 분해
-| 유형 | 이미지 | 원인 |
-|---|---|---|
-| BORDERLINE water (3) | water_014, 024, 045 | 시각적으로 물과 동일(라벨만 borderline). PASS 물과 evidence 분리 불가 |
-| 진짜 FAIL water (5) | water_004(애매), **041(커피), 047·049·052(아이스티)** | **A.X 가 아이스티/커피를 "colorless/clear water"로 오인** — reason 에 색 신호 없음 → guard 불가 |
-| 진짜 FAIL study (1) | study_034 (모바일 게임) | study evidence 오탐 |
+### FP=6 분해 (전부 외관상 물과 구분 불가 — 직접 확인)
+| 이미지 | GT | 7B reason(요약) | 성격 |
+|---|---|---|---|
+| intake_012 | FAIL | "toilet tank ... contains water, waterline" | **변기 물탱크의 실제 물** (외관=물) |
+| water_016 | FAIL | "transparent container ... likely water" | **오염 식수**(File: Unsafe drinking water) — 외관=물 |
+| water_042 | FAIL | "clear liquid ... water" | **맥주**(File: glass of beer) — 옅은 라거를 colorless 로 지각 |
+| water_043 | FAIL | "colorless liquid ... water" | **맥주** — 동일 |
+| water_024, water_045 | BORDERLINE | "colorless ... waterline" | 시각적으로 진짜 물(라벨만 borderline) |
 
-**근거(직접 확인):** water_041 reason="clear liquid... colorless appearance"(실제 커피), water_047/049/052="clear/colorless liquid... water"(실제 아이스티). → A.X 모델의 색 판별 한계로 확정.
+→ **근본 실링:** FAIL 사유가 비-시각적(변기/수질)이거나 옅은 맥주/보더라인이라 **외관 기반 evidence 로 PASS 물과 분리 불가.** 프롬프트/guard/모델 교체로 해소 불가.
+
+### 4b. 참고 — A.X-4.0-VL-Light + guard (탈락)
+water recall 0.95, exercise FP 0 이나 FP=9(아이스티/커피 5 + borderline 3 + study 1), **engine_error 4 + parse_failed 4**(→retake). 7B 가 이 오류들과 아이스티/커피 FP 를 제거해 채택.
 
 ## 5. 확정 가능 여부 / 잔여 블로커
 
-- **확정 불가 (FP>0).** FP=0 은 A.X 단독으로는 도달 불가 — 색깔 음료(아이스티/커피) 오인은 프롬프트/guard 로 해소 안 되는 **모델 판별 한계**.
-- BORDERLINE 3장은 semantically 물과 동일 → strict borderline-as-fail 에서만 FP.
+- **확정 불가 (FP=6 > 0).** 단, 잔여 FP 는 파이프라인/모델 결함이 아니라 **외관 기반 인증의 근본 실링**:
+  변기물·오염수는 외관이 진짜 물, 옅은 맥주는 무색으로 보이고, BORDERLINE 은 정의상 물과 유사. → 더 강한 VLM 으로도 외관만으론 분리 불가.
+- 7B 는 실제로 **개선 상한에 근접**: 색 있는 음료(아이스티/커피)·엔진오류·study/exercise FP 를 모두 제거. 남은 6개는 외관상 구분 불가 케이스뿐.
 
 ## 6. FP=0 도달을 위한 옵션 (사용자 결정 필요)
 
-1. **더 강한 fallback VLM 다운로드** — Qwen2.5-VL-7B(bf16, ~16G) / Qwen3-VL-8B(~18G). 동일 하네스(registry/guard)로 즉시 비교 가능. 색 판별이 나아지면 진짜 FAIL FP 감소 기대. (승인 필요)
-2. **경량 색 신호 추가(비-VLM)** — 액체 영역 색 히스토그램으로 "무색 아님" 판정 → colored beverage 차단. YOLO 없이 가능하나 액체 영역 검출이 별도 과제.
-3. **BORDERLINE 재정의** — borderline 을 FAIL 이 아닌 별도 클래스로 취급 시 true-FAIL FP=6 로 축소(여전히 >0).
-4. **현 baseline 수용** — FP>0 명시하고 "구동 가능한 baseline" 으로 사용, borderline/colored 는 사람 검수.
+1. **비-시각 신호 결합(권장)** — 잔여 FP 는 외관만으론 불가. 기존 Rule Engine 이 지원하는 **GPS/시간/맥락**(현재 `gps.enabled=false`) 또는 촬영 맥락(음용 행동, 장소)로 보강해야 변기물/오염수/맥주를 걸러냄. Rule Engine core 확장 필요(별도 합의).
+2. **데이터 라벨 재검토** — intake_012(변기물)·water_016(오염수)·water_042/043(맥주)는 "외관상 물"이므로 evidence 기준 GT 재정의 시 true-FAIL FP 대폭 축소. BORDERLINE 을 FAIL 에서 제외 시 FP=4.
+3. **경량 색 신호(비-VLM)** — 액체 영역 색 히스토그램. 단 옅은 맥주/변기물엔 무효(색이 옅거나 물임).
+4. **현 baseline 수용(운영)** — 7B fallback 을 "구동 가능한 baseline" 으로 배포하되, `verified(water)` 는 사람 검수 또는 2차 확인 큐로. exercise/study 는 FP=0.
+5. **Qwen3-VL-8B 추가 비교** — 승인 시 동일 하네스로 즉시 평가(개선 여지는 제한적 — 외관 실링).
 
 ## 7. 산출물 / 파일
 

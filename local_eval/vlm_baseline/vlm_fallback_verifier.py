@@ -26,8 +26,9 @@ import smol_evidence_engine as smol_engine          # noqa: E402
 import smol_evidence_adapter as smol_adapter        # noqa: E402
 import server_vlm_evidence_engine as server_engine   # noqa: E402  (A.X/Qwen pluggable + FP guard)
 
-# 선택된 server fallback VLM(Gate B: A.X-4.0-VL-Light 가 FP/recall/latency 우위). env 로 교체 가능.
-FALLBACK_MODEL_KEY = os.environ.get("VLM_FALLBACK_MODEL", "ax_4_0_vl_light")
+# 선택된 server fallback VLM. Gate C full-test(171) 비교: Qwen2.5-VL-7B 가 A.X 대비 FP 6<9,
+# study/exercise FP=0, engine_error/parse_failed=0 로 우위 → 기본값 채택. env VLM_FALLBACK_MODEL 로 교체.
+FALLBACK_MODEL_KEY = os.environ.get("VLM_FALLBACK_MODEL", "qwen25_7b")
 
 
 # --------------------------------------------------------------------------- policy

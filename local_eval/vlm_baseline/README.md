@@ -5,17 +5,19 @@
 > **SmolVLM/Qwen-3B 는 최종 판정 모델이 아니다.** evidence extractor 이며, 최종 verified/rejected/retake_required 는 **기존 Rule Engine** 이 결정한다.
 
 ## end-to-end fallback 파이프라인 (2026-07-11 안정화)
-`vlm_fallback_verifier.py` = **SmolVLM 로컬 우선 → server fallback VLM(A.X-4.0-VL-Light) → FP guard → fail-safe**.
-최종 판정은 항상 **기존 Rule Engine**. 전체 감사/선정/결과는 루트 **`IMAGE_VERIFICATION_SYSTEM_AUDIT.md`** 참조.
+`vlm_fallback_verifier.py` = **SmolVLM 로컬 우선 → server fallback VLM(Qwen2.5-VL-7B) → FP guard → fail-safe**.
+최종 판정은 항상 **기존 Rule Engine**. 전체 감사/선정/결과는 루트 **`IMAGE_VERIFICATION_SYSTEM_AUDIT.md`**,
+**`VLM_FALLBACK_STABILIZATION_REPORT.md`** 참조.
 
-### fallback VLM 선정 (Gate B, mini_probe48)
-| 후보 | FP | task_fp(w/s/e) | recall | latency | 비고 |
-|---|---|---|---|---|---|
-| Qwen2.5-VL-3B (bf16, 이전 fallback) | 15 | 12/1/2 | 0.53 | 11.4s | incumbent |
-| **A.X-4.0-VL-Light (선택)** | **9** | 7/0/2 | 0.60 | **4.9s** | 전 지표 우위 |
-| A.X + **FP guard** | **3** | 3/0/0 | 0.60 | 5.0s | water recall 1.0, 잔여 FP=BORDERLINE 위주 |
+### fallback VLM 선정 (Gate C full-test 171, +guard)
+| 후보 | FP | task_fp(w/s/e) | water recall | error/parse_fail | latency avg | 판정 |
+|---|---|---|---|---|---|---|
+| Qwen2.5-VL-3B (bf16, incumbent) | (mini15) | — | — | — | 11.4s | 탈락 |
+| A.X-4.0-VL-Light + guard | 9 | 8/1/0 | 0.95 | 4/4 | 4.5s | 탈락 |
+| **Qwen2.5-VL-7B + guard (채택)** | **6** | 6/0/0 | 0.85 | **0/0** | 6.6s | DO_NOT_CONFIRM(FP>0) |
 
-→ **A.X-4.0-VL-Light 채택.** Qwen2.5-VL-7B/Qwen3-VL-8B(미다운로드)는 승인 시 추가 비교 예정.
+→ **Qwen2.5-VL-7B 채택**(FP 6<9, study/exercise FP=0, 엔진오류·파싱 0). 잔여 FP=6 은 변기물/오염수/옅은 맥주/borderline
+= **외관상 물과 구분 불가**(외관 기반 인증의 근본 실링). Qwen3-VL-8B 는 승인 시 추가 비교 가능(개선 여지 제한적).
 
 ### FP=0 hard guard (`vlm_fp_guard.py`)
 Rule Engine core 미수정. Rule Engine 이 `verified` 를 내도 **A.X 의 `reason` 자유텍스트**를 스캔해

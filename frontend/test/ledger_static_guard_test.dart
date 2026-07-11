@@ -2,36 +2,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// 1차 수정 회귀 가드(정적 점검).
-/// - m2: 거래 수정에서 memo 입력/전송 제거
-/// - m1: _BudgetAlertBanner 하드코딩 문구 제거
+/// 정적 회귀 가드(소스 문자열 점검). 실기기/서버 없이 `flutter test` 로 돈다.
 ///
-/// 소스 파일 내용을 검사하는 정적 테스트라 실기기/서버 없이 `flutter test` 로 돈다.
+/// 이력 메모:
+/// - m1: _BudgetAlertBanner 하드코딩 문구 제거 → 아래 가드로 회귀 방지(유지).
+/// - m2(폐기): 한때 '거래 수정에서 memo 입력/전송 제거'를 가드했으나, 이후 memo 가
+///   가계부 정식 필드로 재도입되었다(DB ledger_transactions.memo 컬럼 +
+///   ledger_api.updateTransaction 의 memo 파라미터 + ledger_screen 의 메모 입력).
+///   더 이상 유효하지 않은 결정을 강제하므로 memo 부재 가드는 제거한다.
 void main() {
-  test('ledgerApi.updateTransaction 은 memo 를 파라미터/‌body 로 전송하지 않는다', () {
-    final src = File('lib/services/ledger_api.dart').readAsStringSync();
-    expect(
-      src.contains("body['memo']"),
-      isFalse,
-      reason: "PATCH body 에 memo 가 들어가면 안 됨",
-    );
-    expect(
-      src.contains('String? memo'),
-      isFalse,
-      reason: "updateTransaction 시그니처에 memo 파라미터가 남아 있으면 안 됨",
-    );
-  });
-
-  test('거래 수정 다이얼로그에 memo 입력 필드가 없다', () {
-    final src = File('lib/screens/ledger_screen.dart').readAsStringSync();
-    expect(src.contains('memoCtl'), isFalse, reason: "memo 컨트롤러 잔존");
-    expect(
-      RegExp(r"labelText:\s*'메모").hasMatch(src),
-      isFalse,
-      reason: "memo TextField labelText 잔존",
-    );
-  });
-
   test('_BudgetAlertBanner 하드코딩 문구가 활성 화면 코드에 없다', () {
     final src = File('lib/screens/ledger_screen.dart').readAsStringSync();
     expect(src.contains('84%'), isFalse, reason: "84% 하드코딩 잔존");

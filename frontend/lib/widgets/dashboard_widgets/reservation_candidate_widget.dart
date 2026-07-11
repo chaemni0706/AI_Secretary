@@ -2,18 +2,70 @@ import 'package:flutter/material.dart';
 import '../../data/widget_catalog.dart';
 import '../../data/widget_mock_data.dart';
 import '../../models/dashboard_widget_model.dart';
+import '../../models/reservation_model.dart';
+import '../../services/reservation_api.dart';
 import '../../theme/app_theme.dart';
 import 'dashboard_widget_card.dart';
 
 /// 예약 후보 추천 위젯 (Medium).
-/// 현재 mock([WidgetMockData.reservationCandidates]). 예약 추천 API 준비 시 교체.
-class ReservationCandidateWidget extends StatelessWidget {
+///
+/// 저장된 일정을 기반으로 오늘 비어 있는 시간대를 `reservationApi.candidatesFromStore`
+/// 로 추천한다. 충돌 없는 후보의 시작 시각을 최대 3개 노출하고, 실패/후보 없음이면
+/// mock 으로 폴백해 항상 무언가를 보여준다.
+class ReservationCandidateWidget extends StatefulWidget {
   const ReservationCandidateWidget({super.key});
+
+  @override
+  State<ReservationCandidateWidget> createState() =>
+      _ReservationCandidateWidgetState();
+}
+
+class _ReservationCandidateWidgetState
+    extends State<ReservationCandidateWidget> {
+  List<String> _candidates = WidgetMockData.reservationCandidates;
+  String _title = WidgetMockData.reservationTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final result = await reservationApi.candidatesFromStore(
+        targetDate: _today(),
+      );
+      _apply(result);
+    } catch (_) {
+      // 실패 시 mock 유지.
+    }
+  }
+
+  void _apply(ReservationResult result) {
+    if (!mounted) return;
+    final times = result.recommendedCandidates
+        .where((c) => !c.conflict && c.startTime.isNotEmpty)
+        .map((c) => c.startTime)
+        .take(3)
+        .toList();
+    if (times.isEmpty) return; // 후보 없으면 mock 유지
+    setState(() {
+      _candidates = times;
+      _title = '오늘 예약 가능한 시간';
+    });
+  }
+
+  static String _today() {
+    final n = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${n.year}-${two(n.month)}-${two(n.day)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final spec = WidgetCatalog.of(DashboardWidgetType.reservation);
-    final candidates = WidgetMockData.reservationCandidates;
+    final candidates = _candidates;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,7 +78,7 @@ class ReservationCandidateWidget extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          WidgetMockData.reservationTitle,
+          _title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(

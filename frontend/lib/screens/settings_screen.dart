@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../data/mock_profile_data.dart';
+import '../services/preference_store.dart';
+import '../services/user_preferences_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
@@ -12,9 +13,53 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _assistantTone = mockUserProfile.assistantTone;
+  // 백엔드 assistant_tone 코드 ↔ 표시명(backend/data/tone_profiles.json 기준, 5종).
+  // Map 리터럴은 삽입 순서를 보존하므로 그대로 옵션 순서로 쓴다.
+  static const Map<String, String> _tones = {
+    'polite': '정중한 비서',
+    'friendly': '친근한 비서',
+    'concise': '짧고 간결한 비서',
+    'caring': '공감형 비서',
+    'professional': '업무형 비서',
+  };
 
-  static const _toneOptions = ['공손한', '친근한', '간결한', '사려 깊은', '전문적인'];
+  // 서버 동기화된 현재 말투 코드(preferenceStore 는 앱 시작 시 /user/preferences 로 로드됨).
+  String _toneCode = preferenceStore.assistantTone;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 방어적으로 한 번 더 로드해 최신 서버 값 반영.
+    preferenceStore.ensureLoaded().then((_) {
+      if (mounted) setState(() => _toneCode = preferenceStore.assistantTone);
+    });
+  }
+
+  String get _toneLabel => _tones[_toneCode] ?? _toneCode;
+
+  Future<void> _selectTone(String code) async {
+    if (code == _toneCode || _saving) return;
+    // 즉시 반영(로컬/캐시) 후 서버 저장(best-effort).
+    setState(() {
+      _toneCode = code;
+      _saving = true;
+    });
+    preferenceStore.updateLocal(assistantTone: code);
+    try {
+      await UserPreferencesApi.update(assistantTone: code);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('말투를 서버에 저장하지 못했어요. 다음 접속 시 다시 시도됩니다.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '현재 말투: $_assistantTone',
+                            '현재 말투: $_toneLabel',
                             style: AppTextStyles.cardTitle.copyWith(
                               color: AppTheme.blue,
                             ),
@@ -61,11 +106,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ..._toneOptions.map(
-                      (tone) => _ToneOptionCard(
-                        label: tone,
-                        selected: _assistantTone == tone,
-                        onTap: () => setState(() => _assistantTone = tone),
+                    ..._tones.entries.map(
+                      (e) => _ToneOptionCard(
+                        label: e.value,
+                        selected: _toneCode == e.key,
+                        onTap: () => _selectTone(e.key),
                       ),
                     ),
                   ],

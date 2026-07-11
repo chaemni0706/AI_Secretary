@@ -9,9 +9,24 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_runtime_integrated` (build-verified, device-unverified)**
-(이전: `smol_server_python_only` → `smol_android_runtime_stubbed` → 이번 작업으로 **onnxruntime-android 통합 + OrtSession 로드/fallback-safe 브릿지 + Flutter local-first 배선 + Android APK 빌드 성공**.
-아직 **실기기에서 session-load/이미지 추론은 미검증**이고, `verifyImage` 실제 추론은 미구현(전처리/생성 파이프라인) → 서버 fallback. 완성 아님.)
+**분류: `smol_android_session_load_verified`** (2026-07-11, Galaxy Z Flip3 실기기 검증)
+(이전: `smol_server_python_only` → `smol_android_runtime_stubbed` → `smol_android_runtime_integrated`(build) → **실기기에서 OrtSession 3종 로드 성공 검증**.)
+- ✅ 실기기(Galaxy Z Flip3, SM-F711N, arm64-v8a, Android 15)에서 q4f16 ONNX 3종 **OrtSession 로드 성공**(warmup 1117ms, OOM/크래시 없음).
+- ⏳ **이미지 추론(`verifyImage`)은 여전히 미구현**(전처리/토크나이저/디코더 생성) → 서버 fallback. **"온디바이스 완성" 아님.**
+
+### 실기기 session-load smoke 결과 (2026-07-11)
+| 항목 | 값 |
+|---|---|
+| device | Galaxy Z Flip3 (SM-F711N), arm64-v8a, Android 15 |
+| package | `com.example.frontend` (debug, run-as 가능) |
+| APK install | uninstall(서명 불일치) 후 재설치 성공 |
+| 모델 배치 | `run-as … cat > files/models/smolvlm/<f>` 스트리밍 → `getModelInfo`: 6/6 found, 361,194,130 bytes, `status=available`, dir=`/data/user/0/com.example.frontend/files/models/smolvlm` |
+| **warmup (OrtSession load)** | **`success=true`, `sessions_loaded=3`, latency `1117 ms`** |
+| vision_encoder | in `[pixel_values, pixel_attention_mask]` → out `[image_features]` |
+| embed_tokens | in `[input_ids]` → out `[inputs_embeds]` |
+| decoder_merged | out `[logits, present.N.key/value …]`(KV-cache) |
+| memory / OOM | 앱 TOTAL PSS ~534MB, Native Heap ~196MB, **OOM/FATAL/crash 없음**(logcat clean) |
+| inference | `verifyImage` = `unsupported_preprocessing`/`fallback_required`(미구현, 서버 fallback) |
 
 ### 빌드 검증 (2026-07-11)
 - `flutter build apk --debug` → **`✓ Built app-debug.apk` (70.3s) 성공.**
@@ -69,19 +84,17 @@
 
 ## 5. 상태 요약
 
-- ✅ **onnxruntime-android 통합 + OrtSession 로드/fallback-safe 브릿지 + local-first 배선 + APK 빌드 성공(build-verified)**.
-- ⏳ 실기기 session-load/이미지 추론 미검증, `verifyImage` 전처리/생성 파이프라인 미구현 → 현재는 서버 fallback.
-- ❌ "온디바이스 완성" 아님(실기기 이미지 추론 성공 전까지). 현 분류: `smol_android_runtime_integrated`.
+- ✅ **onnxruntime-android 통합 + fallback-safe 브릿지 + local-first 배선 + APK 빌드**, 그리고 **실기기(Flip3) OrtSession 3종 로드 검증(warmup 1117ms, OOM/crash 없음)**.
+- ⏳ **`verifyImage` 이미지 추론(전처리/토크나이저/디코더 생성) 미구현** → 현재는 서버 fallback.
+- ❌ "온디바이스 완성" 아님(실기기 **이미지 추론** 성공 전까지). 현 분류: `smol_android_session_load_verified`.
 - 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback / `review_required`(재촬영). exercise/study 만 local accept 적극 허용 가능.
 
 ## 6. 실기기 session-load smoke — 상태 & 수동 runbook (2026-07-11)
 
 ### 상태(이 세션)
-- **실기기 미연결**(`adb devices` 비어 있음, USB Samsung/Android 미검출) → 실기기 session-load smoke **미수행**.
-- 대신 **dev-only 진단 화면**을 추가해, 기기 연결 시 즉시 warmup(OrtSession 로드)을 돌릴 수 있게 함:
-  [smol_diagnostics_screen.dart](frontend/lib/screens/smol_diagnostics_screen.dart)
-  (진입: 이미지 인증 화면 AppBar 의 memory 아이콘 — `kDebugMode` 에서만 노출).
-- APK 재빌드 성공(진단 화면 포함) — 컴파일/패키징 검증.
+- ✅ **실기기(Galaxy Z Flip3) 연결 → runbook 실행 → OrtSession 3종 로드 성공 검증 완료**(§1 표 참조).
+- 진단 화면 [smol_diagnostics_screen.dart](frontend/lib/screens/smol_diagnostics_screen.dart)
+  (진입: 이미지 인증 화면 AppBar 의 memory 아이콘 — `kDebugMode`)에서 getModelInfo/warmup 로 확인.
 
 ### 수동 runbook (Galaxy Z Flip3 연결 후)
 ```bash

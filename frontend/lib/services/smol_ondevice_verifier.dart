@@ -2,23 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// 온디바이스 SmolVLM-500M 1차 evidence 추론 인터페이스 (**stub**).
+/// 온디바이스 SmolVLM-500M(q4f16 ONNX Runtime) 1차 evidence 인터페이스.
 ///
-/// 목표 구조:
-///   image + task
-///     → (이 클래스) Smol on-device ONNX 추론 → evidence JSON
-///     → confident 하면 로컬 결과 사용, 아니면 서버 Qwen2.5-VL-7B fallback
+/// 네이티브 [SmolVlmBridge] (MethodChannel `ai_secretary/smolvlm`) 와 연결된다.
+/// **fallback-safe**: 네이티브 미등록/모델 미존재/추론 미지원/예외 등 어떤 경우에도 예외를 던지지 않고,
+/// 사용 불가로 판단해 오케스트레이터([ImageVerificationService])가 서버 Qwen2.5-VL-7B fallback 을 타게 한다.
 ///
-/// **현재는 stub 이다.** 실디바이스 ONNX Runtime 추론은 아직 미구현이며 `isAvailable == false` 를 반환해
-/// 오케스트레이터([ImageVerificationService])가 곧바로 서버 fallback 을 타도록 한다.
+/// 현재 상태(정직히): 네이티브는 OrtSession **로드(warmup)** 까지 구현. 실제 이미지 추론
+/// (전처리/토크나이저/디코더 생성)은 미구현 → `verifyImage` 는 `fallback_required=true` 를 반환한다.
 ///
-/// 온디바이스 자산(이미 준비됨, git 미포함 — release 시 asset 주입):
-///   android/app/src/main/assets/models/smolvlm/
-///     vision_encoder_q4f16.onnx (~57MB), embed_tokens_q4f16.onnx (~94MB),
-///     decoder_model_merged_q4f16.onnx (~205MB), tokenizer/merges/chat_template/preprocessor
-///
-/// 연결 방법: [SmolVlmBridge.kt] (MethodChannel `ai_secretary/smolvlm`) 를 통해 네이티브 ONNX Runtime 호출.
-/// 자세한 남은 작업은 루트 `SMOL_ONDEVICE_STATUS.md` 참조.
+/// 모델 파일(git/assets 미포함, ~356MB)은 앱 `filesDir/models/smolvlm/` 에 배치. 자세한 건 `SMOL_ONDEVICE_STATUS.md`.
 ///
 /// 주의: Smol 은 final verifier 가 아니다. Smol `verified`(특히 water)는 로컬 단독 확정 금지.
 class SmolOndeviceVerifier {
@@ -26,40 +19,75 @@ class SmolOndeviceVerifier {
 
   const SmolOndeviceVerifier();
 
-  /// 온디바이스 Smol 런타임 사용 가능 여부. 현재 stub → 항상 false.
-  /// (네이티브 브릿지가 모델 로드에 성공하면 true 로 전환.)
-  Future<bool> isAvailable() async {
+  /// 온디바이스 모델 파일 존재 여부(빠른 확인).
+  Future<bool> isModelAvailable() async {
     try {
-      final ok = await _channel.invokeMethod<bool>('isAvailable');
+      final ok = await _channel.invokeMethod<bool>('isModelAvailable');
       return ok ?? false;
     } on MissingPluginException {
-      // 네이티브 브릿지 미등록(현 stub 상태) → 온디바이스 불가.
-      return false;
+      return false; // 네이티브 브릿지 미등록(예: iOS/데스크톱)
     } on PlatformException {
       return false;
     }
   }
 
-  /// 온디바이스 Smol evidence 추론(→ 로컬 Rule Engine 매핑까지는 네이티브/후속 구현).
-  ///
-  /// 반환은 서버 fallback 과 **동일 schema**(`ImageVerificationResult.fromMap`) 여야 한다.
-  /// 현재 stub: 항상 null 을 반환하여 오케스트레이터가 서버 fallback 을 타게 한다.
+  /// (하위호환) isModelAvailable 과 동일.
+  Future<bool> isAvailable() => isModelAvailable();
+
+  /// 모델 자산 정보(경로/파일별 존재/총 크기/상태).
+  Future<Map<String, dynamic>?> getModelInfo() async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('getModelInfo');
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// OrtSession 로드 시도(모델 input/output 이름 반환). 실패해도 예외 없이 map 반환.
+  Future<Map<String, dynamic>?> warmup() async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('warmup');
+    } on MissingPluginException {
+      return {'success': false, 'status': 'unavailable', 'fallback_required': true};
+    } on PlatformException catch (e) {
+      return {'success': false, 'status': 'error', 'fallback_required': true, 'message': e.message};
+    }
+  }
+
+  /// 온디바이스 추론 시도. 현재는 미지원(unsupported_preprocessing) → fallback_required=true.
+  Future<Map<String, dynamic>?> verifyImage({
+    required File imageFile,
+    required String task,
+    String? activityType,
+  }) async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('verifyImage', {
+        'imagePath': imageFile.path,
+        'task': task,
+        if (activityType != null) 'activityType': activityType,
+      });
+    } on MissingPluginException {
+      return {'success': false, 'status': 'unavailable', 'fallback_required': true};
+    } on PlatformException catch (e) {
+      return {'success': false, 'status': 'error', 'fallback_required': true, 'message': e.message};
+    }
+  }
+
+  /// 오케스트레이터용: **로컬 채택 가능한 evidence** 가 나오면 map 을, 아니면 null 을 반환(→ 서버 fallback).
+  /// 현재 네이티브 추론이 미구현이라 항상 null(fallback) — 온디바이스 추론이 붙으면 evidence map 반환.
   Future<Map<String, dynamic>?> inferEvidence({
     required File imageFile,
     required String task,
     String? activityType,
   }) async {
-    if (!await isAvailable()) return null; // stub: 서버 fallback 유도
-    try {
-      final res = await _channel.invokeMapMethod<String, dynamic>('inferEvidence', {
-        'imagePath': imageFile.path,
-        'task': task,
-        if (activityType != null) 'activityType': activityType,
-      });
-      return res;
-    } on PlatformException {
-      return null; // 실패 시 서버 fallback
-    }
+    if (!await isModelAvailable()) return null;
+    final res = await verifyImage(imageFile: imageFile, task: task, activityType: activityType);
+    if (res == null) return null;
+    // fallback 이 필요하거나 성공하지 못했으면 서버로.
+    if (res['fallback_required'] == true || res['success'] != true) return null;
+    return res; // 서버와 동일 evidence schema 로 정규화된 결과(향후 네이티브 구현 시)
   }
 }
 

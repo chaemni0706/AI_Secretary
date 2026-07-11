@@ -14,8 +14,8 @@ import 'verification_api.dart';
 /// 원칙:
 /// - 최종 판정은 항상 Rule Engine(서버) 또는 fail-safe. Smol/7B 는 evidence extractor.
 /// - Smol `verified`(특히 water)는 로컬 단독 확정 금지 → 서버 fallback 으로 재확인.
-/// - water 의 `verified` 는 비시각 맥락 리스크로 `reviewRequired` → 앱은 secondary_review 로.
-/// - 현재 Smol 은 stub(`isAvailable=false`) → 항상 서버 fallback. 온디바이스 준비 시 자동 활성.
+/// - water 의 `verified` 는 비시각 맥락 리스크로 `reviewRequired` → 앱은 자동 성공이 아니라 **재촬영 안내**.
+/// - Smol 온디바이스 추론은 아직 미구현(네이티브는 세션 로드까지) → 현재는 항상 서버 fallback. 준비 시 자동 활성.
 class ImageVerificationService {
   final SmolOndeviceVerifier smol;
   final VerificationApi api;

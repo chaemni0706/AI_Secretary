@@ -76,3 +76,8 @@ debug_results/
 
 # VLM fallback eval outputs (predictions/metrics/csv/logs) — large, not versioned
 local_eval/vlm_baseline/outputs/
+
+# On-device SmolVLM ONNX model assets (~356MB) — never versioned; loaded from app filesDir at runtime.
+*.ort
+frontend/android/app/src/main/assets/models/
+**/models/smolvlm/

@@ -7,7 +7,7 @@
 > **후속 진행(2026-07-11):** Phase 0 감사 이후 end-to-end 파이프라인 안정화 + fallback 모델 확정 완료.
 > - fallback 후보 비교(A.X vs Qwen2.5-VL-7B) → **Qwen2.5-VL-7B + guard 채택**.
 > - full-test 잔여 FP=6 전수 재분류 → **VLM-eligible visual scope 기준 FP=0 → CONFIRM_ELIGIBLE_SCOPE**.
-> - `verified(water)` → 자동 확정 차단(`review_required=true` → 앱 재촬영 안내). 관리자 검수 큐는 범위 밖(future work). Smol 온디바이스 인터페이스/스텁(`smol_android_runtime_stubbed`).
+> - `verified(water)` → 자동 확정 차단(`review_required=true` → 앱 재촬영 안내). 관리자 검수 큐는 범위 밖(future work). Smol 온디바이스 = onnxruntime-android 통합 + OrtSession 브릿지 + APK 빌드 성공(`smol_android_runtime_integrated`, 실기기 추론 미완).
 > - 상세: **`VLM_FALLBACK_STABILIZATION_REPORT.md`**, **`SMOL_ONDEVICE_STATUS.md`**.
 
 ---

@@ -40,6 +40,12 @@ kotlin {
     }
 }
 
+dependencies {
+    // 온디바이스 SmolVLM-500M q4f16 ONNX 추론용 런타임(SmolVlmBridge.kt 에서 사용).
+    // 모델 weight 는 git/assets 에 넣지 않고 앱 filesDir 에서 로드한다(SMOL_ONDEVICE_STATUS.md 참조).
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.18.0")
+}
+
 flutter {
     source = "../.."
 }

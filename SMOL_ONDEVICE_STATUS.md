@@ -9,8 +9,15 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_runtime_stubbed`**
-(이전: `smol_server_python_only` → 이번 작업으로 인터페이스/브릿지 스텁 + 온디바이스 자산 식별까지 진행. 실디바이스 런타임 검증은 미완.)
+**분류: `smol_android_runtime_integrated` (build-verified, device-unverified)**
+(이전: `smol_server_python_only` → `smol_android_runtime_stubbed` → 이번 작업으로 **onnxruntime-android 통합 + OrtSession 로드/fallback-safe 브릿지 + Flutter local-first 배선 + Android APK 빌드 성공**.
+아직 **실기기에서 session-load/이미지 추론은 미검증**이고, `verifyImage` 실제 추론은 미구현(전처리/생성 파이프라인) → 서버 fallback. 완성 아님.)
+
+### 빌드 검증 (2026-07-11)
+- `flutter build apk --debug` → **`✓ Built app-debug.apk` (70.3s) 성공.**
+- APK 에 **`libonnxruntime.so` 번들 확인**(arm64-v8a / armeabi-v7a / x86_64). Galaxy Z Flip3=arm64-v8a 커버.
+- 즉 **onnxruntime-android:1.18.0 의존성 해결 + `SmolVlmBridge.kt`(OrtEnvironment/OrtSession) 컴파일 + 런타임 패키징**이 검증됨.
+- 미검증: 실기기 OrtSession 로드/추론(디바이스/전처리 필요).
 
 | 항목 | 값 |
 |---|---|
@@ -35,33 +42,34 @@
 (int8/uint8/bnb4 변형도 있음. 정확도-크기 트레이드오프는 디바이스 벤치 후 결정.)
 전처리: `preprocessor_config.json`(SmolVLM image processor), 토크나이저: `tokenizer_config.json`+`merges.txt`+`chat_template.json` → asset 동봉 필요.
 
-## 3. 이번 작업에서 구현한 것 (인터페이스/스텁)
+## 3. 이번 작업에서 구현한 것 (ONNX Runtime 통합)
 
-앱을 깨지 않도록 **기존 화면에 배선하지 않은 additive interface/stub** 으로 추가:
+- Android dependency: `frontend/android/app/build.gradle.kts` 에 `com.microsoft.onnxruntime:onnxruntime-android:1.18.0` 추가
+  → APK 에 `libonnxruntime.so`(arm64-v8a/armeabi-v7a/x86_64) 번들 확인.
+- Android bridge: [SmolVlmBridge.kt](frontend/android/app/src/main/kotlin/com/example/frontend/SmolVlmBridge.kt)
+  — `OrtEnvironment`/`OrtSession` **로드(warmup)** + 모델 가용성/정보 + **fallback-safe**(예외를 Flutter 로 안 던짐, 항상 JSON 반환).
+  MethodChannel `ai_secretary/smolvlm`: `isModelAvailable`/`getModelInfo`/`warmup`/`verifyImage`(+하위호환 `isAvailable`/`inferEvidence`).
+  `verifyImage` 는 **실제 추론 미구현 → `status=unsupported_preprocessing`, `fallback_required=true`** (서버 fallback).
+- Android registration: [MainActivity.kt](frontend/android/app/src/main/kotlin/com/example/frontend/MainActivity.kt)
+  `configureFlutterEngine` 에서 `SmolVlmBridge(applicationContext).register(...)`.
+- Flutter service: [smol_ondevice_verifier.dart](frontend/lib/services/smol_ondevice_verifier.dart)
+  `isModelAvailable/getModelInfo/warmup/verifyImage/inferEvidence` — 모두 fallback-safe(미지원/예외 시 null/`fallback_required`).
+- Flutter orchestrator: [image_verification_service.dart](frontend/lib/services/image_verification_service.dart)
+  local-first → confident accept(**water 는 로컬 채택 금지**) → 아니면 서버 `VerificationApi` fallback.
+- 모델 경로: 앱 `filesDir/models/smolvlm/` (q4f16 ONNX 3종 + tokenizer.json/config.json/preprocessor_config.json). **git/assets 미포함**(.gitignore: `*.onnx`,`*.ort`, assets/models, `**/models/smolvlm/`).
 
-- Flutter: [frontend/lib/models/image_verification_result.dart](frontend/lib/models/image_verification_result.dart)
-  — local-first + server fallback 통합 결과 모델(`finalResult/engineUsed/reviewRequired/reviewReason/localResult/fallbackResult`).
-- Flutter: [frontend/lib/services/smol_ondevice_verifier.dart](frontend/lib/services/smol_ondevice_verifier.dart)
-  — 온디바이스 Smol 추론 **인터페이스 + stub**(`isAvailable=false` → 서버 fallback 유도). ONNX 자산/연결 TODO 명시.
-- Flutter: [frontend/lib/services/image_verification_service.dart](frontend/lib/services/image_verification_service.dart)
-  — **오케스트레이터**: Smol on-device first → confident 하면 반환, 아니면 `VerificationApi`(서버 Qwen7B fallback) 호출.
-- Flutter: [frontend/lib/models/verification_result.dart](frontend/lib/models/verification_result.dart) 확장
-  — `reviewRequired`/`reviewReason` getter(백엔드 `data` 에서 읽음, non-breaking).
-- Android: [frontend/android/app/src/main/kotlin/com/example/frontend/SmolVlmBridge.kt](frontend/android/app/src/main/kotlin/com/example/frontend/SmolVlmBridge.kt)
-  — ONNX Runtime MethodChannel **브릿지 스켈레톤**(MainActivity 미배선, 독립 클래스).
-- Python(local-first 계약): [local_eval/vlm_baseline/vlm_fallback_verifier.py](local_eval/vlm_baseline/vlm_fallback_verifier.py)
-  — `verify_image_with_vlm_fallback(image, task)` = Smol local → server fallback → guard → review policy. **온디바이스가 mirror 할 response schema 기준.**
+## 4. 온디바이스 "실기기 추론"까지 남은 작업
 
-## 4. 온디바이스 런타임을 "실동작"시키려면 (남은 작업)
-
-1. `onnxruntime`(Flutter: `onnxruntime` pub 또는 Android AAR `onnxruntime-android`) 의존성 추가.
-2. q4f16 ONNX 3종 + tokenizer/merges/chat_template/preprocessor 를 `android/app/src/main/assets/models/smolvlm/` 에 asset 동봉(**git 미포함**, CI/release 시 주입).
-3. SmolVLM 추론 루프 구현(Kotlin/JNI 또는 Dart): image preprocess → vision_encoder → embed_tokens → decoder autoregressive(use_cache) → detokenize → evidence JSON.
-4. 출력 evidence 를 서버와 **동일 schema** 로 정규화 → `SmolOndeviceVerifier` 반환.
-5. Galaxy Z Flip3 실디바이스 smoke(load/generate/latency/메모리) → 상태 `smol_android_runtime_verified` 로 승격.
+1. 모델 파일(~356MB)을 실기기 `filesDir/models/smolvlm/` 로 배치(개발용 push 또는 최초 실행 시 download).
+2. `verifyImage` 실제 추론 구현(Kotlin): image preprocess(SmolVLM anyres tiling) → tokenizer/chat_template →
+   vision_encoder → embed_tokens → decoder autoregressive(KV-cache) → detokenize → evidence JSON(서버와 동일 schema).
+3. Galaxy Z Flip3 실디바이스 smoke: `warmup`(OrtSession 로드) + `verifyImage`(load/latency/메모리) → 성공 시
+   상태 `smol_android_runtime_verified` 로 승격.
+4. 정확도/크기 트레이드오프(q4f16 vs int8/bnb4) 디바이스 벤치.
 
 ## 5. 상태 요약
 
-- ✅ 온디바이스 자산(ONNX q4f16) 확보, 인터페이스/오케스트레이터/브릿지 스텁 구현, 서버 fallback 계약 확정.
-- ❌ 실디바이스 ONNX 추론은 미구현(현 환경에 디바이스/빌드 없음) → **stubbed**.
-- 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback/`review_required` 로. exercise/study 만 local accept 적극 허용 가능.
+- ✅ **onnxruntime-android 통합 + OrtSession 로드/fallback-safe 브릿지 + local-first 배선 + APK 빌드 성공(build-verified)**.
+- ⏳ 실기기 session-load/이미지 추론 미검증, `verifyImage` 전처리/생성 파이프라인 미구현 → 현재는 서버 fallback.
+- ❌ "온디바이스 완성" 아님(실기기 이미지 추론 성공 전까지). 현 분류: `smol_android_runtime_integrated`.
+- 원칙: Smol verified(특히 water)는 로컬 단독 확정 금지 → 서버 fallback / `review_required`(재촬영). exercise/study 만 local accept 적극 허용 가능.

@@ -36,12 +36,20 @@ review_required=true  → review_status="pending"             (water verified, �
    재촬영 요청   → "needs_retake"
 ```
 
-## 3. 저장/큐 구조 (구현 현황)
+## 3. 저장/큐 구조 (DB 영속화 — 2026-07-11)
 
-- 이미지 인증은 현재 **DB 저장이 없다(stateless)**. `ImageVerificationData` 는 API 응답 스키마이며 DB 모델이 아니다.
-- 따라서 review queue 는 기존 선례(`wakeup_session_store`)와 동일하게 **in-memory 스토어**로 구현했다:
-  `backend/services/secondary_review_service.py` → `SecondaryReviewStore` + 싱글턴 `secondary_review_store`.
-- **PoC 한계:** 서버 재시작 시 큐가 사라진다. 프로덕션은 DB 테이블(`image_verification_reviews`)로 백킹해야 한다(아래 4항).
+- 이미지 인증 결과 자체는 여전히 DB 저장이 없다(stateless). **review queue 만** 별도 테이블로 영속화한다.
+- 전략 = **B안(별도 테이블)**: 기존 인증 record 테이블이 없어 확장 대상이 없고, planner/ledger 등과 완전 독립이라 가장 안전.
+  ledger 도메인(별도 `*_models.py`/`*_repository.py` + `local_schema.sql` append-only)과 동일 패턴.
+- 구성:
+  - table: `image_verification_reviews` (`database/local_schema.sql`, `CREATE TABLE IF NOT EXISTS`, 트리거/기존 테이블 미수정).
+  - model: `backend/database/image_verification_review_models.py` (`ImageVerificationReviewRow`, `models.py` 의 `Base` 공유).
+  - repository: `backend/database/secondary_review_repository.py` (Session 주입 순수 CRUD).
+  - service: `backend/services/secondary_review_service.py` (`register/list_pending/get/decide` — Session 주입, JSON 직렬화, `ReviewRecord` 변환).
+- enum(review_status/decision)은 API/pydantic 과 동일하게 lowercase 저장 + CHECK 제약(이 도메인 신규 값 → 별도 매핑 레이어 없음).
+- 시각은 ISO 문자열(created_at/reviewed_at), rule_evidence 는 JSON TEXT.
+- 스키마 반영: `apply_schema_to_sqlite_file(runtime/ai_secretary_local.db)` (idempotent, IF NOT EXISTS). Alembic 없음 — SQL 파일이 단일 소스.
+- 견고성: verify 라우트의 등록은 defensive(try/except+rollback) — DB 미초기화여도 인증 판정 자체는 반환(review_required 유지).
 
 ## 4. API
 
@@ -95,7 +103,8 @@ review_required=true  → review_status="pending"             (water verified, �
 
 ## 7. 남은 작업(프로덕션)
 
-1. review queue DB 테이블 백킹(현재 in-memory PoC) + 인증 결과 영속화.
+1. ✅ review queue DB 테이블 백킹 완료(`image_verification_reviews`). (인증 결과 record 전체 영속화는 필요 시 별도.)
 2. 관리자 검수 화면(pending 목록/상세/결정) — 프론트/어드민.
 3. GPS/시간/촬영 맥락 rule 연동 → 일부 water 자동 확정 범위 확대(Rule Engine 확장은 별도 합의).
 4. 재촬영(needs_retake) 시 사용자 재제출 흐름.
+5. review 항목에 user_id/이미지 참조 연결(현재 이미지 인증이 user/이미지 저장을 하지 않아 큐는 독립 테이블).

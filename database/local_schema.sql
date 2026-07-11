@@ -252,3 +252,35 @@ CREATE INDEX IF NOT EXISTS idx_ledger_tx_dedup
 -- 퍼지 dedup 후보 (알림↔영수증 교차, merchant+amount 근사)
 CREATE INDEX IF NOT EXISTS idx_ledger_tx_fuzzy
   ON ledger_transactions (user_id, normalized_merchant, amount);
+
+-- =====================================================================
+-- Secondary review queue — VLM 이미지 인증에서 외관만으로 자동 확정 불가한
+-- water `verified` 를 사람 검수 대기(pending)로 추적한다. planner/ledger 등 기존
+-- 테이블과 완전 독립(append only). 이미지 인증은 결과 record 를 별도 저장하지 않으므로
+-- verification record FK 없이 스스로 완결된 큐 테이블로 둔다.
+-- enum(review_status/decision)은 API/pydantic 과 동일하게 lowercase 로 저장한다
+-- (이 도메인 내부에서만 쓰이는 신규 값이라 별도 매핑 레이어를 두지 않는다).
+-- 최종 성공 판단은 final_result 가 아니라 review_status(approved) 를 우선한다.
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS image_verification_reviews (
+  id                 TEXT PRIMARY KEY,
+  verification_type  TEXT NOT NULL,
+  result             TEXT NOT NULL,             -- final_result: verified/rejected/retake_required
+  score              INTEGER NOT NULL DEFAULT 0,
+  review_reason      TEXT NOT NULL DEFAULT '',
+  review_status      TEXT NOT NULL DEFAULT 'pending'
+                       CHECK (review_status IN
+                         ('none','pending','approved','rejected','needs_retake')),
+  review_decision    TEXT
+                       CHECK (review_decision IS NULL OR review_decision IN
+                         ('approved','rejected','needs_retake')),
+  review_note        TEXT NOT NULL DEFAULT '',
+  reviewer_id        TEXT,
+  rule_evidence_json TEXT,                       -- JSON 배열(코드/메시지/점수). 없으면 NULL
+  created_at         TEXT NOT NULL,
+  reviewed_at        TEXT
+);
+
+-- 검수 대기 목록 조회(상태별)
+CREATE INDEX IF NOT EXISTS idx_image_review_status
+  ON image_verification_reviews (review_status, created_at);

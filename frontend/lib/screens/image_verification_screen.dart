@@ -253,11 +253,14 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Widget _resultCard(VerificationResult r) {
-    final (color, icon) = switch (r.result) {
-      'verified' => (const Color(0xFF2E7D32), Icons.check_circle),
-      'retake_required' => (const Color(0xFFEF6C00), Icons.refresh),
-      _ => (const Color(0xFFC62828), Icons.cancel),
-    };
+    // secondary_review(비시각 맥락 확인 필요)는 verified 와 구분해 amber 로 표시(자동 확정 아님).
+    final (color, icon) = r.needsSecondaryReview
+        ? (const Color(0xFFF9A825), Icons.help_outline)
+        : switch (r.result) {
+            'verified' => (const Color(0xFF2E7D32), Icons.check_circle),
+            'retake_required' => (const Color(0xFFEF6C00), Icons.refresh),
+            _ => (const Color(0xFFC62828), Icons.cancel),
+          };
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -279,6 +282,13 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
             const SizedBox(height: 8),
             Text('타입: ${r.verificationType}  ·  판정: ${r.result}'
                 '${r.score != null ? '  ·  점수: ${r.score}' : ''}'),
+            if (r.needsSecondaryReview) ...[
+              const SizedBox(height: 6),
+              Text(
+                '외관만으로는 확정이 어려워 추가 확인이 필요해요 (${r.reviewReason}).',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
+              ),
+            ],
             if (r.reasons.isNotEmpty) ...[
               const SizedBox(height: 10),
               const Text('근거', style: TextStyle(fontWeight: FontWeight.w600)),

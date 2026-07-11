@@ -47,7 +47,8 @@ class VerificationResult {
     );
   }
 
-  bool get isVerified => result == 'verified';
+  /// 자동 확정(verified) — 단, secondary_review 대상이면 자동 확정 아님.
+  bool get isVerified => result == 'verified' && !reviewRequired;
   bool get isRejected => result == 'rejected';
   bool get isRetakeRequired => result == 'retake_required';
 
@@ -60,8 +61,14 @@ class VerificationResult {
   String get reviewReason =>
       (raw['review_reason'] ?? (reviewRequired ? 'water_non_visual_context_risk' : '')).toString();
 
+  /// verified 이지만 비시각 맥락 확인이 필요한 상태(앱은 자동 확정하지 말 것).
+  bool get needsSecondaryReview => result == 'verified' && reviewRequired;
+
   /// 사용자에게 보여줄 한 줄 메시지.
   String get displayMessage {
+    if (needsSecondaryReview) {
+      return '거의 다 됐어요. 추가 확인이 필요해요 🔎';
+    }
     switch (result) {
       case 'verified':
         return '인증 성공! 잘 하셨어요 👍';

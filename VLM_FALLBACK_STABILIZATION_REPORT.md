@@ -151,3 +151,44 @@ out = verify_image_with_vlm_fallback(image_path, task)   # task ∈ {water, stud
 ```
 반환 schema: task/final_result/engine_used(smol|server_fallback|fail_safe)/fallback_used/local_result/
 fallback_result/rule_reason/rule_trace/evidence/debug(guard_reason 포함). 기존 backend Rule Engine 과 동일 판정 함수 사용.
+
+---
+
+## 9. Backend/API secondary_review 통합 (2026-07-11)
+
+`verified(water)` 를 자동 확정하지 않고 `review_required` 로 표시하는 정책을 **backend service/API layer** 에 반영.
+**Rule Engine core 미수정**(enum `verified/retake_required/rejected` 유지). schema 에 `review_required`/`review_reason` 필드만 추가(기본값 → 하위호환).
+
+- schema: `ImageVerificationData` 에 `review_required: bool=False`, `review_reason: str=""` 추가.
+- service: `apply_secondary_review_policy(data)` — `result==verified AND verification_type==water` → `review_required=true`,
+  `review_reason="water_non_visual_context_risk"`. `verify_image_upload` 반환 직전 적용(study fallback 이후).
+- API: `POST /api/v1/image-verifications` 응답 `data` 에 두 필드 노출(`success_response(data=model_dump())`).
+- exercise/study/기타: 정책 미적용(기존 흐름 유지).
+
+### API response 예시 (water verified → review)
+```json
+{
+  "success": true,
+  "message": "인증사진 판정이 완료되었습니다.",
+  "data": {
+    "verification_type": "water",
+    "result": "verified",
+    "score": 65,
+    "mandatory_passed": true,
+    "rule_evidence": [{"code": "object:cup", "message": "cup 객체가 확인되었습니다.", "score_delta": 15}, ...],
+    "review_required": true,
+    "review_reason": "water_non_visual_context_risk"
+  }
+}
+```
+exercise verified → `"review_required": false, "review_reason": ""` (자동 확정).
+
+### Frontend 반영
+- `verification_result.dart`: `reviewRequired`/`reviewReason`/`needsSecondaryReview` getter, `isVerified` 는 review 시 false,
+  `displayMessage` 는 "추가 확인이 필요해요" 반환.
+- `image_verification_screen.dart`: `needsSecondaryReview` 이면 amber(help) 카드 + "외관만으로는 확정이 어려워 추가 확인이 필요해요" 문구.
+- (온디바이스 경로) `image_verification_service.dart`/`image_verification_result.dart` 도 동일 필드 지원.
+
+### 테스트
+`tests/test_image_verification_review_policy.py`(5 cases): water verified→review, water rejected/exercise verified→no review,
+응답 필드 노출, schema 기본값 하위호환. → 기존 53 + 신규 5 = **58 passed**(회귀 없음).

@@ -64,18 +64,28 @@ def _map(task, ev):
     codes, objs, has_pos = [], [], False
 
     if task == "water":
-        water_word = _has(pos_blob, ("visible_water", "waterline", "water surface", "물", "생수", "맑은 물"))
-        # "water" 단어는 "water bottle"(용기명)만일 수 있어, 액체 문맥일 때만 인정
-        water_liquid = _has(pos_blob, ("water in", "of water", "filled with water", "물이 담", "물을 마", "물이 들어"))
-        clear_liquid = _has(pos_blob, ("clear_liquid", "clear liquid", "transparent liquid", "투명한 액체", "맑은 액체"))
+        # FP=0 보수 강화: '빈/투명 용기'를 물로 오인(water_009 빈 유리잔, water_035 빈 물병)하는 것이 최대 FP 원인.
+        # (a) 빈 용기 신호는 positive/blocker 어디에 있든 empty_container blocker 로 강제하고 positive 를 막는다.
+        empty_sig = _has(pos_blob + " || " + block_blob,
+                         ("empty", "no liquid", "no water", "without water", "appears empty", "looks empty",
+                          "빈 ", "비어", "비었", "물이 없", "액체가 없", "내용물이 없"))
+        # (b) 물/맑은 액체는 '실제 담긴 액체 표면/수위'가 확인될 때만 인정(용기명 'water bottle' 만으론 불충분).
+        water_liquid = _has(pos_blob, ("visible_water", "waterline", "water surface", "water level",
+                                       "water in", "of water", "filled with water", "liquid inside", "liquid in the",
+                                       "물이 담", "물을 마", "물이 들어", "물이 채", "수위", "액체가 담", "액체 표면"))
+        clear_liquid = _has(pos_blob, ("clear_liquid", "clear liquid", "transparent liquid",
+                                       "투명한 액체", "맑은 액체", "맑은 물"))
         container = _has(pos_blob, ("cup", "컵", "glass", "유리", "bottle", "병", "보틀", "transparent_container", "container"))
-        if water_word or water_liquid:
-            codes.append("visible_water"); has_pos = True
-        elif clear_liquid:
-            codes.append("visible_clear_liquid"); has_pos = True
-        if has_pos and container:
-            codes.append("filled_container")
-            objs.append({"label": "water_bottle" if _has(pos_blob, ("bottle", "병", "보틀")) else "cup", "confidence": 0.6})
+        if empty_sig:
+            codes.append("empty_container")     # blocker → Rule Engine 거절/미verify
+        else:
+            if water_liquid:
+                codes.append("visible_water"); has_pos = True
+            elif clear_liquid:
+                codes.append("visible_clear_liquid"); has_pos = True
+            if has_pos and container:
+                codes.append("filled_container")
+                objs.append({"label": "water_bottle" if _has(pos_blob, ("bottle", "병", "보틀")) else "cup", "confidence": 0.6})
         # blockers
         if _has(block_blob, ("empty", "빈", "비어")): codes.append("empty_container")
         if _has(block_blob, ("opaque", "불투명", "opaque_container")): codes.append("opaque_closed_container")
@@ -91,6 +101,13 @@ def _map(task, ev):
         if _has(pos_blob, ("lecture", "강의", "강의자료")): codes.append("lecture_video"); has_pos = True
         if _has(pos_blob, ("problem", "문제", "solving", "writing_or_solving")): codes.append("problem_solving_material"); has_pos = True
         if _has(pos_blob, ("study_related_text", "study content", "study screen", "학습 화면", "공부 화면", "study_content")): codes.append("study_content_on_screen"); has_pos = True
+        # FP=0 보수 강화: vocabulary-dump 방어. 한 장의 사진에 lecture_video+code_editor+textbook+notes 가
+        # 동시에 잡히는 것은 물리적으로 불가능 → Qwen 이 허용 토큰을 나열(dump)한 것으로 보고 positive 전부 폐기.
+        _study_pos = [c for c in codes if c not in {"gaming_content", "entertainment_video", "social_media",
+                     "shopping_content", "closed_study_materials", "uncertain_screen_content"}]
+        if len(_study_pos) >= 4:
+            codes = [c for c in codes if c not in _study_pos]; has_pos = False
+            objs = []
         if has_pos: objs.append({"label": "book", "confidence": 0.6})
         # blockers
         if _has(block_blob, ("game", "게임", "gaming")): codes.append("gaming_content")

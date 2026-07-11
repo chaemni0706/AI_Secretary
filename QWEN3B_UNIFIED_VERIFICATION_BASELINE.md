@@ -1,6 +1,13 @@
 # Qwen-3B as Image Evidence Engine (into EXISTING Rule Engine)
 
 작성 2026-07-10, 개정. branch: `archive/vlm-qwen3b-unified-baseline`.
+
+> **업데이트(2026-07-10, end-to-end 평가):** SmolVLM 로컬 우선 + Qwen-3B fallback + 기존 Rule Engine 파이프라인을
+> 구축·평가함(`VLM_FALLBACK_VERIFICATION_PIPELINE.md`). **결과 FP≠0 → 이미지 인증 시스템으로 확정 불가(DO_NOT_CONFIRM).**
+> 지배적 FP: Qwen-3B 가 **빈/투명 용기를 물로 환각**(visible_water/clear_liquid 토큰이 실제 물과 동일 → adapter 분리 불가).
+> study 는 vocabulary-dump ↔ recall 상충. 해결에는 더 강한 VLM 또는 (보류했던) YOLO/액체-수위 신호가 필요.
+> **YOLO/OpenImages 경로는 현재 후순위 보류.**
+
 > **방향 수정**: 새 verification 시스템을 만드는 게 아니라, **기존 앱/검증 시스템 구조를 유지하고 "이미지 판독 엔진"만 Qwen-3B 로 교체**한다.
 > **Qwen-3B 는 최종 판정 모델이 아니다.** Qwen-3B 는 기존 객체/장면/evidence 판독 엔진을 대체하는 **evidence extractor** 이며, 최종 verified/rejected/retake_required 는 **기존 Rule Engine** 이 결정한다.
 

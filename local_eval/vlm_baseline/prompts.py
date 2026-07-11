@@ -33,11 +33,17 @@ _COMMON = (
 # task별 허용 evidence/blocker 토큰(기존 Rule Engine evidence 로 매핑되는 adapter 어휘).
 _TASK = {
     "water": (
-        "task=water. positive_evidence tokens: visible_water, clear_liquid_visible, transparent_container, "
-        "cup_visible, bottle_visible, waterline_visible. "
-        "blockers tokens: empty_cup, empty_bottle, colored_beverage, coffee, juice, milk, tea, soda, "
-        "opaque_container, liquid_unclear. "
-        "Only report visible_water/clear_liquid_visible when liquid is actually visible (not from container name alone)."
+        "task=water. Decide what is ACTUALLY inside the container. "
+        "positive_evidence tokens (use ONLY when clearly true): visible_water (a COLORLESS liquid with a visible "
+        "liquid surface/waterline inside the container), clear_liquid_visible, transparent_container, cup_visible, "
+        "bottle_visible, waterline_visible. "
+        "blockers tokens (use when true): empty_cup (container looks empty / no liquid surface or waterline visible), "
+        "empty_bottle, colored_beverage (liquid is yellow/green/brown/orange/red or any non-colorless tint → tea, "
+        "juice, soda, etc.), coffee, juice, milk, tea, soda, opaque_container (cannot see inside), liquid_unclear. "
+        "STRICT RULES for FP=0: (1) An empty-looking glass with NO visible liquid surface/waterline is empty_cup, "
+        "NOT visible_water. (2) A COLORED (non-colorless) liquid is a beverage → colored_beverage, NOT water. "
+        "(3) Report visible_water/clear_liquid_visible ONLY when you can clearly see a colorless liquid surface; "
+        "when in doubt set uncertainty=high and use liquid_unclear. Never infer water from the container name alone."
     ),
     "study": (
         "task=study. positive_evidence tokens: open_book, textbook, notes, study_document, code_screen, "

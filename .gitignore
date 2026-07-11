@@ -73,3 +73,6 @@ rag/vector_db/
 raw_ocr_results/
 structured_results/
 debug_results/
+
+# VLM fallback eval outputs (predictions/metrics/csv/logs) — large, not versioned
+local_eval/vlm_baseline/outputs/

@@ -3,6 +3,8 @@ package com.example.frontend
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Handler
+import android.os.Looper
 import ai.onnxruntime.OnnxJavaType
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
@@ -66,9 +68,12 @@ class SmolVlmBridge(private val context: Context) {
         private val PROMPT_PREFIX = longArrayOf(1L, 11126L, 42L, 49189L, 49152L)   // <|im_start|>User:<fake><global-img>
         private val PROMPT_TAIL = longArrayOf(49279L, 198L, 9519L, 9531L, 42L)     // <end_of_utterance>\nAssistant:
         private const val FAKE_TOKEN = 49189L
-        // question token ids(host-encoded). 짧은 **중립 서술형** 사용: 옵션 열거("… or empty?")는
-        // SmolVLM-500M 이 마지막 옵션을 그대로 뱉는 편향("Empty.")을 유발해 오히려 정확도↓ → 제거.
-        // task 차이는 명사만("drink"/"scene"/"activity") — water 의 "drink" 초점이 이전엔 study/exercise 도 beverage 로 편향시켰었다.
+        // question token ids(host-encoded, 도구 tools/gen_smol_prompts.py). **중립 서술형**.
+        // 프롬프트 스타일 3종 실기기 비교 결과(§13):
+        //  - 옵션 열거형("… or empty?") → SmolVLM-500M 이 마지막 옵션 복사("Empty.") → water 오답.
+        //  - 객체 나열 명령형("Name visible … items") → 짧은 garbage/부분출력("TMC", "There is a glass.") → 더 나쁨.
+        //  - **중립 서술형("Describe the … briefly.")이 최선** → 실제 장면 서술, beverage 편향 없음. 채택.
+        // task 차이는 명사만(drink/scene/activity). SmolVLM-500M single-512 는 명사 추출 유도가 안 되는 caption granularity 한계.
         private val Q_WATER = longArrayOf(37964L, 260L, 5968L, 13099L, 30L)      // "Describe the drink briefly."
         private val Q_STUDY = longArrayOf(37964L, 260L, 6621L, 13099L, 30L)      // "Describe the scene briefly."
         private val Q_EXERCISE = longArrayOf(37964L, 260L, 2313L, 13099L, 30L)   // "Describe the activity briefly."
@@ -594,6 +599,7 @@ class SmolVlmBridge(private val context: Context) {
             var curLen = baseLen
             val gen = ArrayList<Long>()
             var loopErr: String? = null
+            var eosSeen = false
             for (step in 0 until maxNew) {
                 val stepCl = ArrayList<AutoCloseable>()
                 try {
@@ -610,7 +616,7 @@ class SmolVlmBridge(private val context: Context) {
                     val vocab = logits.info.shape[2].toInt()
                     val next = argmaxAt(logits.floatBuffer, (curLen - 1) * vocab, vocab)
                     gen.add(next.toLong())
-                    if (next.toLong() == EOS_ID) break
+                    if (next.toLong() == EOS_ID) { eosSeen = true; break }
                     // 다음 토큰 임베딩 → buf 에 append
                     val nT = OnnxTensor.createTensor(env, LongBuffer.wrap(longArrayOf(next.toLong())), longArrayOf(1, 1)); stepCl.add(nT)
                     val nr = embedS.run(mapOf("input_ids" to nT)); stepCl.add(nr)
@@ -647,6 +653,7 @@ class SmolVlmBridge(private val context: Context) {
                 "task_prompt_name" to promptName, "prompt_seq_len" to baseLen,
                 "image_token_count" to imgCount, "image_token_start" to imgStart,
                 "image_token_end" to (imgStart + imgCount - 1), "pad_len" to pad,
+                "max_new_tokens" to maxNew, "eos_seen" to eosSeen, "generated_token_count" to gen.size,
                 "generated_token_ids" to gen, "generated_text" to (text ?: ""),
                 "count" to gen.size, "latency_ms" to (System.currentTimeMillis() - t0),
                 "levels" to levels,
@@ -711,30 +718,45 @@ class SmolVlmBridge(private val context: Context) {
         return String(bytes.toByteArray(), StandardCharsets.UTF_8)
     }
 
+    // ONNX 추론(수 초)은 메인 스레드에서 돌리면 ANR → 백그라운드 스레드에서 실행 후 결과를 메인으로 post.
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private fun runAsync(result: MethodChannel.Result, block: () -> Any?) {
+        Thread {
+            val out: Any? = try {
+                block()
+            } catch (t: Throwable) {
+                hashMapOf(
+                    "success" to false, "engine" to "smol_ondevice", "status" to "error",
+                    "fallback_required" to true, "message" to (t.message ?: t.javaClass.simpleName),
+                )
+            }
+            mainHandler.post { result.success(out) }
+        }.start()
+    }
+
     fun register(flutterEngine: FlutterEngine) {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 try {
                     when (call.method) {
-                        // 신규 리치 API
+                        // 가벼운 조회 — 동기
                         "isModelAvailable" -> result.success(isModelAvailable())
                         "getModelInfo" -> result.success(getModelInfo())
-                        "warmup" -> result.success(warmup())
-                        "verifyImage" -> result.success(
-                            verifyImage(call.argument("imagePath"), call.argument("task"))
-                        )
-                        "l4Experiment" -> result.success(l4Experiment())
-                        "imageTextGen" -> result.success(
-                            imageTextGeneration(call.argument("imagePath"),
-                                (call.argument<String>("task")) ?: "water",
-                                (call.argument<Int>("maxNew")) ?: 12,
-                                (call.argument<Int>("padLen")) ?: 96)
-                        )
-                        // 하위호환(기존 Dart 오케스트레이터)
                         "isAvailable" -> result.success(isModelAvailable())
-                        "inferEvidence" -> {
-                            // 미구현 → null 반환(오케스트레이터가 서버 fallback).
-                            result.success(null)
+                        "inferEvidence" -> result.success(null) // 미구현 → 서버 fallback
+                        // 무거운 추론 — 백그라운드 스레드(ANR 방지)
+                        "warmup" -> runAsync(result) { warmup() }
+                        "verifyImage" -> runAsync(result) {
+                            verifyImage(call.argument("imagePath"), call.argument("task"))
+                        }
+                        "l4Experiment" -> runAsync(result) { l4Experiment() }
+                        "imageTextGen" -> {
+                            val imagePath = call.argument<String>("imagePath")
+                            val task = call.argument<String>("task") ?: "water"
+                            val maxNew = call.argument<Int>("maxNew") ?: 12
+                            val padLen = call.argument<Int>("padLen") ?: 96
+                            runAsync(result) { imageTextGeneration(imagePath, task, maxNew, padLen) }
                         }
                         else -> result.notImplemented()
                     }

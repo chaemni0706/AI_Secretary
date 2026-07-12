@@ -91,7 +91,7 @@ class SmolOndeviceVerifier {
   Future<Map<String, dynamic>?> imageTextGen({
     required File imageFile,
     String task = 'water',
-    int maxNew = 16,
+    int maxNew = 12,
     int padLen = 128,
   }) async {
     try {

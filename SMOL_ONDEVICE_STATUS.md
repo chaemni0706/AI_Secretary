@@ -17,6 +17,7 @@
   - **water 생성 정확**: 맑은 물→`"A glass of water."`→`[visible_water]`; 오렌지주스→`"Orange juice."`→`[non_water_beverage]`. positive/blocker 모두 정확 매핑.
   - **study/exercise 는 하드코딩 water-프롬프트 때문에 생성이 beverage 로 편향**(예: 책상+노트→"Tea.", 배낭→"A glass of water.") → 파서가 **보수적으로 `weak`/`uncertain_*` 처리, false-accept 0**. 모든 6장 `local_accept_candidate=false`, 무크래시(5~8s).
 - ✅ **task별 프롬프트 도입 → beverage 편향 제거**(§12): 프롬프트 질문을 water="the drink", study="the scene", exercise="the activity" 로 분리(옵션 열거는 "Empty." 오답 유발해 제외). 재검증 결과 study/exercise 생성이 **실제 장면 서술**로 개선(책상→"wooden table with various items", 소파→"A woman is sitting on a couch"). **소파(비운동)는 sitting/couch→`unrelated_environment` blocker 로 정확 거절**. water 정확 유지(맑은물→visible_water, 주스→non_water_beverage). false-accept 여전히 0.
+- ✅ **프롬프트 스타일 3종 비교 + 지연/ANR 개선**(§13): 열거형("… or empty?")→"Empty."(최종옵션 복사), 객체나열형("Name visible … items")→garbage/부분("TMC","There is a glass.") 로 **둘 다 서술형보다 나쁨** → **중립 서술형 채택**(SmolVLM-500M single-512 는 명사 추출 유도 불가 = caption granularity 한계). `maxNew 16→12` 로 study/exercise 지연 **~20s→~13s**. **추론을 백그라운드 스레드로 이동해 ANR 제거**(이전엔 메인 스레드 블록으로 ANR). 진단 JSON 에 `max_new_tokens/eos_seen/generated_token_count` 추가.
 - ✅ **payload backend Rule Engine 투입 확인**: `rule_engine_payload` 4종을 실제 `evaluate_image_verification` 에 투입 → 오류 없이 소비. water[visible_water]→`rejected`(단일 코드/객체 없음→mandatory 미달, Smol 이 water 를 local-accept 하면 안 되는 근거 보강), water[non_water_beverage]→`rejected`, study/exercise weak→`retake_required`.
 - ⚠️ **partial 사유(갱신)**: 이미지 배포는 gallery picker 로 해결됐으나, **study/exercise 는 하드코딩 프롬프트로 생성 텍스트가 부정확**해 task-정확 evidence 생성 불가(파서는 안전하게 fallback). water 만 생성·evidence 모두 정확. → task별 정확도는 부분.
 - ⏳ spike/diagnostics 전용(프롬프트 water-하드코딩·task별 프롬프트 미구현, single-512 anyres 미적용, 서버 evidence schema 자동 투입 미연결) → `fallback_required=true` 유지, 서버 fallback + water local accept 금지 유지.
@@ -351,3 +352,29 @@ diagnostics 에서 task별 정확도 충분 확인 → local-first accept 배선
 **상태 판단:** `smol_android_evidence_spike_partial` **유지**. beverage 편향 제거·blocker 검출·water 정확은 개선됐으나, study/exercise **positive(인정) evidence** 는 caption 어휘 한계로 미달. → `verified` 아님.
 
 **다음 단계:** (1) 프롬프트를 "list the objects" 형으로 조정하거나 anyres 로 세부 명사(book/notes/dumbbell) 유도 → positive 검출, (2) latency 위해 maxNew 축소/EOS 유도, (3) 그 후 study/exercise 만 local accept 후보 배선(water 서버/정책 유지).
+
+
+## 13. 프롬프트 스타일 비교 + 지연/ANR 개선 (2026-07-12, Flip3)
+
+**목표였던 것:** study/exercise 가 caption 일반어("table/items")만 뱉어 positive evidence 미달(§12) → parser 친화적 명사(book/notes/dumbbell)를 유도할 프롬프트 탐색.
+
+**프롬프트 스타일 3종 실기기 비교:**
+| 스타일 | 예시 | 결과 | 판정 |
+|---|---|---|---|
+| 옵션 열거형 | "Describe … Water, juice, … or empty?" | water 맑은물→**"Empty."**(마지막 옵션 복사) | ❌ 오답 |
+| 객체 나열 명령형 | "Name visible study items…" | water→"There is a glass."(액체종류 누락), study 책상→**"TMC"**(garbage) | ❌ 더 나쁨 |
+| **중립 서술형** | "Describe the scene briefly." | 책상→"a wooden table with various items", 소파→"A woman is sitting on a couch" | ✅ **채택** |
+
+**결론:** SmolVLM-500M(q4f16, single-512, no-cache)은 명령형/열거형에 취약(마지막 옵션 복사·garbage). **중립 서술형이 최선**이며, 그마저도 세부 명사(book/notes/dumbbell)는 잘 안 나오는 **caption granularity 한계** → study/exercise **positive** 자동검출은 프롬프트만으로는 불가. (개선하려면 anyres 다중타일로 해상도↑ 또는 더 큰 모델.)
+
+**지연/ANR 개선(채택):**
+- `maxNew 16→12`: study/exercise no-EOS full 생성 지연 **~20s→~13s**. water 는 EOS 조기 종료 6~8s(영향 적음). 진단에 `eos_seen`(대개 study/exercise=false, water=true) 노출.
+- **ANR 제거:** MethodChannel 핸들러가 추론(수 초)을 메인 스레드에서 실행 → ANR("응답하지 않음"). 무거운 메서드(warmup/verifyImage/l4Experiment/imageTextGen)를 **백그라운드 스레드**로 옮기고 결과만 메인으로 post → 재검증 시 **ANR 없이** 13229ms 완료(exercise 소파, evidence `[unrelated_environment]` 정확).
+
+**재검증(서술형 + maxNew12 + 스레드):** water 맑은물→"A glass of water."→`[visible_water]`(clean, 8436ms), exercise 소파→"A woman is sitting on a couch…"→`[unrelated_environment]`(clean reject, 13229ms, ANR 없음). 나머지 4장(주스/study×2/배낭)은 프롬프트가 §12 와 동일하여 결과 동일(juice→non_water_beverage, study/배낭→weak). **false-accept 0**.
+
+**parser 변경:** 없음(§12 와 동일 사유 — caption 일반어를 positive 로 넣으면 FP 위험).
+
+**payload → backend:** 동일(§12): water→rejected, exercise[unrelated_environment]→rejected, weak→retake_required. 오류 없이 소비.
+
+**상태:** `smol_android_evidence_spike_partial` **유지**. 프롬프트로 positive 검출을 못 여는 것을 확인(caption granularity 한계)했고, 지연·ANR·진단은 개선. Smol 의 현실적 역할 = **강한 blocker extractor + 보수적 local evidence 후보**(최종 verifier 아님). study/exercise **positive** 는 anyres/큰 모델 필요.

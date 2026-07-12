@@ -27,10 +27,12 @@ TAIL = [49279, 198, 9519, 9531, 42]  # <end_of_utterance>\nAssistant:
 IMG_TOKEN_ID = 49190
 N_IMG = 64
 
-# Short NEUTRAL descriptive questions. Enumerating options ("... or empty?") makes
-# SmolVLM-500M echo the last option ("Empty.") and hurts accuracy, so only the task
-# noun differs (drink / scene / activity). "drink" focus is what biased study/exercise
-# toward beverages under the old single prompt.
+# Short NEUTRAL descriptive questions (best of three styles tested on-device):
+#  - option-enumerating ("... or empty?")  -> model copies the last option ("Empty.") -> wrong
+#  - object-naming imperative ("Name visible ... items") -> short garbage/partial ("TMC") -> worse
+#  - neutral descriptive ("Describe the ... briefly.") -> coherent scene, no beverage bias -> chosen
+# Only the task noun differs. SmolVLM-500M at single-512 won't be prompted into reliable
+# object-noun extraction (caption granularity limit); descriptive is the safe choice.
 QUESTIONS = {
     "water": "Describe the drink briefly.",
     "study": "Describe the scene briefly.",

@@ -9,7 +9,6 @@ import '../services/dashboard_api.dart';
 import 'booking_message_screen.dart';
 
 /// 예약 조건(데모 기본값).
-///
 /// 실제 화면에 입력 폼이 붙기 전까지는 이 기본값으로 예약 후보를 요청한다.
 /// (백엔드 `/reservations/candidates/from-store` 는 title/location 을 받지 않으므로,
 ///  그 두 값은 저장 시 schedule_draft 를 만들 때만 사용한다.)
@@ -39,8 +38,7 @@ class BookingRecommendScreen extends StatefulWidget {
   const BookingRecommendScreen({super.key});
 
   @override
-  State<BookingRecommendScreen> createState() =>
-      _BookingRecommendScreenState();
+  State<BookingRecommendScreen> createState() => _BookingRecommendScreenState();
 }
 
 class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
@@ -186,8 +184,9 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
       );
 
       debugPrint(
-          '[BookingRecommend] schedule saved successfully  id=${saved.id} '
-          'date=${saved.date} ${saved.startTime}-${saved.endTime}');
+        '[BookingRecommend] schedule saved successfully  id=${saved.id} '
+        'date=${saved.date} ${saved.startTime}-${saved.endTime}',
+      );
 
       // 홈 대시보드 새로고침 트리거.
       triggerDashboardRefresh();
@@ -217,8 +216,7 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   // ---- build ---------------------------------------------------------------
@@ -239,8 +237,11 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
                 color: Colors.white.withOpacity(0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.chevron_left,
-                  color: AppTheme.textPrimary, size: 26),
+              child: const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textPrimary,
+                size: 26,
+              ),
             ),
           ),
           title: const Text('예약 후보 추천'),
@@ -280,21 +281,22 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const Icon(Icons.cloud_off,
-                color: AppTheme.textSecondary, size: 36),
+            const Icon(
+              Icons.cloud_off,
+              color: AppTheme.textSecondary,
+              size: 36,
+            ),
             const SizedBox(height: 12),
             Text(
               _error ?? '예약 후보를 불러오지 못했습니다.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 14, color: AppTheme.textPrimary),
+              style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 6),
             const Text(
               '백엔드 서버가 실행 중인지 확인하세요.',
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 14),
             FilledButton(
@@ -319,8 +321,11 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
               color: AppTheme.purple.withOpacity(0.12),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.content_cut,
-                color: AppTheme.purple, size: 22),
+            child: const Icon(
+              Icons.content_cut,
+              color: AppTheme.purple,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -357,8 +362,11 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
                 color: AppTheme.textSecondary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.refresh,
-                  color: AppTheme.textSecondary, size: 18),
+              child: const Icon(
+                Icons.refresh,
+                color: AppTheme.textSecondary,
+                size: 18,
+              ),
             ),
           ),
         ],
@@ -419,9 +427,7 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: GestureDetector(
-          onTap: selectable
-              ? () => setState(() => _selectedIndex = i)
-              : null,
+          onTap: selectable ? () => setState(() => _selectedIndex = i) : null,
           child: Opacity(
             opacity: selectable ? 1.0 : 0.5,
             child: GlassCard(
@@ -471,12 +477,13 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
                             const Spacer(),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? AppTheme.blue
-                                    : AppTheme.textSecondary
-                                        .withOpacity(0.1),
+                                    : AppTheme.textSecondary.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -518,9 +525,7 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
-                                c.conflict
-                                    ? '충돌 · 선택 불가'
-                                    : c.reason,
+                                c.conflict ? '충돌 · 선택 불가' : c.reason,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: c.conflict
@@ -555,17 +560,21 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.event_available, size: 18),
-            label: Text(_saving ? '저장 중...' : '캘린더에 등록하기',
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w600)),
+            label: Text(
+              _saving ? '저장 중...' : '캘린더에 등록하기',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.blue,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),
@@ -578,15 +587,17 @@ class _BookingRecommendScreenState extends State<BookingRecommendScreen> {
               MaterialPageRoute(builder: (_) => const BookingMessageScreen()),
             ),
             icon: const Icon(Icons.forum_outlined, size: 18),
-            label: const Text('예약 메시지 생성',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            label: const Text(
+              '예약 메시지 생성',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.textPrimary,
               side: const BorderSide(color: AppTheme.separator, width: 1.5),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),

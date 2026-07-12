@@ -22,5 +22,15 @@
   },
   "todo_checklist_suffix": "챙기기",
   "other_schedule_daypart_suffix": "에는 ",
-  "limits": { "max_key_points": 5 }
+  "limits": { "max_key_points": 5 },
+
+  "_weather_comment": "브리핑 날씨 안내/준비 문구와 임계값. 우선순위: 강수 > 추위/더위 > 일반 안내. rain_pop=우산 안내 강수확률(%), cold/hot_max_temp=방한/수분 안내 최고기온(℃).",
+  "weather_templates": {
+    "info": "오늘 날씨는 {info}예요.",
+    "rain": "오늘은 {precip} 소식이 있어요{pop_suffix}. 우산을 챙기세요.",
+    "cold": "오늘은 쌀쌀해요(최고 {temp_max}℃). 따뜻하게 입으세요.",
+    "hot": "오늘은 더워요(최고 {temp_max}℃). 수분을 챙기세요.",
+    "pop_suffix": "(강수확률 {pop}%)"
+  },
+  "weather_thresholds": { "rain_pop": 60, "cold_max_temp": 5, "hot_max_temp": 30 }
 }

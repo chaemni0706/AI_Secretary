@@ -299,6 +299,44 @@ def _build_prompt(req: DailyBriefingRequest,
     )
 
 
+def _compose_briefing_tts(
+    base: str,
+    weather_kp: Optional[str],
+    high_todos: list,
+    brules: dict,
+) -> str:
+    """읽어줄 브리핑 문장: 일정(base) + 날씨 + 준비물을 순서대로 이어 붙인다.
+
+    - 날씨 문장(weather_kp)에는 우산/방한/수분 등 날씨발 준비 안내가 이미 포함됨.
+    - 준비물 문장은 체크리스트형("...챙기기") 고우선 할 일에서 물품만 뽑아 안내.
+    날씨·준비물이 모두 없으면 기존과 동일하게 base(일정 문장)만 반환한다.
+    """
+    checklist_suffix = brules.get("todo_checklist_suffix", "챙기기")
+
+    def _end_dot(s: str) -> str:
+        s = (s or "").strip()
+        if s and s[-1] not in ".!?…":
+            s += "."
+        return s
+
+    parts: List[str] = []
+    if base and base.strip():
+        parts.append(_end_dot(base))
+    if weather_kp:
+        parts.append(_end_dot(weather_kp))
+
+    prep_items = [
+        _todo_stem(t.title)
+        for t in high_todos
+        if t.title.endswith(checklist_suffix) and _todo_stem(t.title)
+    ]
+    if prep_items:
+        joined = ", ".join(prep_items)
+        parts.append(_end_dot(f"준비물로 {joined}{_eul_reul(prep_items[-1])} 챙기세요"))
+
+    return " ".join(parts).strip() or (base or "")
+
+
 def generate_briefing(req: DailyBriefingRequest, preferences: Optional[dict] = None) -> DailyBriefingData:
     brules = _briefing_rules()
     s_tpl = brules["summary_templates"]
@@ -403,15 +441,17 @@ def generate_briefing(req: DailyBriefingRequest, preferences: Optional[dict] = N
 
     preferences = user_preference_service.get_user_preferences(None)
     if schedules:
-        tts_text = tts_response_builder.build_tts_response(
+        base_tts = tts_response_builder.build_tts_response(
             intent="briefing_today",
             slots={"count": len(schedules), "main_event": ordered[0].title if ordered else schedules[0].title},
             preferences=preferences,
         )
     else:
-        tts_text = tts_response_builder.build_tts_response(
+        base_tts = tts_response_builder.build_tts_response(
             intent="briefing_empty", slots={}, preferences=preferences,
         )
+    # 읽어줄 때 일정에 더해 날씨·준비물도 함께 안내(weather_kp / high_todos 활용).
+    tts_text = _compose_briefing_tts(base_tts, weather_kp, high_todos, brules)
 
     return DailyBriefingData(
         summary=summary,

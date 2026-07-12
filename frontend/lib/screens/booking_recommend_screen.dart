@@ -9,7 +9,6 @@ import '../services/dashboard_api.dart';
 import 'booking_message_screen.dart';
 
 /// 예약 조건(데모 기본값).
-///
 /// 실제 화면에 입력 폼이 붙기 전까지는 이 기본값으로 예약 후보를 요청한다.
 /// (백엔드 `/reservations/candidates/from-store` 는 title/location 을 받지 않으므로,
 ///  그 두 값은 저장 시 schedule_draft 를 만들 때만 사용한다.)

@@ -8,7 +8,8 @@ rule-based scoring style used elsewhere in the project
 
 Pipeline:
     parse query/category  ->  Naver local search  ->  rule-based scoring
-    -> [optional] travel time for top-N + travel-aware scoring
+    -> travel time (on by default, needs location coords) + travel-aware scoring
+    -> [if schedule window + duration given] schedule-feasibility scoring
     ->  reason + tags  ->  sort (score desc, then original order)  ->  data
 
 Weights & aliases come from rules/place_recommendation_rules.json (not
@@ -19,6 +20,7 @@ recommendation: the place's `travel` field is simply left null.
 
 from __future__ import annotations
 
+import logging
 from typing import List, Optional, Tuple
 
 from backend.database.schema.place_schema import (
@@ -31,6 +33,8 @@ from backend.services import naver_maps_client as maps
 from backend.services import naver_place_client as naver
 from backend.services import travel_time_service as travel_svc
 from backend.services.place_query_parser import build_search_query, load_place_rules
+
+_logger = logging.getLogger(__name__)
 
 # Display label for our category slugs (response-friendly).
 _CATEGORY_LABEL = {
@@ -90,14 +94,12 @@ def _score_place(
     if cat_match:
         score += sc["category_match_bonus"]
         tags.append("카테고리 일치")
-        reason_bits.append("요청한 카테고리와 잘 맞고")
     elif not category:
         score += sc["unknown_penalty"]
 
     if _keyword_matched(place, keywords):
         score += sc["keyword_match_bonus"]
         tags.append("키워드 일치")
-        reason_bits.append("선호 키워드와 관련이 있으며")
 
     if place.get("road_address"):
         score += sc["has_road_address_bonus"]
@@ -115,13 +117,6 @@ def _score_place(
 
     score = _clamp(score, sc["min_score"], sc["max_score"])
 
-    info_bits = []
-    if place.get("road_address") or place.get("address"):
-        info_bits.append("주소")
-    if place.get("phone"):
-        info_bits.append("연락처")
-    if info_bits:
-        reason_bits.append(f"{'와 '.join(info_bits)} 정보가 있어 방문/문의하기 좋습니다")
     if not reason_bits:
         reason_bits.append("현재 조건에 맞는 장소입니다")
 
@@ -141,6 +136,38 @@ def _available_time(schedule_context: Optional[dict]) -> Optional[str]:
     return start or end
 
 
+def _parse_hhmm(value: Optional[str]) -> Optional[int]:
+    """'HH:mm' -> minutes since midnight. None on anything unparseable."""
+    if not value:
+        return None
+    try:
+        h, m = str(value).split(":")
+        h, m = int(h), int(m)
+    except (ValueError, AttributeError):
+        return None
+    if not (0 <= h < 24 and 0 <= m < 60):
+        return None
+    return h * 60 + m
+
+
+def _available_window_minutes(schedule_context: dict) -> Optional[int]:
+    """Length of the user's available window in minutes, or None if the window
+    isn't a usable same-day start<end pair."""
+    start = _parse_hhmm(schedule_context.get("available_start_time"))
+    end = _parse_hhmm(schedule_context.get("available_end_time"))
+    if start is None or end is None or end <= start:
+        return None
+    return end - start
+
+
+def _schedule_usable(schedule_context: dict) -> bool:
+    """Schedule scoring needs both a window and how long the visit takes."""
+    return (
+        _available_window_minutes(schedule_context) is not None
+        and bool(schedule_context.get("duration_minutes"))
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Travel-time enrichment (optional, additive)
 # --------------------------------------------------------------------------- #
@@ -155,24 +182,24 @@ def _travel_info_from_dict(d: dict) -> TravelInfo:
     )
 
 
-def _travel_for_place(
-    place_addr: Optional[str],
-    origin_lat: float,
-    origin_lng: float,
-    mode: str,
-) -> Optional[dict]:
-    """Geocode the place then compute travel. Never raises (returns None)."""
+def _geocode_place(place_addr: Optional[str]) -> Optional[dict]:
+    """Geocode a place address to coords. Never raises (returns None).
+
+    Failures are logged (not swallowed silently) so a missing travel line can be
+    diagnosed: config error vs. no geocode match.
+    """
     if not place_addr:
+        _logger.info("[PLACE TRAVEL] 주소 없음 → 이동시간 건너뜀")
         return None
     try:
         geo = maps.geocode(place_addr)
-    except Exception:
+    except Exception as exc:
+        _logger.warning("[PLACE TRAVEL] geocode 실패 addr=%r: %s", place_addr, exc)
         return None
     if not geo:
+        _logger.info("[PLACE TRAVEL] geocode 결과 없음 addr=%r", place_addr)
         return None
-    return travel_svc.safe_compute_travel(
-        origin_lat, origin_lng, geo["latitude"], geo["longitude"], mode
-    )
+    return geo
 
 
 def _apply_travel_score(rec: RecommendedPlace, travel: dict, rules: dict) -> None:
@@ -198,24 +225,109 @@ def _apply_travel_score(rec: RecommendedPlace, travel: dict, rules: dict) -> Non
     rec.reason = (rec.reason.rstrip() + tail).strip()
 
 
+def _apply_schedule_score(
+    rec: RecommendedPlace, travel: dict, schedule_context: dict, rules: dict
+) -> None:
+    """Fold schedule feasibility into score/reason/tags.
+
+    needed = one-way travel time + on-site stay (duration_minutes).
+    Compared against the user's available window (end - start).
+    """
+    ss = rules.get("schedule_scoring", {})
+    minutes = travel.get("duration_minutes")
+    if minutes is None:
+        return
+    duration = schedule_context.get("duration_minutes") or 0
+    window = _available_window_minutes(schedule_context)
+    needed = minutes + duration
+
+    if window is None:
+        # No usable window: can't judge fit, just surface the total time needed.
+        if duration:
+            rec.recommendation_tags.append(f"소요 약 {needed}분")
+        return
+
+    sc = rules["scoring"]
+    comfortable = window * ss.get("comfortable_ratio", 0.8)
+    if needed <= comfortable:
+        rec.score += ss.get("fits_bonus", 10)
+        rec.recommendation_tags.append("일정 여유")
+        tail = (
+            f" 이동 {minutes}분 + 체류 {duration}분(총 {needed}분)으로 "
+            f"가능 시간 {window}분 안에 여유있게 소화할 수 있습니다."
+        )
+    elif needed <= window:
+        rec.score += ss.get("tight_bonus", 0)
+        rec.recommendation_tags.append("일정 빠듯")
+        tail = (
+            f" 이동·체류 포함 총 {needed}분으로 가능 시간 {window}분에 "
+            f"빠듯하게 맞습니다."
+        )
+    else:
+        rec.score += ss.get("overflow_penalty", -15)
+        rec.recommendation_tags.append("일정 초과 우려")
+        tail = (
+            f" 이동·체류 포함 총 {needed}분으로 가능 시간 {window}분을 "
+            f"초과할 수 있습니다."
+        )
+
+    rec.score = _clamp(rec.score, sc["min_score"], sc["max_score"])
+    rec.reason = (rec.reason.rstrip() + tail).strip()
+
+
 def _enrich_with_travel(
     recs: List[RecommendedPlace],
     origin: dict,
     mode: str,
     rules: dict,
+    schedule_context: Optional[dict] = None,
 ) -> None:
-    """Compute travel for the top-N places and fold it into score/reason/tags."""
+    """Compute travel and fold it into score/reason/tags. When the schedule is
+    usable, also score schedule feasibility and widen the enrichment scope so
+    ranking reflects which places actually fit the user's available time."""
     o_lat, o_lng = origin.get("latitude"), origin.get("longitude")
     if o_lat is None or o_lng is None:
         return  # no origin coords -> cannot compute; leave travel null
-    top_n = rules.get("travel_scoring", {}).get("top_n_with_travel", 3)
-    for rec in recs[:top_n]:
+
+    schedule_context = schedule_context or {}
+    if _schedule_usable(schedule_context):
+        limit = rules.get("schedule_scoring", {}).get("top_n_with_schedule", 5)
+    else:
+        limit = rules.get("travel_scoring", {}).get("top_n_with_travel", 3)
+
+    walk_max = rules.get("travel_scoring", {}).get("walk_show_max_minutes", 15)
+
+    for rec in recs[:limit]:
         addr = rec.road_address or rec.address
-        travel = _travel_for_place(addr, o_lat, o_lng, mode)
-        if not travel:
+        geo = _geocode_place(addr)
+        if not geo:
             continue  # Maps failure -> travel stays null, recommendation continues
-        rec.travel = _travel_info_from_dict(travel)
-        _apply_travel_score(rec, travel, rules)
+        g_lat, g_lng = geo["latitude"], geo["longitude"]
+
+        # Primary travel = requested mode (car by default). Drives scoring.
+        primary = travel_svc.safe_compute_travel(o_lat, o_lng, g_lat, g_lng, mode)
+        if primary:
+            rec.travel = _travel_info_from_dict(primary)
+            _apply_travel_score(rec, primary, rules)
+            if _schedule_usable(schedule_context):
+                _apply_schedule_score(rec, primary, schedule_context, rules)
+            _logger.info(
+                "[PLACE TRAVEL] ok(%s) addr=%r → %s분", mode, addr,
+                primary.get("duration_minutes"),
+            )
+        else:
+            _logger.warning(
+                "[PLACE TRAVEL] %s 경로 실패(키/경로 확인) addr=%r origin=(%s,%s)",
+                mode, addr, o_lat, o_lng,
+            )
+
+        # Extra: walking, shown only when it's short enough to be worth walking.
+        if mode != "walking":
+            walk = travel_svc.safe_compute_travel(o_lat, o_lng, g_lat, g_lng, "walking")
+            w_min = walk.get("duration_minutes") if walk else None
+            if w_min is not None and w_min <= walk_max:
+                rec.travel_walk = _travel_info_from_dict(walk)
+                _logger.info("[PLACE TRAVEL] 도보 %s분 (≤%s) → 표시", w_min, walk_max)
 
 
 def recommend_places(req: dict) -> PlaceRecommendData:
@@ -262,12 +374,17 @@ def recommend_places(req: dict) -> PlaceRecommendData:
     scored.sort(key=lambda t: (-t[0], t[1]))
     recommended = [rec for _, _, rec in scored]
 
-    # optional travel enrichment (top-N only); never fails the recommendation
-    if options.get("include_travel_time") and (location.get("latitude") is not None):
+    # Travel + schedule enrichment. On by default (options.include_travel_time
+    # defaults True); needs user-location coords. Never fails the recommendation.
+    if options.get("include_travel_time", True) and (location.get("latitude") is not None):
         _enrich_with_travel(
-            recommended, location, options.get("transport_mode", "car"), rules
+            recommended,
+            location,
+            options.get("transport_mode", "car"),
+            rules,
+            schedule_context=schedule_context,
         )
-        # travel bonuses may have changed scores -> stable re-sort
+        # travel / schedule bonuses may have changed scores -> stable re-sort
         recommended.sort(key=lambda r: -r.score)
 
     filters = PlaceRecommendFilters(

@@ -45,7 +45,12 @@ class PlaceOptions(BaseModel):
     """Optional, additive behavior toggles."""
 
     include_travel_time: bool = Field(
-        False, description="True면 상위 N개 장소에 이동 시간 정보를 계산해 포함"
+        True,
+        description=(
+            "기본 True. 사용자 위치 좌표가 있으면 상위 N개 장소에 이동 시간을 계산해 "
+            "포함하고, 일정(가능 시간대)이 주어지면 이동+체류 시간으로 실현 가능성까지 "
+            "점수에 반영. 명시적으로 False를 주면 이동 시간 계산을 끕니다."
+        ),
     )
     transport_mode: str = Field("car", description="car | public_transit | walking | unknown")
 
@@ -109,7 +114,14 @@ class RecommendedPlace(BaseModel):
     reason: str
     recommendation_tags: List[str] = Field(default_factory=list)
     travel: Optional[TravelInfo] = Field(
-        None, description="options.include_travel_time=true일 때 상위 N개에만 채워짐"
+        None, description="자동차 기준 이동 정보. 상위 N개에만 채워짐"
+    )
+    travel_walk: Optional[TravelInfo] = Field(
+        None,
+        description=(
+            "도보 이동 정보. 도보 예상 시간이 walk_show_max_minutes(기본 15분) 이하일 "
+            "때만 채워지고, 그보다 멀면 null."
+        ),
     )
     source: str = "naver"
 

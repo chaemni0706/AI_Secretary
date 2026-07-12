@@ -98,14 +98,17 @@ class Settings(BaseSettings):
     # startup; the Maps-backed endpoints return a clear config error instead.
     NAVER_MAPS_CLIENT_ID: str | None = None
     NAVER_MAPS_CLIENT_SECRET: str | None = None
+    # 새 Maps 서비스(Application Services > Maps, ncp_ 키)는 maps.apigw.ntruss.com
+    # 도메인을 사용한다. 구형 naveropenapi.apigw.ntruss.com 은 신규 콘솔 키로 401을
+    # 반환한다. 헤더(x-ncp-apigw-api-key-id / x-ncp-apigw-api-key)와 경로는 동일.
     NAVER_MAPS_GEOCODE_URL: str = (
-        "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode"
+        "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
     )
     NAVER_MAPS_REVERSE_GEOCODE_URL: str = (
-        "https://naveropenapi.apigw.ntruss.com/map-reversegeocode/v2/gc"
+        "https://maps.apigw.ntruss.com/map-reversegeocode/v2/gc"
     )
     NAVER_MAPS_DIRECTIONS_URL: str = (
-        "https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving"
+        "https://maps.apigw.ntruss.com/map-direction/v1/driving"
     )
     NAVER_MAPS_TIMEOUT_SECONDS: float = 5.0
 

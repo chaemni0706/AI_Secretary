@@ -68,7 +68,7 @@ class _PlaceCarouselCardState extends State<PlaceCarouselCard> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 184,
+          height: 220,
           child: PageView.builder(
             controller: _controller,
             itemCount: widget.places.length,
@@ -154,25 +154,23 @@ class _PlaceCard extends StatelessWidget {
               ),
             ),
           ],
-          if (place.reason.isNotEmpty) ...[
+          if (place.travel != null) ...[
             const SizedBox(height: 6),
-            Text(
-              place.reason,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.3,
-                color: AppTheme.textPrimary,
-              ),
-            ),
+            _TravelLine(travel: place.travel!),
+          ],
+          if (place.travelWalk != null) ...[
+            const SizedBox(height: 2),
+            _TravelLine(travel: place.travelWalk!),
           ],
           const Spacer(),
-          if (place.tags.isNotEmpty)
+          if (place.tags.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Wrap(
               spacing: 6,
+              runSpacing: 4,
               children: [for (final t in place.tags.take(3)) _MiniBadge(t)],
             ),
+          ],
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
@@ -189,6 +187,41 @@ class _PlaceCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 현재 위치 → 업체까지의 소요시간·거리 한 줄. (예: 🚗 약 12분 · 3.2km)
+class _TravelLine extends StatelessWidget {
+  final PlaceTravel travel;
+  const _TravelLine({required this.travel});
+
+  IconData get _icon {
+    if (travel.isWalking) return Icons.directions_walk_rounded;
+    if (travel.isTransit) return Icons.directions_transit_rounded;
+    return Icons.directions_car_filled_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_icon, size: 14, color: AppTheme.blue),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            travel.label ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.blue,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

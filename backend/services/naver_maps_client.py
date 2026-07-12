@@ -43,6 +43,7 @@ def _headers() -> dict:
     return {
         "x-ncp-apigw-api-key-id": settings.NAVER_MAPS_CLIENT_ID,
         "x-ncp-apigw-api-key": settings.NAVER_MAPS_CLIENT_SECRET,
+        "Accept": "application/json",
     }
 
 

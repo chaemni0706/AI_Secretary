@@ -43,7 +43,16 @@
     "medium_bonus": 5,
     "long_min_minutes": 45,
     "long_penalty": -10,
-    "top_n_with_travel": 3
+    "top_n_with_travel": 3,
+    "walk_show_max_minutes": 15
+  },
+  "schedule_scoring": {
+    "_comment": "일정 실현 가능성 점수. needed = 편도 이동시간 + 체류시간(duration_minutes). window = available_end - available_start(분). window 대비 needed 비율로 판정.",
+    "comfortable_ratio": 0.8,
+    "fits_bonus": 10,
+    "tight_bonus": 0,
+    "overflow_penalty": -15,
+    "top_n_with_schedule": 5
   },
   "mood_aliases": {
     "casual": ["가성비", "편한", "캐주얼", "혼밥", "간단", "분위기"],

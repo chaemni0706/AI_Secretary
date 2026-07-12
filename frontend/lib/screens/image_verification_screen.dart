@@ -26,6 +26,14 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
     'water': '물',
     'exercise': '운동',
     'study': '공부',
+    'wake_up': '기상',
+  };
+  // task별 안내 문구(선택 시 상단 힌트).
+  static const _typeHints = <String, String>{
+    'water': '물이 잘 보이도록 촬영해 주세요.',
+    'exercise': '운동 동작·기구·공간이 보이도록 촬영해 주세요.',
+    'study': '책·노트·학습 화면이 보이도록 촬영해 주세요.',
+    'wake_up': '기상 후 현재 상태를 촬영해 인증해 주세요. (얼굴 식별이 아니라 기상 상황 확인)',
   };
   static const _activityTypes = <String, String>{
     'gym': '헬스장',
@@ -131,6 +139,11 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
             const SizedBox(height: 12),
             _sectionTitle('인증 종류'),
             _typeSelector(),
+            if (_typeHints[_verificationType] != null) ...[
+              const SizedBox(height: 6),
+              Text(_typeHints[_verificationType]!,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
             if (_isExercise) ...[
               const SizedBox(height: 12),
               _sectionTitle('운동 종류 (필수)'),
@@ -219,24 +232,15 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Widget _captureButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: _loading ? null : () => _capture(),
-            icon: const Icon(Icons.photo_camera),
-            label: const Text('카메라 촬영'),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _loading ? null : () => _capture(fromGallery: true),
-            icon: const Icon(Icons.photo_library_outlined),
-            label: const Text('갤러리'),
-          ),
-        ),
-      ],
+    // 일반 사용자 인증은 **직접 촬영만** 허용(갤러리 업로드 금지 — 과거/타인 사진 방지).
+    // 갤러리 선택은 kDebugMode 진단 화면에서만 유지된다.
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: _loading ? null : () => _capture(),
+        icon: const Icon(Icons.photo_camera),
+        label: const Text('카메라 촬영'),
+      ),
     );
   }
 

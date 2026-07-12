@@ -105,6 +105,18 @@ class ImageVerificationResult {
       }
     }
     if (needsRetake) return '자동 인증이 어렵습니다. 다른 사진으로 다시 촬영해 주세요 📷';
+    if (task == 'wake_up') {
+      switch (finalResult) {
+        case 'verified':
+          return '기상 인증이 완료되었습니다 👍';
+        case 'retake_required':
+          return '기상 상태를 확인하기 어려워요. 밝은 곳에서 다시 촬영해 주세요 📷';
+        case 'rejected':
+          return '기상 인증 조건과 맞지 않는 사진으로 보여요. 다시 촬영해 주세요 📷';
+        default:
+          return '알 수 없는 결과입니다: $finalResult';
+      }
+    }
     switch (finalResult) {
       case 'verified':
         return '인증 성공! 잘 하셨어요 👍';

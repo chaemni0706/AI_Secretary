@@ -16,7 +16,7 @@ import 'api_client.dart';
 class VerificationApi {
   const VerificationApi();
 
-  static const Set<String> imageVerificationTypes = {'water', 'exercise', 'study'};
+  static const Set<String> imageVerificationTypes = {'water', 'exercise', 'study', 'wake_up'};
 
   /// 촬영/선택한 이미지 파일을 인증 타입별 엔드포인트로 업로드한다.
   ///

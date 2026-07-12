@@ -1,0 +1,48 @@
+# 기상 상황 이미지 인증(wake_up).
+# **얼굴/신원 식별이 아니라** 이미지의 visual context(사람이 보이는지 + 아침/기상 맥락)로만 판정한다.
+# 기존 water/study/exercise 와 달리 task 전용 evidence enum 없이 **generic 경로**(any_of_objects + object_scores)
+# 만 사용하므로 Rule Engine core 변경이 없다. 초기 정책은 보수적: 사람이 없으면 인증 불가, 사람만 있으면
+# 근거 부족으로 retake, 사람 + 아침 맥락(침대/창문/햇빛/알람 등)이 함께 보이면 verified.
+type: wake_up
+allowed_labels:
+  - person
+  - bed
+  - pillow
+  - blanket
+  - window
+  - curtain
+  - sunlight
+  - alarm_clock
+  - clock
+  - phone
+  - toothbrush
+  - cup
+mandatory:
+  quality_usable: true
+  any_of_objects:
+    - person   # 기상 인증은 사람이 보여야 한다(빈 방/침대만/무관 사진 차단)
+thresholds:
+  verified: 50           # 사람 + 아침 맥락 1개 이상
+  retake_required: 25    # 사람만(맥락 부족) → 재촬영
+scoring:
+  base_score: 0
+  object_scores:
+    person: 35
+    bed: 12
+    pillow: 8
+    blanket: 8
+    window: 10
+    curtain: 10
+    sunlight: 18
+    alarm_clock: 18
+    clock: 10
+    phone: 5
+    toothbrush: 15
+    cup: 6
+  similar_object_groups:
+    - labels: [bed, pillow, blanket]
+      max_score: 15
+    - labels: [window, curtain, sunlight]
+      max_score: 20
+gps:
+  enabled: false

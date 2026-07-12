@@ -11,7 +11,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-VerificationType = Literal["gym", "study", "medicine", "water", "wakeup", "exercise"]
+VerificationType = Literal["gym", "study", "medicine", "water", "wakeup", "exercise", "wake_up"]
 VerificationResult = Literal["verified", "retake_required", "rejected"]
 ExerciseActivityType = Literal["gym", "running", "swimming", "yoga", "pilates", "home_workout"]
 StudyVisualEvidence = Literal[

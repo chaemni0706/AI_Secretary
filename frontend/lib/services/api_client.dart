@@ -19,7 +19,11 @@ String _resolveBaseUrl() {
     final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
     return 'http://$host:8000';
   }
-  return 'http://172.30.1.14:8000';
+  // 기본값: USB 연결 + `adb reverse tcp:8000 tcp:8000` 전제(개발 표준 경로).
+  // 폰의 127.0.0.1:8000 이 PC 백엔드로 포워딩된다. PC IP 를 하드코딩하면
+  // IP 가 바뀔 때마다 전원이 타임아웃을 겪어서(과거 172.30.x 사고) 금지.
+  // 다른 접속 방식이 필요하면 --dart-define=API_BASE_URL=... 로 덮어쓸 것.
+  return 'http://127.0.0.1:8000';
 }
 
 /// API 공통 prefix (`/health` 제외).

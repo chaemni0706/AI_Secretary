@@ -241,7 +241,9 @@ class _MonthGrid extends StatelessWidget {
       itemCount: cellCount,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        childAspectRatio: 0.76,
+        // 셀 내용(날짜 숫자 + 도넛 42px + 패딩)이 온전히 들어가도록 세로 여유를
+        // 준다. 0.76에서는 도넛 하단이 잘려 오늘 테두리가 끊겨 보였다.
+        childAspectRatio: 0.64,
       ),
       itemBuilder: (context, index) {
         final dayNumber = index - leading + 1;
@@ -289,33 +291,52 @@ class CompletionDayActivityRingCell extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         margin: const EdgeInsets.all(2),
         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
+        // 월간 캘린더 셀과 동일한 규칙: 선택 = 테두리 없는 반투명 파랑 배경,
+        // 오늘 = 날짜 숫자를 감싸는 채워진 붉은 원 + 흰 숫자.
         decoration: BoxDecoration(
           color: selected
-              ? AppTheme.blue.withValues(alpha: 0.1)
+              ? TossColors.blue500.withValues(alpha: 0.16)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.small),
-          border: selected
-              ? Border.all(color: AppTheme.blue.withValues(alpha: 0.34))
-              : today
-              ? Border.all(color: AppTheme.green.withValues(alpha: 0.36))
-              : null,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              '${date.day}',
-              style: AppTextStyles.meta.copyWith(
-                color: today ? AppTheme.green : AppTheme.textPrimary,
-                fontWeight: today || selected
-                    ? FontWeight.w800
-                    : FontWeight.w600,
+            Container(
+              width: 20,
+              height: 20,
+              alignment: Alignment.center,
+              decoration: today
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.red.withValues(alpha: 0.9),
+                    )
+                  : null,
+              child: Text(
+                '${date.day}',
+                style: AppTextStyles.meta.copyWith(
+                  color: today
+                      ? Colors.white
+                      : selected
+                      ? TossColors.blue600
+                      : AppTheme.textPrimary,
+                  height: 1,
+                  fontWeight: today || selected
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                ),
               ),
             ),
             const SizedBox(height: 3),
-            CompletionDayDonutChart(
-              segments: segments,
-              emphasized: stats?.hasCompleted == true,
+            // 좁은 화면에서도 도넛이 잘리지 않도록 남는 공간에 맞춰 축소.
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: CompletionDayDonutChart(
+                  segments: segments,
+                  emphasized: stats?.hasCompleted == true,
+                ),
+              ),
             ),
           ],
         ),

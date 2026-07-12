@@ -52,6 +52,21 @@ def _apply_column_migrations(cursor) -> None:
                 cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
 
 
+def _migrate_todo_planned_date_to_due_at(cursor) -> None:
+    """One-time data fix: before start/end-date support was added, todo_details
+    .planned_date held what the API exposed as due_date; due_at was unused.
+    Move that value to due_at (the real due-date column going forward) and
+    clear planned_date so it's free to hold a genuine start date. Idempotent:
+    only touches rows where due_at is still empty."""
+    try:
+        cursor.execute(
+            "UPDATE todo_details SET due_at = planned_date, planned_date = NULL "
+            "WHERE due_at IS NULL AND planned_date IS NOT NULL"
+        )
+    except Exception:
+        pass  # table not present yet -> nothing to backfill
+
+
 def apply_schema_to_sqlite_file(db_path: Union[str, Path]) -> None:
     """Initialize a standalone SQLite file from local_schema.sql (raw sqlite3)."""
     db_path = Path(db_path)
@@ -61,6 +76,7 @@ def apply_schema_to_sqlite_file(db_path: Union[str, Path]) -> None:
         conn.execute("PRAGMA foreign_keys=ON")
         conn.executescript(sql)
         _apply_column_migrations(conn.cursor())
+        _migrate_todo_planned_date_to_due_at(conn.cursor())
         conn.commit()
 
 
@@ -73,6 +89,7 @@ def init_db_from_engine(engine: Engine) -> None:
         cursor = raw.cursor()
         cursor.executescript(sql)
         _apply_column_migrations(cursor)
+        _migrate_todo_planned_date_to_due_at(cursor)
         raw.commit()
     finally:
         raw.close()

@@ -23,7 +23,8 @@ class ScheduleFormScreen extends StatefulWidget {
 
 class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
   final _titleController = TextEditingController();
-  final _dateController = TextEditingController();
+  final _startDateController = TextEditingController();
+  final _endDateController = TextEditingController();
   final _startTimeController = TextEditingController();
   final _endTimeController = TextEditingController();
   final _locationController = TextEditingController();
@@ -33,7 +34,8 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
   String _priority = 'medium';
   bool _isAllDay = false;
   bool _saving = false;
-  bool _datePickerOpen = false;
+  bool _startDatePickerOpen = false;
+  bool _endDatePickerOpen = false;
   bool _startTimePickerOpen = false;
   bool _endTimePickerOpen = false;
   DateTime _focusedDate = DateTime.now();
@@ -45,28 +47,31 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
     super.initState();
     final schedule = widget.initialSchedule;
     if (schedule == null) {
-      _dateController.text = widget.initialDate ?? '';
+      _startDateController.text = widget.initialDate ?? '';
+      _endDateController.text = widget.initialDate ?? '';
       _focusedDate =
-          ScheduleDateParser.parse(_dateController.text) ?? DateTime.now();
+          ScheduleDateParser.parse(_startDateController.text) ?? DateTime.now();
       return;
     }
     _titleController.text = schedule.title;
-    _dateController.text = schedule.date ?? '';
+    _startDateController.text = schedule.date ?? '';
+    _endDateController.text = schedule.effectiveEndDate ?? schedule.date ?? '';
     _startTimeController.text = schedule.startTime ?? '';
     _endTimeController.text = schedule.endTime ?? '';
     _locationController.text = schedule.location ?? '';
-    _memoController.text = schedule.memo ?? '';
+    _memoController.text = ScheduleModel.stripEndDateToken(schedule.memo);
     _category = ScheduleStyles.categoryLabel(schedule.category);
     _priority = schedule.priority;
     _isAllDay = schedule.isAllDay;
     _focusedDate =
-        ScheduleDateParser.parse(_dateController.text) ?? DateTime.now();
+        ScheduleDateParser.parse(_startDateController.text) ?? DateTime.now();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _dateController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
     _startTimeController.dispose();
     _endTimeController.dispose();
     _locationController.dispose();
@@ -100,45 +105,91 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
     return startMinutes <= endMinutes;
   }
 
+  /// 종료 날짜가 시작 날짜보다 빠르면 무효. 같은 날이면(하루 종일이 아닐 때)
+  /// 시간 순서까지 확인하고, 종료일이 시작일보다 뒤(여러 날짜 일정)면 시간
+  /// 비교는 의미가 없으므로 건너뛴다.
+  bool _isDateOrderValid() {
+    final start = _startDateController.text.trim();
+    final end = _endDateController.text.trim();
+    if (start.isEmpty || end.isEmpty) return true;
+    final cmp = end.compareTo(start);
+    if (cmp < 0) return false;
+    if (cmp == 0 && !_isAllDay) return _isTimeOrderValid();
+    return true;
+  }
+
   void _closePickersExcept(String target) {
     setState(() {
-      _datePickerOpen = target == 'date' ? !_datePickerOpen : false;
-      _startTimePickerOpen = target == 'start' ? !_startTimePickerOpen : false;
-      _endTimePickerOpen = target == 'end' ? !_endTimePickerOpen : false;
+      final openingStartDate = target == 'startDate' ? !_startDatePickerOpen : false;
+      final openingEndDate = target == 'endDate' ? !_endDatePickerOpen : false;
+      _startDatePickerOpen = openingStartDate;
+      _endDatePickerOpen = openingEndDate;
+      _startTimePickerOpen = target == 'startTime' ? !_startTimePickerOpen : false;
+      _endTimePickerOpen = target == 'endTime' ? !_endTimePickerOpen : false;
+      if (openingStartDate) {
+        _focusedDate =
+            ScheduleDateParser.parse(_startDateController.text) ?? _focusedDate;
+      } else if (openingEndDate) {
+        _focusedDate =
+            ScheduleDateParser.parse(_endDateController.text) ?? _focusedDate;
+      }
     });
   }
 
-  bool _normalizeDateInput({bool showError = false}) {
-    final normalized = ScheduleDateParser.normalize(_dateController.text);
+  bool _normalizeStartDateInput({bool showError = false}) {
+    final normalized = ScheduleDateParser.normalize(_startDateController.text);
     if (normalized == null) {
-      if (showError) _showMessage('날짜 형식을 확인해 주세요.');
+      if (showError) _showMessage('시작 날짜 형식을 확인해 주세요.');
       return false;
     }
-    _dateController.text = normalized;
+    final oldStart = _startDateController.text.trim();
+    final endFollowsStart = _endDateController.text.trim().isEmpty ||
+        _endDateController.text.trim() == oldStart;
+    _startDateController.text = normalized;
+    if (endFollowsStart) _endDateController.text = normalized;
     _focusedDate = ScheduleDateParser.parse(normalized) ?? _focusedDate;
     return true;
   }
 
-  void _selectDate(DateTime date) {
+  bool _normalizeEndDateInput({bool showError = false}) {
+    final normalized = ScheduleDateParser.normalize(_endDateController.text);
+    if (normalized == null) {
+      if (showError) _showMessage('종료 날짜 형식을 확인해 주세요.');
+      return false;
+    }
+    _endDateController.text = normalized;
+    _focusedDate = ScheduleDateParser.parse(normalized) ?? _focusedDate;
+    return true;
+  }
+
+  void _selectStartDate(DateTime date) {
     setState(() {
-      _dateController.text = ScheduleDateParser.format(date);
+      final oldStart = _startDateController.text.trim();
+      final endFollowsStart = _endDateController.text.trim().isEmpty ||
+          _endDateController.text.trim() == oldStart;
+      _startDateController.text = ScheduleDateParser.format(date);
+      if (endFollowsStart) _endDateController.text = _startDateController.text;
       _focusedDate = date;
-      _datePickerOpen = false;
+      _startDatePickerOpen = false;
     });
   }
 
-  void _selectStartTime(String time) {
+  void _selectEndDate(DateTime date) {
     setState(() {
-      _startTimeController.text = time;
-      _startTimePickerOpen = false;
+      _endDateController.text = ScheduleDateParser.format(date);
+      _focusedDate = date;
+      _endDatePickerOpen = false;
     });
+  }
+
+  // 시간 휠은 드래그 중 매 프레임 onDateTimeChanged 를 호출하므로, 여기서 피커를
+  // 닫으면 슬라이드 도중 피커가 즉시 접히는 버그가 생긴다(값만 반영하고 접지 않음).
+  void _selectStartTime(String time) {
+    setState(() => _startTimeController.text = time);
   }
 
   void _selectEndTime(String time) {
-    setState(() {
-      _endTimeController.text = time;
-      _endTimePickerOpen = false;
-    });
+    setState(() => _endTimeController.text = time);
   }
 
   Map<String, dynamic> _payload() {
@@ -149,14 +200,15 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
 
     return {
       'title': _titleController.text.trim(),
-      'date': _dateController.text.trim(),
+      'date': _startDateController.text.trim(),
+      'end_date': optional(_endDateController.text),
       // 하루 종일이면 시간은 보내지 않는다(서버가 00:00·is_all_day=1 로 저장).
       'start_time': _isAllDay ? null : optional(_startTimeController.text),
       'end_time': _isAllDay ? null : optional(_endTimeController.text),
       'category': _category,
       'priority': _priority,
       'location': optional(_locationController.text),
-      'memo': optional(_memoController.text),
+      'memo': optional(ScheduleModel.stripEndDateToken(_memoController.text)),
       'source': widget.initialSchedule?.source ?? 'user',
       'is_all_day': _isAllDay,
     };
@@ -164,18 +216,25 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
 
   Future<void> _submit() async {
     final title = _titleController.text.trim();
-    final date = _dateController.text.trim();
+    final startDate = _startDateController.text.trim();
     final startTime = _startTimeController.text.trim();
 
     if (title.isEmpty) {
       _showMessage('일정명을 입력해 주세요.');
       return;
     }
-    if (date.isEmpty) {
-      _showMessage('날짜를 입력해 주세요.');
+    if (startDate.isEmpty) {
+      _showMessage('시작 날짜를 입력해 주세요.');
       return;
     }
-    if (!_normalizeDateInput(showError: true)) return;
+    if (!_normalizeStartDateInput(showError: true)) return;
+    if (_endDateController.text.trim().isNotEmpty &&
+        !_normalizeEndDateInput(showError: true)) {
+      return;
+    }
+    if (_endDateController.text.trim().isEmpty) {
+      _endDateController.text = _startDateController.text.trim();
+    }
     // 하루 종일 일정은 시간 입력/검증을 건너뛴다.
     if (!_isAllDay) {
       if (startTime.isEmpty) {
@@ -191,10 +250,14 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
         _showMessage('종료 시간은 HH:mm 형식으로 입력해 주세요.');
         return;
       }
-      if (!_isTimeOrderValid()) {
-        _showMessage('종료 시간은 시작 시간보다 늦어야 합니다.');
-        return;
-      }
+    }
+    if (!_isDateOrderValid()) {
+      _showMessage(
+        _startDateController.text.trim() == _endDateController.text.trim()
+            ? '종료 시간은 시작 시간보다 늦어야 합니다.'
+            : '종료 날짜는 시작 날짜보다 빠를 수 없습니다.',
+      );
+      return;
     }
 
     setState(() => _saving = true);
@@ -259,36 +322,41 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                     hint: '예: 병원 예약',
                     icon: Icons.title,
                   ),
-                  ScheduleDatePickerRow(
-                    controller: _dateController,
-                    expanded: _datePickerOpen,
+                  DateTimePickerRow(
+                    label: '시작날짜',
+                    icon: Icons.event_outlined,
+                    dateController: _startDateController,
+                    timeController: _startTimeController,
+                    dateExpanded: _startDatePickerOpen,
+                    timeExpanded: _startTimePickerOpen,
                     focusedDay: _focusedDate,
-                    onExpandedChanged: (_) => _closePickersExcept('date'),
+                    onDateExpandedChanged: (_) => _closePickersExcept('startDate'),
+                    onTimeExpandedChanged: (_) => _closePickersExcept('startTime'),
                     onFocusedDayChanged: (date) =>
                         setState(() => _focusedDate = date),
-                    onDateSelected: _selectDate,
-                    onNormalize: () => _normalizeDateInput(),
+                    onDateSelected: _selectStartDate,
+                    onTimeSelected: _selectStartTime,
+                    onNormalizeDate: () => _normalizeStartDateInput(),
+                    showTime: !_isAllDay,
                   ),
-                  // 하루 종일이면 시작/종료 시간 선택을 숨긴다.
-                  if (!_isAllDay) ...[
-                    ScheduleTimePickerRow(
-                      controller: _startTimeController,
-                      label: '시작',
-                      icon: Icons.schedule_outlined,
-                      expanded: _startTimePickerOpen,
-                      onExpandedChanged: (_) => _closePickersExcept('start'),
-                      onTimeSelected: _selectStartTime,
-                    ),
-                    ScheduleTimePickerRow(
-                      controller: _endTimeController,
-                      label: '종료',
-                      icon: Icons.schedule_send_outlined,
-                      expanded: _endTimePickerOpen,
-                      onExpandedChanged: (_) => _closePickersExcept('end'),
-                      onTimeSelected: _selectEndTime,
-                      showDivider: false,
-                    ),
-                  ],
+                  DateTimePickerRow(
+                    label: '종료날짜',
+                    icon: Icons.event_available_outlined,
+                    dateController: _endDateController,
+                    timeController: _endTimeController,
+                    dateExpanded: _endDatePickerOpen,
+                    timeExpanded: _endTimePickerOpen,
+                    focusedDay: _focusedDate,
+                    onDateExpandedChanged: (_) => _closePickersExcept('endDate'),
+                    onTimeExpandedChanged: (_) => _closePickersExcept('endTime'),
+                    onFocusedDayChanged: (date) =>
+                        setState(() => _focusedDate = date),
+                    onDateSelected: _selectEndDate,
+                    onTimeSelected: _selectEndTime,
+                    onNormalizeDate: () => _normalizeEndDateInput(),
+                    showTime: !_isAllDay,
+                    showDivider: false,
+                  ),
                 ],
               ),
               ScheduleFormSection(

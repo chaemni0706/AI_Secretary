@@ -15,7 +15,10 @@ from backend.database.schema.local_schedule_schema import ScheduleDraftInput
 
 class TodoCreate(BaseModel):
     title: str
-    due_date: Optional[str] = Field(None, description="'YYYY-MM-DD'")
+    due_date: Optional[str] = Field(None, description="'YYYY-MM-DD' (마감일)")
+    due_time: Optional[str] = Field(None, description="'HH:mm' (마감 시각, 선택)")
+    start_date: Optional[str] = Field(None, description="'YYYY-MM-DD' (시작일, 선택)")
+    start_time: Optional[str] = Field(None, description="'HH:mm' (시작 시각, 선택)")
     priority: str = "medium"
     completed: bool = False
     category: Optional[str] = None
@@ -39,6 +42,9 @@ class TodoCreate(BaseModel):
 class TodoUpdate(BaseModel):
     title: Optional[str] = None
     due_date: Optional[str] = None
+    due_time: Optional[str] = None
+    start_date: Optional[str] = None
+    start_time: Optional[str] = None
     priority: Optional[str] = None
     completed: Optional[bool] = None
     category: Optional[str] = None
@@ -54,6 +60,9 @@ class TodoRead(BaseModel):
     id: str
     title: str
     due_date: Optional[str] = None
+    due_time: Optional[str] = None
+    start_date: Optional[str] = None
+    start_time: Optional[str] = None
     priority: str
     completed: bool
     category: Optional[str] = None

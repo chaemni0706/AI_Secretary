@@ -11,6 +11,7 @@ import 'screens/ledger_screen.dart';
 import 'screens/my_page_screen.dart';
 import 'screens/image_verification_screen.dart';
 import 'data/dashboard_navigation.dart';
+import 'screens/voice_overlay_screen.dart';
 import 'services/briefing_scheduler_service.dart';
 import 'services/preference_store.dart';
 import 'services/schedule_api.dart';
@@ -30,6 +31,8 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+  // "포비" 오버레이가 백그라운드 서비스에서 화면을 띄울 수 있도록 키 주입.
+  voiceOverlay.attachNavigator(rootNavigatorKey);
   // AI 음성 스타일 설정을 미리 불러와 캐시(비차단; 실패해도 기본값으로 동작).
   // 로드가 끝나면 자동 브리핑 시각이 설정돼 있는 경우 로컬 알림을 예약한다.
   preferenceStore.ensureLoaded().then((_) async {

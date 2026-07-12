@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../services/hotword_service.dart';
+import 'voice_overlay_screen.dart';
 
 /// "포비" 음성 호출 켜기/끄기 테스트 화면.
 ///
@@ -38,6 +39,15 @@ class _HotwordControlScreenState extends State<HotwordControlScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// 실제 음성 없이 오버레이 화면을 확인할 수 있는 미리보기(샘플 대화 주입).
+  void _previewOverlay() {
+    voiceOverlay.show();
+    voiceOverlay.addUser('포비 오늘 브리핑');
+    voiceOverlay.addAssistant('네, 오늘 일정 확인할게요.');
+    voiceOverlay.addAssistant('오늘 남은 일정은 2건이에요. 오후 3시 회의. 오후 7시 저녁 약속.');
+    voiceOverlay.setPhase(VoicePhase.listening);
   }
 
   @override
@@ -119,6 +129,55 @@ class _HotwordControlScreenState extends State<HotwordControlScreen> {
                         height: 1.5,
                         color: AppTheme.textSecondary,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              GlassCard(
+                onTap: _previewOverlay,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.blue.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.preview_outlined,
+                        color: AppTheme.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '오버레이 미리보기',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            '포비 호출 시 뜨는 화면을 미리 확인해요.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: AppTheme.textSecondary,
+                      size: 20,
                     ),
                   ],
                 ),

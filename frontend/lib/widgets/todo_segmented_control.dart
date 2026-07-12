@@ -5,8 +5,13 @@ import '../theme/app_theme.dart';
 class TodoSegment {
   final String label;
   final int count;
+  final bool showCount;
 
-  const TodoSegment({required this.label, required this.count});
+  const TodoSegment({
+    required this.label,
+    required this.count,
+    this.showCount = true,
+  });
 }
 
 class TodoSegmentedControl extends StatelessWidget {
@@ -49,7 +54,9 @@ class TodoSegmentedControl extends StatelessWidget {
                     boxShadow: selected ? TossShadow.tiny : null,
                   ),
                   child: Text(
-                    '${segment.label} ${segment.count}',
+                    segment.showCount
+                        ? '${segment.label} ${segment.count}'
+                        : segment.label,
                     textAlign: TextAlign.center,
                     style: AppTextStyles.cardTitle.copyWith(
                       color: selected

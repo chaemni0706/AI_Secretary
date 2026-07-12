@@ -15,6 +15,7 @@ import '../widgets/todo_completion_calendar.dart';
 import '../widgets/todo_progress_card.dart';
 import '../widgets/todo_segmented_control.dart';
 import '../widgets/toss_button.dart';
+import 'title_search_screen.dart';
 import 'todo_form_screen.dart';
 
 class TodoScreen extends StatefulWidget {
@@ -245,6 +246,28 @@ class _TodoScreenState extends State<TodoScreen>
     await _loadTodos();
   }
 
+  void _openTodoSearch() {
+    Navigator.push<Object>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TitleSearchScreen<TodoModel>(
+          title: '할 일 검색',
+          hintText: '할 일 제목 검색',
+          items: _all,
+          titleOf: (todo) => todo.title,
+          itemBuilder: (context, todo) => TodoCard(
+            todo: todo,
+            onToggle: () => _toggle(todo),
+            onTap: () {
+              Navigator.pop(context);
+              _openEditTodo(todo);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -304,6 +327,12 @@ class _TodoScreenState extends State<TodoScreen>
               ],
             ),
           ),
+          AppHeaderIconButton(
+            icon: Icons.search,
+            tooltip: '할 일 검색',
+            onTap: _openTodoSearch,
+          ),
+          const SizedBox(width: 8),
           const AppTopActions(),
         ],
       ),
@@ -316,7 +345,7 @@ class _TodoScreenState extends State<TodoScreen>
       segments: [
         TodoSegment(label: '오늘', count: _todayTodos.length),
         TodoSegment(label: '예정', count: _upcomingTodos.length),
-        TodoSegment(label: '완료', count: _doneTodos.length),
+        TodoSegment(label: '완료', count: _doneTodos.length, showCount: false),
       ],
       onChanged: (index) {
         setState(() => _tabController.index = index);

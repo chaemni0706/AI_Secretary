@@ -60,8 +60,14 @@ class LedgerReportContent extends StatefulWidget {
   State<LedgerReportContent> createState() => _LedgerReportContentState();
 }
 
-class _LedgerReportContentState extends State<LedgerReportContent> {
+class _LedgerReportContentState extends State<LedgerReportContent>
+    with AutomaticKeepAliveClientMixin {
   static const _userId = 'local-user';
+
+  // 탭(PageView) 사이를 오갈 때 이 위젯이 폐기·재생성되어 매번 다시 로드(스피너 번쩍)
+  // 되는 것을 막는다. 상태(_report)를 유지해 재방문 시 즉시 보여준다.
+  @override
+  bool get wantKeepAlive => true;
 
   bool _loading = true;
   bool _usingFallback = false;
@@ -74,11 +80,18 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
   /// 마지막으로 로드한 refreshToken(중복/무한 재조회 방지용).
   int? _loadedForToken;
 
+  /// AI 브리핑이 백그라운드 생성 중(pending)일 때 조용히 재조회할 남은 횟수.
+  int _briefingPollsLeft = 0;
+
   @override
   void initState() {
     super.initState();
     final base = widget.focusedMonth ?? DateTime.now();
     _focusedMonth = DateTime(base.year, base.month);
+    // keep-alive 로 이 위젯은 한 번만 생성되므로(재방문 시 재초기화 없음) 여기서
+    // 곧바로 로드한다. 백엔드가 빨라져(수십 ms) 미리 로드해도 부담이 없고, 이전의
+    // 'active 일 때만 로드 + post-frame' 방식은 keep-alive 와 얽혀 로드 완료 전에
+    // 위젯이 교체되면 스피너가 계속 도는 문제가 있어 단순화한다.
     _loadReport();
   }
 
@@ -114,11 +127,13 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
     }
   }
 
-  Future<void> _loadReport({bool silent = false}) async {
+  Future<void> _loadReport({bool silent = false, bool force = false}) async {
     // 이번 로드가 커버하는 refreshToken 을 먼저 기록해 중복 호출을 막는다.
     _loadedForToken = widget.refreshToken;
+    if (!silent) _briefingPollsLeft = 5; // 사용자 조작 로드마다 폴링 예산 리셋.
     setState(() {
-      if (!silent) _loading = true;
+      // 아직 표시할 리포트가 없으면 silent 여도 스피너를 보인다(첫 로드 시 mock 노출 방지).
+      if (!silent || _report == null) _loading = true;
       _errorMessage = null;
     });
     try {
@@ -126,6 +141,8 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
         userId: _userId,
         year: _focusedMonth.year,
         month: _focusedMonth.month,
+        // 브리핑 폴링 시엔 프론트 30초 캐시를 건너뛰어야 최신 AI 문장을 받는다.
+        forceRefresh: force,
       );
       if (!mounted) return;
       setState(() {
@@ -134,6 +151,7 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
         _errorMessage = null;
         _loading = false;
       });
+      _maybePollBriefing();
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.isNetworkError) {
@@ -162,6 +180,18 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
         _loading = false;
       });
     }
+  }
+
+  /// AI 브리핑이 아직 백그라운드 생성 중이면 잠시 후 조용히 다시 조회한다.
+  void _maybePollBriefing() {
+    if (_report?.briefingPending != true) return;
+    if (_briefingPollsLeft <= 0) return;
+    _briefingPollsLeft--;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && _report?.briefingPending == true) {
+        _loadReport(silent: true, force: true);
+      }
+    });
   }
 
   void _onChangeMonth(int delta) {
@@ -214,6 +244,7 @@ class _LedgerReportContentState extends State<LedgerReportContent> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin 필수 호출.
     if (_loading && _report == null && !_usingFallback) {
       return const Center(child: CircularProgressIndicator());
     }

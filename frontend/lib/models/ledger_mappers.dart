@@ -139,6 +139,14 @@ extension LedgerTransactionMapper on LedgerTransactionDto {
 // ---------------------------------------------------------------------------
 
 extension LedgerDashboardMapper on LedgerDashboardDto {
+  /// 선택 날짜 AI 브리핑 문장이 아직 백그라운드 생성 중인지(true면 잠시 후 재조회 대상).
+  bool get briefingPending {
+    final sel = selectedDate;
+    if (sel == null) return false;
+    final b = sel['briefing'];
+    return b is Map && b['pending'] == true;
+  }
+
   /// 이번 달 총 지출.
   int get monthExpense => _readIntKeys(summary, [
     'month_expense',
@@ -430,5 +438,11 @@ extension LedgerReportMapper on LedgerReportDto {
     final msg = b['message'] ?? b['text'] ?? b['title'];
     final s = msg?.toString().trim();
     return (s == null || s.isEmpty) ? null : s;
+  }
+
+  /// AI 브리핑 문장이 아직 백그라운드 생성 중인지(true면 잠시 후 재조회 대상).
+  bool get briefingPending {
+    final b = briefing;
+    return b != null && b['pending'] == true;
   }
 }

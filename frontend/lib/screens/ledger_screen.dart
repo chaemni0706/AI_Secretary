@@ -47,6 +47,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
   bool _usingFallback = false;
   String? _errorMessage;
 
+  /// AI 브리핑이 백그라운드 생성 중(pending)일 때 조용히 재조회할 남은 횟수.
+  /// 사용자 조작(비 silent)으로 로드할 때마다 예산을 리셋한다(무한 폴링 방지).
+  int _briefingPollsLeft = 0;
+
   late DateTime _focusedMonth; // 해당 월의 1일
   late DateTime _selectedDate; // 선택된 날짜(오늘 기준 시작)
   LedgerDashboardDto? _dashboard;
@@ -110,8 +114,15 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   bool get _usingApi => !_usingFallback && _dashboard != null;
 
-  List<PendingTx> get _pendingList =>
-      _usingApi ? _dashboard!.pendingCards() : _localPending;
+  /// 리스트(거래내역) 탭용: 대시보드와 무관하게 빠른 월 거래내역만 있으면 실데이터로 본다.
+  bool get _hasMonthTx => !_usingFallback && _monthTx != null;
+
+  List<PendingTx> get _pendingList {
+    if (_usingApi) return _dashboard!.pendingCards();
+    if (_usingFallback) return _localPending;
+    // 실데이터 모드지만 대시보드(대기 거래 포함)가 아직 로딩 중 → 잠깐 비워 둔다.
+    return const [];
+  }
 
   // --- 데이터 로드 ---------------------------------------------------------
   Future<void> _loadDashboard({bool silent = false}) async {
@@ -120,55 +131,134 @@ class _LedgerScreenState extends State<LedgerScreen> {
         _loading = true;
         _errorMessage = null;
       });
+      _briefingPollsLeft = 5; // 사용자 조작 로드마다 폴링 예산 리셋.
     }
-    try {
-      // 대시보드(선택 날짜 중심)와 월 전체 거래내역을 병렬로 조회한다.
-      final results = await Future.wait([
-        ledgerApi.dashboard(
-          userId: _userId,
-          year: _year,
-          month: _month,
-          selectedDate: _selectedDate,
-        ),
-        ledgerApi.monthTransactions(
-          userId: _userId,
-          year: _year,
-          month: _month,
-        ),
-      ]);
-      if (!mounted) return;
+    // 대시보드(4초대)와 거래내역(수십 ms)을 '병렬로 기다리기'(Future.wait)면
+    // 느린 쪽이 끝날 때까지 화면 전체가 스피너에 묶인다. 대신 두 요청을 독립적으로
+    // 실행해, 빠른 거래내역이 오면 즉시 화면을 띄우고 느린 대시보드는 도착하는 대로
+    // 달력 요약·브리핑을 채운다.
+    //
+    // 응답 유효성은 '요청한 월/날짜가 지금과 같은지'로 판정한다. (단조 토큰으로
+    // 판정하면 시작 시 알림 리스너 등이 로드를 연달아 부를 때 먼저 온 응답이 모두
+    // 폐기돼 화면이 안 채워지는 문제가 있었다. 같은 날짜의 중복 응답은 모두 반영하고
+    // 진짜 오래된(다른 날짜) 응답만 버린다.)
+    final reqMonth = _focusedMonth;
+    final reqDate = _selectedDate;
+    bool monthStale() =>
+        !mounted ||
+        reqMonth.year != _focusedMonth.year ||
+        reqMonth.month != _focusedMonth.month;
+    bool dashStale() => monthStale() || !sameDate(reqDate, _selectedDate);
+
+    // (1) 월 전체 거래내역 — 빠름. 오면 즉시 로딩 해제 → 리스트 탭/화면이 바로 뜬다.
+    ledgerApi
+        .monthTransactions(userId: _userId, year: _year, month: _month)
+        .then((tx) {
+      if (monthStale()) return;
       setState(() {
-        _dashboard = results[0] as LedgerDashboardDto;
-        _monthTx = results[1] as LedgerMonthTransactionsDto;
+        _monthTx = tx;
         _usingFallback = false;
         _errorMessage = null;
         _loading = false;
       });
-    } on ApiException catch (e) {
-      if (!mounted) return;
+    }).catchError((Object e) {
+      if (monthStale()) return;
+      _handleLoadError(e);
+    });
+
+    // (2) 대시보드 — 느림(브리핑 생성). 오면 달력 요약을 채우고 개별 로더만 해제.
+    ledgerApi
+        .dashboard(
+          userId: _userId,
+          year: _year,
+          month: _month,
+          selectedDate: reqDate,
+        )
+        .then((d) {
+      if (dashStale()) return;
+      setState(() {
+        _dashboard = d;
+        _usingFallback = false;
+        _errorMessage = null;
+        _loading = false;
+      });
+      _maybePollBriefing();
+    }).catchError((Object e) {
+      if (dashStale()) return;
+      _handleLoadError(e);
+    });
+  }
+
+  /// AI 브리핑이 아직 백그라운드 생성 중이면, 잠시 후 조용히 다시 조회해서
+  /// 준비된 AI 문장으로 교체한다(예산 소진 시 중단 → 무한 폴링 방지).
+  void _maybePollBriefing() {
+    if (_dashboard?.briefingPending != true) return;
+    if (_briefingPollsLeft <= 0) return;
+    _briefingPollsLeft--;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && _dashboard?.briefingPending == true) {
+        _refreshDashboardOnly();
+      }
+    });
+  }
+
+  /// 브리핑 폴링 전용: 거래내역은 건드리지 않고 대시보드만 강제 새로고침한다.
+  /// (전체 _loadDashboard 는 거래내역까지 재조회해 리스트가 들썩이므로 사용하지 않는다.
+  ///  또 프론트 30초 캐시를 건너뛰어야 백그라운드로 준비된 최신 AI 문장을 받는다.)
+  void _refreshDashboardOnly() {
+    final reqMonth = _focusedMonth;
+    final reqDate = _selectedDate;
+    ledgerApi
+        .dashboard(
+          userId: _userId,
+          year: _year,
+          month: _month,
+          selectedDate: reqDate,
+          forceRefresh: true,
+        )
+        .then((d) {
+      if (!mounted ||
+          reqMonth.year != _focusedMonth.year ||
+          reqMonth.month != _focusedMonth.month ||
+          !sameDate(reqDate, _selectedDate)) {
+        return;
+      }
+      setState(() => _dashboard = d);
+      _maybePollBriefing();
+    }).catchError((Object _) {
+      /* 폴링 실패는 조용히 무시(다음 로드에서 다시 시도) */
+    });
+  }
+
+  /// 로드 실패 처리. 네트워크 오류(서버 미도달)이고 아직 실데이터가 하나도 없으면
+  /// 오프라인 데모(fallback)로 전환한다. 이미 실데이터가 있으면 그대로 유지한다.
+  void _handleLoadError(Object e) {
+    if (!mounted) return;
+    if (e is ApiException) {
       if (e.isNetworkError) {
-        // 서버 미도달 → 오프라인 데모 fallback.
-        setState(() {
-          _usingFallback = true;
-          _dashboard = null;
-          _monthTx = null;
-          _errorMessage = null;
-          _loading = false;
-        });
+        if (_dashboard == null && _monthTx == null) {
+          setState(() {
+            _usingFallback = true;
+            _dashboard = null;
+            _monthTx = null;
+            _errorMessage = null;
+            _loading = false;
+          });
+        } else {
+          setState(() => _loading = false);
+        }
       } else {
         setState(() {
           _errorMessage = e.message;
           _loading = false;
         });
       }
-    } on FormatException catch (e) {
-      if (!mounted) return;
+    } else if (e is FormatException) {
       setState(() {
         _errorMessage = '응답 형식 오류: ${e.message}';
         _loading = false;
       });
-    } catch (_) {
-      if (!mounted) return;
+    } else {
       setState(() {
         _errorMessage = '알 수 없는 오류가 발생했어요.';
         _loading = false;
@@ -628,10 +718,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading && _dashboard == null && !_usingFallback) {
+    // 아직 보여줄 게 아무것도 없을 때(첫 데이터 도착 전)만 전체 스피너.
+    // 빠른 거래내역이 오면 곧바로 화면을 띄우고, 느린 대시보드는 달력 요약
+    // 영역에서 개별적으로 로딩 표시한다.
+    final hasAnyData = _dashboard != null || _monthTx != null || _usingFallback;
+    if (_loading && !hasAnyData) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_errorMessage != null && _dashboard == null && !_usingFallback) {
+    if (_errorMessage != null && !hasAnyData) {
       return _buildErrorView();
     }
     return PageView(
@@ -718,12 +812,25 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   void _onTabTap(int index) {
+    if (_topTab == index) return;
     setState(() => _topTab = index);
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-    );
+    // 로딩 중에는 PageView 가 아직 트리에 없어 컨트롤러가 붙어있지 않다.
+    // 이때 animateToPage 를 호출하면 'PageController is not attached to a
+    // PageView' assertion 으로 크래시가 나므로, 붙어있을 때만 애니메이션하고
+    // 아니면 다음 프레임(=PageView 가 그려진 뒤)에 해당 탭으로 점프한다.
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          _pageController.jumpToPage(index);
+        }
+      });
+    }
   }
 
   Widget _buildHeader() {
@@ -835,6 +942,59 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   List<Widget> _buildCalendarView() {
+    // 대시보드(달력 요약·브리핑)가 아직 오지 않았고 오프라인 fallback 도 아니면,
+    // mock 데이터를 잠깐 보여주는 대신 이 영역에만 가벼운 로더를 표시한다.
+    // (거래내역 탭은 이미 실데이터로 즉시 사용 가능하다.)
+    if (_dashboard == null && !_usingFallback) {
+      // 대시보드 조회가 실패한 경우: 무한 로더 대신 오류 + 다시 시도.
+      if (_errorMessage != null) {
+        return [
+          Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_rounded,
+                      size: 36, color: AppTheme.textSecondary),
+                  const SizedBox(height: 12),
+                  Text(
+                    _errorMessage ?? '이번 달 요약을 불러오지 못했어요.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton(
+                    onPressed: () => _loadDashboard(),
+                    child: const Text('다시 시도'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ];
+      }
+      return const [
+        Padding(
+          padding: EdgeInsets.only(top: 80),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 14),
+                Text(
+                  '이번 달 요약을 불러오는 중…',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ];
+    }
+
     final Map<int, DayInfo> dayData = _usingApi
         ? _dashboard!.dayInfos()
         : MockLedgerData.dayData;
@@ -952,7 +1112,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   List<Widget> _buildListView() {
-    if (_usingApi) {
+    if (_hasMonthTx) {
       // 선택 날짜에 한정하지 않고 '월 전체' 거래를 일자별 그룹으로 보여준다.
       // (결제 알림 자동 감지 카드는 목록 맨 아래로 배치한다.)
       final groups = _monthTx?.dayGroups() ?? const <LedgerDayGroup>[];

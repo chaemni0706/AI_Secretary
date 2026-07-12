@@ -19,7 +19,7 @@ String _resolveBaseUrl() {
     final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
     return 'http://$host:8000';
   }
-  return 'http://172.30.1.14:8000';
+  return 'http://192.168.0.73:8000';
 }
 
 /// API 공통 prefix (`/health` 제외).
@@ -85,26 +85,48 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          // 요청 시작 시각을 기록해 응답에서 소요 시간을 계산한다.
+          options.extra['_startedAt'] = DateTime.now();
           debugPrint('[API REQUEST] ${options.method} ${options.uri}');
           handler.next(options);
         },
         onResponse: (response, handler) {
           debugPrint(
-            '[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri} '
-            'body=${response.data}',
+            '[API RESPONSE] ${response.statusCode} '
+            '${_elapsedMs(response.requestOptions)}ms '
+            '${response.requestOptions.uri} '
+            'body=${_short(response.data)}',
           );
           handler.next(response);
         },
         onError: (e, handler) {
           debugPrint(
             '[API ERROR] status=${e.response?.statusCode} '
+            '${_elapsedMs(e.requestOptions)}ms '
             'uri=${e.requestOptions.uri} type=${e.type} '
-            'message=${e.message} body=${e.response?.data}',
+            'message=${e.message} body=${_short(e.response?.data)}',
           );
           handler.next(e);
         },
       ),
     );
+  }
+
+  /// 요청 시작 이후 경과 시간(ms). 서버 응답이 느린지 즉시 판단하는 용도.
+  static int _elapsedMs(RequestOptions options) {
+    final started = options.extra['_startedAt'];
+    if (started is DateTime) {
+      return DateTime.now().difference(started).inMilliseconds;
+    }
+    return -1;
+  }
+
+  /// 로그용으로 응답 본문을 최대 300자로 자른다.
+  /// 큰 payload 를 통째로 debugPrint 하면 Flutter 로그 throttling 에 걸려
+  /// 로그가 밀리고 초기 로딩이 버벅이는 원인이 되므로 짧게만 남긴다.
+  static String _short(dynamic data) {
+    final s = data?.toString() ?? 'null';
+    return s.length > 300 ? '${s.substring(0, 300)}…(${s.length}자)' : s;
   }
 
   static final ApiClient instance = ApiClient._internal();

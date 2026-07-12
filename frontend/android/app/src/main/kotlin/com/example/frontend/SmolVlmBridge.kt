@@ -57,21 +57,30 @@ class SmolVlmBridge(private val context: Context) {
         // --- image-text generation 용 (SmolVLM processor 출력, do_image_splitting=false) ---
         const val HIDDEN = 960
         const val IMG_TOKEN_ID = 49190L
-        const val IMG_POS_START = 5     // image_token 64개 시작 위치
+        const val IMG_POS_START = 5     // image_token 64개 시작 위치(prefix len)
         const val IMG_FEAT_COUNT = 64   // vision_encoder image_features 토큰 수
-        // "<|im_start|>User:<image>×64 Describe the drink briefly.<end_of_utterance>\nAssistant:" 의 input_ids(len 80).
-        // (prefix 5) + (image_token 64 @ 위치 5..68) + (suffix 11). image_features 를 이미지 위치 임베딩에 치환 후 no-cache 생성.
-        val PROMPT_IMG_IDS: LongArray = run {
-            val prefix = longArrayOf(1L, 11126L, 42L, 49189L, 49152L)
-            val suffix = longArrayOf(49189L, 37964L, 260L, 5968L, 13099L, 30L, 49279L, 198L, 9519L, 9531L, 42L)
-            LongArray(prefix.size + IMG_FEAT_COUNT + suffix.size) { i ->
-                when {
-                    i < prefix.size -> prefix[i]
-                    i < prefix.size + IMG_FEAT_COUNT -> IMG_TOKEN_ID
-                    else -> suffix[i - prefix.size - IMG_FEAT_COUNT]
-                }
-            }
-        }
+
+        // task별 프롬프트(diagnostics 전용). 구조: prefix + 64×<image> + <fake_token> + question + <end>\nAssistant:
+        // 질문 token ids 는 host tokenizer(tokenizer.json)로 offline encode(도구: tools/gen_smol_prompts.py 참고).
+        // 이전 단일 프롬프트는 "the drink" 질문이라 study/exercise 도 beverage 로 편향됨 → task별 질문으로 교체.
+        private val PROMPT_PREFIX = longArrayOf(1L, 11126L, 42L, 49189L, 49152L)   // <|im_start|>User:<fake><global-img>
+        private val PROMPT_TAIL = longArrayOf(49279L, 198L, 9519L, 9531L, 42L)     // <end_of_utterance>\nAssistant:
+        private const val FAKE_TOKEN = 49189L
+        // question token ids(host-encoded). 짧은 **중립 서술형** 사용: 옵션 열거("… or empty?")는
+        // SmolVLM-500M 이 마지막 옵션을 그대로 뱉는 편향("Empty.")을 유발해 오히려 정확도↓ → 제거.
+        // task 차이는 명사만("drink"/"scene"/"activity") — water 의 "drink" 초점이 이전엔 study/exercise 도 beverage 로 편향시켰었다.
+        private val Q_WATER = longArrayOf(37964L, 260L, 5968L, 13099L, 30L)      // "Describe the drink briefly."
+        private val Q_STUDY = longArrayOf(37964L, 260L, 6621L, 13099L, 30L)      // "Describe the scene briefly."
+        private val Q_EXERCISE = longArrayOf(37964L, 260L, 2313L, 13099L, 30L)   // "Describe the activity briefly."
+
+        private fun buildPrompt(q: LongArray): LongArray =
+            PROMPT_PREFIX + LongArray(IMG_FEAT_COUNT) { IMG_TOKEN_ID } + longArrayOf(FAKE_TOKEN) + q + PROMPT_TAIL
+
+        val WATER_PROMPT_IMG_IDS: LongArray = buildPrompt(Q_WATER)
+        val STUDY_PROMPT_IMG_IDS: LongArray = buildPrompt(Q_STUDY)
+        val EXERCISE_PROMPT_IMG_IDS: LongArray = buildPrompt(Q_EXERCISE)
+        // 하위호환 기본(=water). imageTextGeneration 은 task별로 선택한다.
+        val PROMPT_IMG_IDS: LongArray = WATER_PROMPT_IMG_IDS
     }
 
     private fun modelDir(): File = File(context.filesDir, "models/smolvlm")
@@ -525,9 +534,9 @@ class SmolVlmBridge(private val context: Context) {
     }
 
     /**
-     * 이미지+텍스트 짧은 생성 spike: vision_encoder → embed(prompt) → image_features 를 image_token 위치 임베딩에 병합
-     * → 고정길이 패딩 no-cache 로 N tokens greedy 생성 → detokenize → [SmolEvidenceParser] 로 task별 evidence 변환.
-     * text 는 approximate(하드코딩 프롬프트/단일 512). fallback_required=true 유지(서버 fallback). 완성 인증 아님.
+     * 이미지+텍스트 짧은 생성 spike: vision_encoder → embed(**task별 프롬프트**) → image_token(49190) 연속 구간 자동탐지 후
+     * image_features 병합 → 고정길이 패딩 no-cache greedy 생성 → detokenize → [SmolEvidenceParser] task별 evidence 변환.
+     * text 는 approximate(single-512 anyres 미적용). fallback_required=true 유지(서버 fallback). 완성 인증 아님.
      */
     private fun imageTextGeneration(imagePath: String?, task: String, maxNew: Int, padLen: Int): HashMap<String, Any?> {
         if (!isModelAvailable()) return hashMapOf("success" to false, "status" to "unavailable", "fallback_required" to true, "engine" to "smol_ondevice")
@@ -549,8 +558,12 @@ class SmolVlmBridge(private val context: Context) {
             levels["vision_encoder"] = "ok ${feat.info.shape.toList()}"
             val featArr = floatsOf(feat, IMG_FEAT_COUNT * HIDDEN)
 
-            // 2) embed prompt(image placeholder 포함) → [1,80,960]
-            val promptIds = PROMPT_IMG_IDS
+            // 2) task별 프롬프트 선택 → embed prompt(image placeholder 포함)
+            val (promptIds, promptName) = when (task) {
+                "study" -> STUDY_PROMPT_IMG_IDS to "study"
+                "exercise" -> EXERCISE_PROMPT_IMG_IDS to "exercise"
+                else -> WATER_PROMPT_IMG_IDS to "water"   // water/unknown → water(보수)
+            }
             val baseLen = promptIds.size
             val idT = OnnxTensor.createTensor(env, LongBuffer.wrap(promptIds), longArrayOf(1, baseLen.toLong())); cl.add(idT)
             val rE = embedS.run(mapOf("input_ids" to idT)); cl.add(rE)
@@ -558,19 +571,25 @@ class SmolVlmBridge(private val context: Context) {
             levels["embed_tokens"] = "ok ${embT.info.shape.toList()}"
             val seqEmb = floatsOf(embT, baseLen * HIDDEN)
 
-            // 3) merge: image_token(위치 5..68) 임베딩을 image_features 로 치환
+            // 3) merge: image_token(49190) 연속 구간을 자동 탐지 → image_features 치환(하드코딩 위치 비의존)
+            val imgStart = promptIds.indexOfFirst { it == IMG_TOKEN_ID }
+            var imgCount = 0
+            if (imgStart >= 0) { var j = imgStart; while (j < baseLen && promptIds[j] == IMG_TOKEN_ID) { imgCount++; j++ } }
+            if (imgStart < 0 || imgCount != IMG_FEAT_COUNT) {
+                levels["image_merge"] = "blocked (image_token_count=$imgCount != $IMG_FEAT_COUNT)"
+                return hashMapOf("success" to false, "status" to "image_token_mismatch", "fallback_required" to true,
+                    "engine" to "smol_ondevice", "task" to task, "task_prompt_name" to promptName, "levels" to levels)
+            }
             for (i in 0 until IMG_FEAT_COUNT) {
-                System.arraycopy(featArr, i * HIDDEN, seqEmb, (IMG_POS_START + i) * HIDDEN, HIDDEN)
+                System.arraycopy(featArr, i * HIDDEN, seqEmb, (imgStart + i) * HIDDEN, HIDDEN)
             }
-            levels["image_merge"] = "ok (${IMG_FEAT_COUNT} tokens @${IMG_POS_START})"
+            levels["image_merge"] = "ok ($imgCount tokens @$imgStart)"
 
-            if (baseLen + maxNew > padLen) {
-                return hashMapOf("success" to false, "status" to "padlen_too_small", "fallback_required" to true,
-                    "engine" to "smol_ondevice", "message" to "padLen($padLen) < baseLen($baseLen)+maxNew($maxNew)", "levels" to levels)
-            }
+            // PAD 는 프롬프트 길이에 맞춰 자동 확장(task별 프롬프트가 이전보다 김)
+            val pad = maxOf(padLen, baseLen + maxNew)
 
             // 4) 고정길이 패딩 no-cache greedy 생성
-            val buf = FloatArray(padLen * HIDDEN) // zero-padded
+            val buf = FloatArray(pad * HIDDEN) // zero-padded
             System.arraycopy(seqEmb, 0, buf, 0, seqEmb.size)
             var curLen = baseLen
             val gen = ArrayList<Long>()
@@ -578,9 +597,9 @@ class SmolVlmBridge(private val context: Context) {
             for (step in 0 until maxNew) {
                 val stepCl = ArrayList<AutoCloseable>()
                 try {
-                    val eT = OnnxTensor.createTensor(env, FloatBuffer.wrap(buf.copyOf()), longArrayOf(1, padLen.toLong(), HIDDEN.toLong())); stepCl.add(eT)
-                    val am = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(padLen) { if (it < curLen) 1L else 0L }), longArrayOf(1, padLen.toLong())); stepCl.add(am)
-                    val pos = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(padLen) { it.toLong() }), longArrayOf(1, padLen.toLong())); stepCl.add(pos)
+                    val eT = OnnxTensor.createTensor(env, FloatBuffer.wrap(buf.copyOf()), longArrayOf(1, pad.toLong(), HIDDEN.toLong())); stepCl.add(eT)
+                    val am = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(pad) { if (it < curLen) 1L else 0L }), longArrayOf(1, pad.toLong())); stepCl.add(am)
+                    val pos = OnnxTensor.createTensor(env, LongBuffer.wrap(LongArray(pad) { it.toLong() }), longArrayOf(1, pad.toLong())); stepCl.add(pos)
                     val inputs = HashMap<String, OnnxTensor>()
                     inputs["inputs_embeds"] = eT; inputs["attention_mask"] = am; inputs["position_ids"] = pos
                     for (i in 0 until N_LAYERS) for (kv in listOf("key", "value")) {
@@ -625,13 +644,16 @@ class SmolVlmBridge(private val context: Context) {
             return hashMapOf(
                 "success" to false, "engine" to "smol_ondevice", "status" to "image_text_generation_ok",
                 "fallback_required" to true, "task" to task,
+                "task_prompt_name" to promptName, "prompt_seq_len" to baseLen,
+                "image_token_count" to imgCount, "image_token_start" to imgStart,
+                "image_token_end" to (imgStart + imgCount - 1), "pad_len" to pad,
                 "generated_token_ids" to gen, "generated_text" to (text ?: ""),
                 "count" to gen.size, "latency_ms" to (System.currentTimeMillis() - t0),
                 "levels" to levels,
                 "evidence" to evidence,
                 "local_accept_candidate" to (evidence["local_accept_candidate"] ?: false),
                 "local_reject_candidate" to (evidence["local_reject_candidate"] ?: false),
-                "note" to "image+text no-cache 생성 spike + evidence 변환(diagnostics-only). single-512(anyres 미적용), 프롬프트 하드코딩 → 텍스트 approximate.",
+                "note" to "image+text no-cache 생성 spike + task별 프롬프트 + evidence 변환(diagnostics-only). single-512(anyres 미적용).",
             )
         } catch (e: Throwable) {
             return hashMapOf("success" to false, "engine" to "smol_ondevice", "status" to "error",

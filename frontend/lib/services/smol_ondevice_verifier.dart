@@ -91,8 +91,8 @@ class SmolOndeviceVerifier {
   Future<Map<String, dynamic>?> imageTextGen({
     required File imageFile,
     String task = 'water',
-    int maxNew = 12,
-    int padLen = 96,
+    int maxNew = 16,
+    int padLen = 128,
   }) async {
     try {
       return await _channel.invokeMapMethod<String, dynamic>('imageTextGen', {

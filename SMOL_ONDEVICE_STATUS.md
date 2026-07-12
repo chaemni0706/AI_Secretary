@@ -16,6 +16,7 @@
 - ✅ **실기기 6장 task 스모크 완료(gallery picker)**: image_picker 로 선택한 이미지는 앱 cache 로 복사돼 앱 프로세스가 바로 읽으므로 EROFS/FUSE 우회(§11). water 2 + study 2 + exercise 2.
   - **water 생성 정확**: 맑은 물→`"A glass of water."`→`[visible_water]`; 오렌지주스→`"Orange juice."`→`[non_water_beverage]`. positive/blocker 모두 정확 매핑.
   - **study/exercise 는 하드코딩 water-프롬프트 때문에 생성이 beverage 로 편향**(예: 책상+노트→"Tea.", 배낭→"A glass of water.") → 파서가 **보수적으로 `weak`/`uncertain_*` 처리, false-accept 0**. 모든 6장 `local_accept_candidate=false`, 무크래시(5~8s).
+- ✅ **task별 프롬프트 도입 → beverage 편향 제거**(§12): 프롬프트 질문을 water="the drink", study="the scene", exercise="the activity" 로 분리(옵션 열거는 "Empty." 오답 유발해 제외). 재검증 결과 study/exercise 생성이 **실제 장면 서술**로 개선(책상→"wooden table with various items", 소파→"A woman is sitting on a couch"). **소파(비운동)는 sitting/couch→`unrelated_environment` blocker 로 정확 거절**. water 정확 유지(맑은물→visible_water, 주스→non_water_beverage). false-accept 여전히 0.
 - ✅ **payload backend Rule Engine 투입 확인**: `rule_engine_payload` 4종을 실제 `evaluate_image_verification` 에 투입 → 오류 없이 소비. water[visible_water]→`rejected`(단일 코드/객체 없음→mandatory 미달, Smol 이 water 를 local-accept 하면 안 되는 근거 보강), water[non_water_beverage]→`rejected`, study/exercise weak→`retake_required`.
 - ⚠️ **partial 사유(갱신)**: 이미지 배포는 gallery picker 로 해결됐으나, **study/exercise 는 하드코딩 프롬프트로 생성 텍스트가 부정확**해 task-정확 evidence 생성 불가(파서는 안전하게 fallback). water 만 생성·evidence 모두 정확. → task별 정확도는 부분.
 - ⏳ spike/diagnostics 전용(프롬프트 water-하드코딩·task별 프롬프트 미구현, single-512 anyres 미적용, 서버 evidence schema 자동 투입 미연결) → `fallback_required=true` 유지, 서버 fallback + water local accept 금지 유지.
@@ -319,3 +320,34 @@ diagnostics 에서 task별 정확도 충분 확인 → local-first accept 배선
 `water[visible_water]→rejected`(단일 코드+객체 없음→mandatory 미달; Smol 이 water 를 local-accept 하면 안 되는 근거 보강), `water[non_water_beverage]→rejected`, `study/exercise weak→retake_required`. → `rule_engine_compatible=true` end-to-end 확인.
 
 **남은 조건(local-first accept 전):** (1) **task별 프롬프트**(study/exercise 용) 로 생성 정확도 확보, (2) 정확도 충분 확인 후 study/exercise local accept 후보만 배선(water 는 서버/정책 유지), (3) evidence→Rule Engine 자동 판정 연결. 이때까지 `smol_android_runtime_verified` 금지, `fallback_required=true` 유지.
+
+
+## 12. task별 프롬프트 도입 + 6장 재검증 (2026-07-12, Flip3)
+
+**원인:** 이전 단일 프롬프트가 `<image>… Describe the drink briefly. …` 로 **"the drink"** 질문이라 study/exercise 이미지도 beverage 로 서술("Tea.", "A glass of water.")됨.
+
+**구현:** SmolVlmBridge.kt 에 task별 프롬프트(질문만 차이) — 구조 `prefix + 64×<image> + <fake> + Q + <end>\nAssistant:`.
+질문 token ids 는 host tokenizer 로 offline encode(도구 `tools/gen_smol_prompts.py`). image_token(49190) 연속구간 **자동 탐지**(하드코딩 위치 비의존, count≠64 면 blocked). 진단 JSON 에 `task_prompt_name/prompt_seq_len/image_token_start/end/pad_len` 추가.
+- `water = "Describe the drink briefly."`  `study = "Describe the scene briefly."`  `exercise = "Describe the activity briefly."`
+- **옵션 열거형 실패:** 처음엔 "… Water, juice, … or empty?" 식 열거를 시도했으나 SmolVLM-500M 이 **마지막 옵션을 그대로 뱉는**("Empty.") 편향으로 water 정확도↓ → **중립 서술형**으로 교체.
+
+**재검증(중립 프롬프트):**
+| # | task | 이미지 | generated_text(요약) | evidence_codes | accept | reject | parse | ms |
+|---|---|---|---|---|---|---|---|---|
+| 1 | water | 맑은 물 | "A glass of water." | `[visible_water]` | F | F | clean | 8511 |
+| 2 | water | 오렌지주스 | "Orange juice." | `[non_water_beverage]` | F | **T** | clean | 6537 |
+| 3 | study | 책상+필기 | "…wooden table with various items…" | `[uncertain_screen_content]` | F | F | weak | 15836 |
+| 4 | study | 게임 | "…two people, one holding a phone." | `[uncertain_screen_content]` | F | F | weak | 16092 |
+| 5 | exercise | 배낭(borderline) | "…a person wearing a backpack…" | `[uncertain_exercise_environment]` | F | F | weak | 20424 |
+| 6 | exercise | 소파(FAIL) | "A woman is sitting on a couch…" | `[unrelated_environment]` | F | **T** | clean | 19951 |
+
+**개선:** beverage 편향 **완전 제거** — study/exercise 가 실제 장면을 서술. **소파(비운동) 정확 거절**(sitting/couch→unrelated_environment). water 정확 유지. **false-accept 0**.
+**한계:** study-pass/게임/배낭은 caption 이 일반어("table/items", "phone", "backpack")라 파서 **positive/게임 blocker 미매치 → weak**(보수적으로 정확, 오탐 없음). 즉 positive 검출은 아직 미달. 또 no-EOS 시 maxNew(16) full 생성으로 **latency 15~20s 증가**(water 는 EOS 조기 종료 6~8s).
+
+**payload → backend Rule Engine:** `exercise[unrelated_environment]→rejected`, `study/exercise[uncertain_*]→retake_required`, `water[visible_water]→rejected`(mandatory 미달), `water[non_water_beverage]→rejected`. 전부 오류 없이 소비.
+
+**parser 변경:** 없음(보수). caption 일반어를 study/exercise **positive** 로 추가하면 FP 위험 → 미추가(사용자 지침). blocker 는 이미 sitting/couch 로 충분(Case 6).
+
+**상태 판단:** `smol_android_evidence_spike_partial` **유지**. beverage 편향 제거·blocker 검출·water 정확은 개선됐으나, study/exercise **positive(인정) evidence** 는 caption 어휘 한계로 미달. → `verified` 아님.
+
+**다음 단계:** (1) 프롬프트를 "list the objects" 형으로 조정하거나 anyres 로 세부 명사(book/notes/dumbbell) 유도 → positive 검출, (2) latency 위해 maxNew 축소/EOS 유도, (3) 그 후 study/exercise 만 local accept 후보 배선(water 서버/정책 유지).

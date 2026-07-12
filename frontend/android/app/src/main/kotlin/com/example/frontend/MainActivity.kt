@@ -14,6 +14,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // 온디바이스 SmolVLM 브릿지 등록(fallback-safe; 모델 미존재 시 서버 fallback).
+        SmolVlmBridge(applicationContext).register(flutterEngine)
+
         // 네이티브 리스너 → Flutter 알림 원문 스트림.
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, eventsChannel)
             .setStreamHandler(object : EventChannel.StreamHandler {

@@ -1,8 +1,22 @@
 {
   "task": "water|study|exercise",
-  "result": "verified|rejected|retake_required",
-  "positive_evidence": [],
-  "negative_evidence": [],
-  "uncertainty": "low|medium|high",
-  "reason": ""
+  "final_result": "verified|rejected|retake_required",
+  "rule_reason": "",
+  "rule_trace": [],
+  "evidence": {
+    "positive_evidence": [],
+    "negative_evidence": [],
+    "blockers": [],
+    "uncertainty": "low|medium|high",
+    "image_quality": "good|poor|unusable|unknown",
+    "visible_objects": [],
+    "visible_actions": [],
+    "mapped_rule_codes": []
+  },
+  "debug": {
+    "engine": "qwen3b",
+    "qwen_raw_output": "",
+    "qwen_parse_status": "clean|repaired|failed",
+    "qwen_suggested_result": "NOT_USED_FOR_FINAL"
+  }
 }

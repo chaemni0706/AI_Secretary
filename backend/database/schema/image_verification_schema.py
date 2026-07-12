@@ -11,7 +11,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-VerificationType = Literal["gym", "study", "medicine", "water", "wakeup", "exercise"]
+VerificationType = Literal["gym", "study", "medicine", "water", "wakeup", "exercise", "wake_up"]
 VerificationResult = Literal["verified", "retake_required", "rejected"]
 ExerciseActivityType = Literal["gym", "running", "swimming", "yoga", "pilates", "home_workout"]
 StudyVisualEvidence = Literal[
@@ -154,6 +154,13 @@ class ImageVerificationData(BaseModel):
     score_breakdown: RuleScoreBreakdown
     vlm_analysis: VisionAnalysis
     rule_evidence: list[RuleEvidence] = Field(default_factory=list)
+    # secondary_review 라우팅(orchestrator/API layer 에서 설정; Rule Engine core 미변경).
+    # VLM-eligible visual scope 밖일 수 있는 verified(현재: water)는 자동 확정하지 않고 review 로 표시.
+    review_required: bool = Field(
+        default=False,
+        description="verified 이지만 비시각 맥락 확인이 필요해 자동 확정 대신 secondary_review 로 보내야 하는지",
+    )
+    review_reason: str = Field(default="", description="review 사유(예: water_non_visual_context_risk)")
 
 
 class ImageVerificationResponse(BaseModel):

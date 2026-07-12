@@ -1,12 +1,14 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../models/verification_result.dart';
+import '../models/image_verification_result.dart';
 import '../services/api_client.dart' show baseUrl, ApiException;
 import '../services/camera_capture_service.dart';
-import '../services/verification_api.dart';
+import '../services/image_verification_service.dart';
+import 'smol_diagnostics_screen.dart';
 
 /// 이미지 인증 화면.
 ///
@@ -16,8 +18,7 @@ class ImageVerificationScreen extends StatefulWidget {
   const ImageVerificationScreen({super.key});
 
   @override
-  State<ImageVerificationScreen> createState() =>
-      _ImageVerificationScreenState();
+  State<ImageVerificationScreen> createState() => _ImageVerificationScreenState();
 }
 
 class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
@@ -25,6 +26,14 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
     'water': '물',
     'exercise': '운동',
     'study': '공부',
+    'wake_up': '기상',
+  };
+  // task별 안내 문구(선택 시 상단 힌트).
+  static const _typeHints = <String, String>{
+    'water': '물이 잘 보이도록 촬영해 주세요.',
+    'exercise': '운동 동작·기구·공간이 보이도록 촬영해 주세요.',
+    'study': '책·노트·학습 화면이 보이도록 촬영해 주세요.',
+    'wake_up': '기상 후 현재 상태를 촬영해 인증해 주세요. (얼굴 식별이 아니라 기상 상황 확인)',
   };
   static const _activityTypes = <String, String>{
     'gym': '헬스장',
@@ -36,7 +45,7 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
 
   File? _image;
   bool _loading = false;
-  VerificationResult? _result;
+  ImageVerificationResult? _result;
   String? _error;
 
   bool get _isExercise => _verificationType == 'exercise';
@@ -85,9 +94,11 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
       _result = null;
     });
     try {
-      final result = await verificationApi.submitImageVerification(
-        verificationType: _verificationType,
+      // Smol **blocker-only** local-first → 아니면 서버 Qwen fallback(오케스트레이터).
+      // 모델이 없는 일반 기기에선 Smol 이 inert → 서버 경로 그대로.
+      final result = await imageVerificationService.verify(
         imageFile: image,
+        task: _verificationType,
         activityType: _isExercise ? _activityType : null,
       );
       if (!mounted) return;
@@ -106,7 +117,20 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('이미지 인증')),
+      appBar: AppBar(
+        title: const Text('이미지 인증'),
+        actions: [
+          // dev-only: 온디바이스 SmolVLM ONNX session-load 진단(일반 사용자 플로우와 분리).
+          if (kDebugMode)
+            IconButton(
+              tooltip: 'Smol 온디바이스 진단 (dev)',
+              icon: const Icon(Icons.memory),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SmolDiagnosticsScreen()),
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -115,6 +139,11 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
             const SizedBox(height: 12),
             _sectionTitle('인증 종류'),
             _typeSelector(),
+            if (_typeHints[_verificationType] != null) ...[
+              const SizedBox(height: 6),
+              Text(_typeHints[_verificationType]!,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
             if (_isExercise) ...[
               const SizedBox(height: 12),
               _sectionTitle('운동 종류 (필수)'),
@@ -136,17 +165,14 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Widget _serverHint() => Text(
-    '서버: $baseUrl',
-    style: const TextStyle(fontSize: 12, color: Colors.grey),
-  );
+        '서버: $baseUrl',
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      );
 
   Widget _sectionTitle(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      t,
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+      );
 
   Widget _typeSelector() {
     return Wrap(
@@ -195,16 +221,9 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.photo_camera_outlined,
-                    size: 40,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.photo_camera_outlined, size: 40, color: Colors.grey),
                   SizedBox(height: 8),
-                  Text(
-                    '촬영한 사진이 여기에 표시됩니다',
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  Text('촬영한 사진이 여기에 표시됩니다', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             )
@@ -213,24 +232,15 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Widget _captureButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: _loading ? null : () => _capture(),
-            icon: const Icon(Icons.photo_camera),
-            label: const Text('카메라 촬영'),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _loading ? null : () => _capture(fromGallery: true),
-            icon: const Icon(Icons.photo_library_outlined),
-            label: const Text('갤러리'),
-          ),
-        ),
-      ],
+    // 일반 사용자 인증은 **직접 촬영만** 허용(갤러리 업로드 금지 — 과거/타인 사진 방지).
+    // 갤러리 선택은 kDebugMode 진단 화면에서만 유지된다.
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: _loading ? null : () => _capture(),
+        icon: const Icon(Icons.photo_camera),
+        label: const Text('카메라 촬영'),
+      ),
     );
   }
 
@@ -240,11 +250,7 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
       child: FilledButton.icon(
         onPressed: (_loading || _image == null) ? null : _submit,
         icon: _loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.verified_outlined),
         label: Text(_loading ? '인증 중...' : '인증 요청'),
       ),
@@ -260,24 +266,22 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
           children: [
             const Icon(Icons.error_outline, color: Color(0xFFC62828)),
             const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                msg,
-                style: const TextStyle(color: Color(0xFFC62828)),
-              ),
-            ),
+            Expanded(child: Text(msg, style: const TextStyle(color: Color(0xFFC62828)))),
           ],
         ),
       ),
     );
   }
 
-  Widget _resultCard(VerificationResult r) {
-    final (color, icon) = switch (r.result) {
-      'verified' => (const Color(0xFF2E7D32), Icons.check_circle),
-      'retake_required' => (const Color(0xFFEF6C00), Icons.refresh),
-      _ => (const Color(0xFFC62828), Icons.cancel),
-    };
+  Widget _resultCard(ImageVerificationResult r) {
+    // 자동 인증 확정 불가(needsRetake)는 verified 와 구분해 amber 로 표시(자동 성공 아님 → 재촬영 안내).
+    final (color, icon) = r.needsRetake
+        ? (const Color(0xFFF9A825), Icons.camera_alt_outlined)
+        : switch (r.finalResult) {
+            'verified' => (const Color(0xFF2E7D32), Icons.check_circle),
+            'retake_required' => (const Color(0xFFEF6C00), Icons.refresh),
+            _ => (const Color(0xFFC62828), Icons.cancel),
+          };
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -291,30 +295,36 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
                 Expanded(
                   child: Text(
                     r.displayMessage,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              '타입: ${r.verificationType}  ·  판정: ${r.result}'
-              '${r.score != null ? '  ·  점수: ${r.score}' : ''}',
-            ),
+            Text('타입: ${r.task}  ·  판정: ${r.finalResult}'
+                '${r.smolBlockerDetected ? '  ·  로컬(Smol) 감지' : ''}'
+                '${r.score != null ? '  ·  점수: ${r.score}' : ''}'),
+            if (r.needsRetake) ...[
+              const SizedBox(height: 6),
+              Text(
+                r.smolBlockerDetected
+                    ? '로컬 분석에서 인증 조건과 다른 단서가 감지됐어요. 과제에 맞는 장면이 잘 보이도록 다시 촬영해 주세요.'
+                    : '사진상 물처럼 보이지만 물의 종류나 촬영 맥락을 확실히 판단하기 어려워 '
+                        '자동 인증할 수 없어요. 다른 사진으로 다시 촬영해 주세요.',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
+              ),
+              const SizedBox(height: 4),
+              const Text('위 “카메라 촬영” 으로 다시 시도할 수 있어요.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB0812A))),
+            ],
             if (r.reasons.isNotEmpty) ...[
               const SizedBox(height: 10),
               const Text('근거', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              ...r.reasons.map(
-                (m) => Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text('• $m', style: const TextStyle(fontSize: 13)),
-                ),
-              ),
+              ...r.reasons.map((m) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text('• $m', style: const TextStyle(fontSize: 13)),
+                  )),
             ],
           ],
         ),

@@ -31,7 +31,8 @@ from backend.services.vision_analyzer import VisionAnalyzer
 from backend.services.wakeup_verification_service import wakeup_session_store
 
 # VLM 기반 이미지 인증 타입
-IMAGE_VERIFICATION_TYPES: frozenset[str] = frozenset({"water", "exercise", "study"})
+# wake_up = 기상 상황(사람+아침 맥락) **이미지** 인증. 시간/세션 기반 wakeup 과 별개(얼굴/신원 식별 아님).
+IMAGE_VERIFICATION_TYPES: frozenset[str] = frozenset({"water", "exercise", "study", "wake_up"})
 # 세션/시간 기반 인증 타입 (VLM 미사용)
 SESSION_VERIFICATION_TYPES: frozenset[str] = frozenset({"wakeup"})
 SUPPORTED_VERIFICATION_TYPES: frozenset[str] = IMAGE_VERIFICATION_TYPES | SESSION_VERIFICATION_TYPES

@@ -624,3 +624,43 @@ def test_duplicate_exercise_equipment_and_evidence_score_once():
 
     assert data.result == "verified"
     assert data.score_breakdown.object_score == 65
+
+
+# --- wake_up (기상 상황 이미지 인증; generic 경로, Rule Engine core 무변경) ---
+
+def _wake_up_analysis(labels, usable=True):
+    return VisionAnalysis(
+        quality=ImageQuality(usable=usable),
+        objects=[ImageObjectObservation(label=x, confidence=0.9) for x in labels],
+    )
+
+
+def test_wake_up_person_with_morning_context_is_verified():
+    data = evaluate_image_verification(
+        "wake_up", _wake_up_analysis(["person", "sunlight"]), ImageVerificationContext()
+    )
+    assert data.result == "verified"
+    assert data.mandatory_passed is True
+
+
+def test_wake_up_person_only_requires_retake():
+    data = evaluate_image_verification(
+        "wake_up", _wake_up_analysis(["person"]), ImageVerificationContext()
+    )
+    assert data.result == "retake_required"
+    assert data.mandatory_passed is True
+
+
+def test_wake_up_no_person_is_rejected():
+    data = evaluate_image_verification(
+        "wake_up", _wake_up_analysis(["bed", "pillow"]), ImageVerificationContext()
+    )
+    assert data.result == "rejected"
+    assert data.mandatory_passed is False
+
+
+def test_wake_up_unusable_quality_requires_retake():
+    data = evaluate_image_verification(
+        "wake_up", _wake_up_analysis(["person", "window"], usable=False), ImageVerificationContext()
+    )
+    assert data.result == "retake_required"

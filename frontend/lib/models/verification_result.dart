@@ -49,12 +49,32 @@ class VerificationResult {
     );
   }
 
-  bool get isVerified => result == 'verified';
+  /// 자동 확정(verified) — 단, secondary_review 대상이면 자동 확정 아님.
+  bool get isVerified => result == 'verified' && !reviewRequired;
   bool get isRejected => result == 'rejected';
   bool get isRetakeRequired => result == 'retake_required';
 
+  /// VLM-eligible scope 밖(비시각 맥락)일 수 있어 secondary_review 가 필요한지.
+  /// 백엔드 `data.review_required` 를 우선하고, 없으면 water verified 를 보수적으로 review 로 본다.
+  bool get reviewRequired =>
+      raw['review_required'] == true || (result == 'verified' && verificationType == 'water');
+
+  /// review 사유 (예: water_non_visual_context_risk).
+  String get reviewReason =>
+      (raw['review_reason'] ?? (reviewRequired ? 'water_non_visual_context_risk' : '')).toString();
+
+  /// verified 이지만 자동 인증 확정이 어려운 상태(앱은 자동 성공으로 처리하지 말고 재촬영 안내).
+  /// review_required 는 "관리자 검수 대기"가 아니라 "자동 확정 불가 → 다른 사진으로 재촬영" 을 의미한다.
+  bool get needsRetake => result == 'verified' && reviewRequired;
+
+  /// (하위호환) 이전 이름. needsRetake 와 동일 의미.
+  bool get needsSecondaryReview => needsRetake;
+
   /// 사용자에게 보여줄 한 줄 메시지.
   String get displayMessage {
+    if (needsRetake) {
+      return '자동 인증이 어렵습니다. 다른 사진으로 다시 촬영해 주세요 📷';
+    }
     switch (result) {
       case 'verified':
         return '인증 성공! 잘 하셨어요 👍';

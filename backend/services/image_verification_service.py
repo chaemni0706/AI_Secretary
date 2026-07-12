@@ -39,6 +39,23 @@ _STUDY_FALLBACK_TRIGGER_CODES = frozenset(
 # 근거가 이보다 적어 통과하지 못하면, study 정확도가 높은 fallback(Qwen)으로 재확인한다.
 _STUDY_MIN_EVIDENCE_FOR_VERIFY = 2
 
+# secondary_review 라우팅 정책(orchestrator layer; Rule Engine core 미수정).
+# 근거: VLM 이미지 인증 full-test 잔여 오탐(FP)은 전부 water 에서만, 그리고 **외관상 물과 구분 불가**한
+# 케이스(오염 식수/정수기·변기물/맥주+물 동시/BORDERLINE)였다. 추론 시 이를 사전 판별할 시각 신호가 없으므로,
+# **verified(water) 는 자동 확정하지 않고 review_required 로 표시**해 앱이 secondary_review(사람 검수 또는
+# GPS/시간/맥락 rule)로 라우팅하게 한다. exercise/study 및 기타 결과는 기존 흐름 유지.
+# final_result enum 은 변경하지 않는다(verified/retake_required/rejected). review_required/review_reason 필드로만 표현.
+_REVIEW_TASKS = frozenset({"water"})
+
+
+def apply_secondary_review_policy(data: ImageVerificationData) -> ImageVerificationData:
+    """verified 이지만 VLM-eligible visual scope 밖일 수 있는 결과에 review_required 를 부여."""
+    if data.result == "verified" and data.verification_type in _REVIEW_TASKS:
+        return data.model_copy(
+            update={"review_required": True, "review_reason": "water_non_visual_context_risk"}
+        )
+    return data
+
 
 def _analyze(vision, image_path, verification_type, labels, exercise_activity_type):
     """analyzer 가 activity-aware(analyze_with_context) 를 지원하면 activity 를 전달한다.
@@ -126,7 +143,8 @@ def verify_image_upload(
                     result = evaluate_image_verification(
                         verification_type, fb_analysis, context
                     )
-        return result
+        # orchestrator 후처리: verified(water) → secondary_review 라우팅(Rule Engine core 미수정).
+        return apply_secondary_review_policy(result)
     finally:
         try:
             tmp_path.unlink(missing_ok=True)

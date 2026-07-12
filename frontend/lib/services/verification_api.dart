@@ -16,11 +16,7 @@ import 'api_client.dart';
 class VerificationApi {
   const VerificationApi();
 
-  static const Set<String> imageVerificationTypes = {
-    'water',
-    'exercise',
-    'study',
-  };
+  static const Set<String> imageVerificationTypes = {'water', 'exercise', 'study', 'wake_up'};
 
   /// 촬영/선택한 이미지 파일을 인증 타입별 엔드포인트로 업로드한다.
   ///
@@ -35,15 +31,13 @@ class VerificationApi {
     if (!imageVerificationTypes.contains(verificationType)) {
       throw ApiException('지원하지 않는 인증 타입입니다: $verificationType');
     }
-    if (verificationType == 'exercise' &&
-        (activityType == null || activityType.isEmpty)) {
+    if (verificationType == 'exercise' && (activityType == null || activityType.isEmpty)) {
       throw ApiException('운동 인증에는 activity_type(gym/home_workout)이 필요합니다.');
     }
 
     final filename = imageFile.path.split(Platform.pathSeparator).last;
     final formData = FormData.fromMap({
-      if (activityType != null && activityType.isNotEmpty)
-        'activity_type': activityType,
+      if (activityType != null && activityType.isNotEmpty) 'activity_type': activityType,
       'file': await MultipartFile.fromFile(imageFile.path, filename: filename),
     });
 

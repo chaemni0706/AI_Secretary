@@ -164,107 +164,6 @@ class ScheduleDateTimeRow extends StatelessWidget {
   }
 }
 
-class ScheduleDatePickerRow extends StatelessWidget {
-  final TextEditingController controller;
-  final bool expanded;
-  final DateTime focusedDay;
-  final ValueChanged<bool> onExpandedChanged;
-  final ValueChanged<DateTime> onFocusedDayChanged;
-  final ValueChanged<DateTime> onDateSelected;
-  final VoidCallback onNormalize;
-  final bool showDivider;
-
-  const ScheduleDatePickerRow({
-    super.key,
-    required this.controller,
-    required this.expanded,
-    required this.focusedDay,
-    required this.onExpandedChanged,
-    required this.onFocusedDayChanged,
-    required this.onDateSelected,
-    required this.onNormalize,
-    this.showDivider = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ScheduleFormRow(
-          icon: Icons.event_outlined,
-          label: '날짜',
-          showDivider: false,
-          child: GestureDetector(
-            onTap: () => onExpandedChanged(!expanded),
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 34),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.blue.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: TextField(
-                      controller: controller,
-                      onTap: () => onExpandedChanged(true),
-                      onSubmitted: (_) => onNormalize(),
-                      onEditingComplete: onNormalize,
-                      style: AppTextStyles.cardTitle.copyWith(
-                        color: AppTheme.blue,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'YYYY-MM-DD',
-                        isDense: true,
-                        border: InputBorder.none,
-                        hintStyle: AppTextStyles.cardTitle.copyWith(
-                          color: AppTheme.blue.withValues(alpha: 0.62),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: AppTheme.textSecondary,
-                ),
-              ],
-            ),
-          ),
-        ),
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: InlineCalendarPicker(
-            selectedDate: ScheduleDateParser.parse(controller.text),
-            focusedDay: focusedDay,
-            onFocusedDayChanged: onFocusedDayChanged,
-            onDateSelected: onDateSelected,
-          ),
-          crossFadeState: expanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 180),
-          sizeCurve: Curves.easeOut,
-        ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            indent: 58,
-            color: AppTheme.separator.withValues(alpha: 0.7),
-          ),
-      ],
-    );
-  }
-}
-
 class InlineCalendarPicker extends StatelessWidget {
   final DateTime? selectedDate;
   final DateTime focusedDay;
@@ -357,77 +256,159 @@ class InlineCalendarPicker extends StatelessWidget {
   }
 }
 
-class ScheduleTimePickerRow extends StatelessWidget {
-  final TextEditingController controller;
+/// 라벨(예: '시작날짜'/'종료날짜') + 날짜 칩 + 시간 칩을 한 행에 보여주고,
+/// 탭한 쪽의 인라인 피커(달력/시간 휠)를 그 아래 펼친다. 일정/할일 폼 양쪽에서
+/// 시작·종료 날짜+시간 선택에 공용으로 쓴다.
+class DateTimePickerRow extends StatelessWidget {
   final String label;
   final IconData icon;
-  final bool expanded;
-  final ValueChanged<bool> onExpandedChanged;
+  final TextEditingController dateController;
+  final TextEditingController timeController;
+  final bool dateExpanded;
+  final bool timeExpanded;
+  final DateTime focusedDay;
+  final ValueChanged<bool> onDateExpandedChanged;
+  final ValueChanged<bool> onTimeExpandedChanged;
+  final ValueChanged<DateTime> onFocusedDayChanged;
+  final ValueChanged<DateTime> onDateSelected;
   final ValueChanged<String> onTimeSelected;
-  final bool enabled;
+  final VoidCallback onNormalizeDate;
+  final bool showTime;
   final bool showDivider;
 
-  const ScheduleTimePickerRow({
+  const DateTimePickerRow({
     super.key,
-    required this.controller,
     required this.label,
     required this.icon,
-    required this.expanded,
-    required this.onExpandedChanged,
+    required this.dateController,
+    required this.timeController,
+    required this.dateExpanded,
+    required this.timeExpanded,
+    required this.focusedDay,
+    required this.onDateExpandedChanged,
+    required this.onTimeExpandedChanged,
+    required this.onFocusedDayChanged,
+    required this.onDateSelected,
     required this.onTimeSelected,
-    this.enabled = true,
+    required this.onNormalizeDate,
+    this.showTime = true,
     this.showDivider = true,
   });
 
+  // 아이콘+라벨(78dp 고정폭)을 왼쪽에 두는 ScheduleFormRow 를 그대로 쓰면, 날짜 칩과
+  // 시간 칩이 한 줄에 들어갈 폭이 부족해 날짜 칩이 잘린다(좁은 화면에서 특히).
+  // 그래서 라벨을 윗줄에 두고, 날짜·시간 칩은 카드 전체 폭을 쓰는 아랫줄에 배치한다.
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ScheduleFormRow(
-          icon: icon,
-          label: label,
-          showDivider: false,
-          child: GestureDetector(
-            onTap: enabled ? () => onExpandedChanged(!expanded) : null,
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                TimeSelectionChip(
-                  label: controller.text.trim().isEmpty
-                      ? 'HH:mm'
-                      : controller.text.trim(),
-                  selected: controller.text.trim().isNotEmpty,
-                  enabled: enabled,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: AppTheme.textSecondary),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: AppTheme.textPrimary,
                 ),
-                const Spacer(),
-                Icon(
-                  expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: enabled
-                      ? AppTheme.textSecondary
-                      : AppTheme.textSecondary.withValues(alpha: 0.45),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onDateExpandedChanged(!dateExpanded),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 34),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.blue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: TextField(
+                      controller: dateController,
+                      onTap: () => onDateExpandedChanged(true),
+                      onSubmitted: (_) => onNormalizeDate(),
+                      onEditingComplete: onNormalizeDate,
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: AppTheme.blue,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'YYYY-MM-DD',
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintStyle: AppTextStyles.cardTitle.copyWith(
+                          color: AppTheme.blue.withValues(alpha: 0.62),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (showTime) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => onTimeExpandedChanged(!timeExpanded),
+                  behavior: HitTestBehavior.opaque,
+                  child: TimeSelectionChip(
+                    label: timeController.text.trim().isEmpty
+                        ? 'HH:mm'
+                        : timeController.text.trim(),
+                    selected: timeController.text.trim().isNotEmpty,
+                  ),
                 ),
               ],
-            ),
+              const SizedBox(width: 8),
+              Icon(
+                (dateExpanded || timeExpanded)
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                color: AppTheme.textSecondary,
+              ),
+            ],
           ),
         ),
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
-          secondChild: InlineTimePicker(
-            selectedTime: controller.text,
-            onTimeSelected: onTimeSelected,
+          secondChild: InlineCalendarPicker(
+            selectedDate: ScheduleDateParser.parse(dateController.text),
+            focusedDay: focusedDay,
+            onFocusedDayChanged: onFocusedDayChanged,
+            onDateSelected: onDateSelected,
           ),
-          crossFadeState: expanded && enabled
+          crossFadeState: dateExpanded
               ? CrossFadeState.showSecond
               : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 180),
           sizeCurve: Curves.easeOut,
         ),
+        if (showTime)
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: InlineTimePicker(
+              selectedTime: timeController.text,
+              onTimeSelected: onTimeSelected,
+            ),
+            crossFadeState: timeExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+            sizeCurve: Curves.easeOut,
+          ),
         if (showDivider)
           Divider(
             height: 1,
-            indent: 58,
+            indent: 14,
             color: AppTheme.separator.withValues(alpha: 0.7),
           ),
       ],

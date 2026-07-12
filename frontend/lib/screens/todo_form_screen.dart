@@ -7,6 +7,7 @@ import '../services/todo_api.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
 import '../theme/todo_styles.dart';
+import '../widgets/schedule_form_components.dart' show DateTimePickerRow;
 import '../widgets/todo_form_components.dart';
 
 class TodoFormScreen extends StatefulWidget {
@@ -25,8 +26,10 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
   );
 
   final _titleController = TextEditingController();
-  final _dateController = TextEditingController();
-  final _timeController = TextEditingController();
+  final _startDateController = TextEditingController();
+  final _startTimeController = TextEditingController();
+  final _dueDateController = TextEditingController();
+  final _dueTimeController = TextEditingController();
   final _memoController = TextEditingController();
 
   String _category = TodoStyles.categoryOrder.first;
@@ -34,8 +37,10 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
   bool _completed = false;
   bool _saving = false;
   bool _deleting = false;
-  bool _datePickerOpen = false;
-  bool _timePickerOpen = false;
+  bool _startDatePickerOpen = false;
+  bool _startTimePickerOpen = false;
+  bool _dueDatePickerOpen = false;
+  bool _dueTimePickerOpen = false;
   DateTime _focusedDate = DateTime.now();
 
   bool get _isEditMode => widget.initialTodo != null;
@@ -46,59 +51,84 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
     final todo = widget.initialTodo;
     if (todo != null) {
       _titleController.text = todo.title;
-      _dateController.text = todo.dueDate ?? '';
+      _dueDateController.text = todo.dueDate ?? '';
+      _startDateController.text = todo.startDate ?? '';
+      _startTimeController.text = todo.startTime ?? '';
       _category = TodoStyles.categoryLabel(todo.category);
       _priority = todo.priority;
       _completed = todo.completed;
 
       final memo = todo.memo ?? '';
-      final timeMatch = _timeLinePattern.firstMatch(memo);
-      if (timeMatch != null) {
-        _timeController.text = timeMatch.group(1)!.trim();
-        _memoController.text = memo.replaceAll(_timeLinePattern, '').trim();
-      } else {
+      if ((todo.dueTime ?? '').isNotEmpty) {
+        _dueTimeController.text = todo.dueTime!;
         _memoController.text = memo;
+      } else {
+        // 하위 호환: 옛 데이터는 마감 시간이 memo 안에 "시간: HH:mm" 로 남아있을 수
+        // 있다(이제 due_time 이 진짜 필드이므로 다음 저장부터는 여기로 안 온다).
+        final timeMatch = _timeLinePattern.firstMatch(memo);
+        if (timeMatch != null) {
+          _dueTimeController.text = timeMatch.group(1)!.trim();
+          _memoController.text = memo.replaceAll(_timeLinePattern, '').trim();
+        } else {
+          _memoController.text = memo;
+        }
       }
     }
     _focusedDate =
-        ScheduleDateParser.parse(_dateController.text) ?? DateTime.now();
+        ScheduleDateParser.parse(_dueDateController.text) ?? DateTime.now();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
+    _startDateController.dispose();
+    _startTimeController.dispose();
+    _dueDateController.dispose();
+    _dueTimeController.dispose();
     _memoController.dispose();
     super.dispose();
   }
 
   void _closePickersExcept(String target) {
     setState(() {
-      _datePickerOpen = target == 'date' ? !_datePickerOpen : false;
-      _timePickerOpen = target == 'time' ? !_timePickerOpen : false;
+      final openingStartDate = target == 'startDate' ? !_startDatePickerOpen : false;
+      final openingDueDate = target == 'dueDate' ? !_dueDatePickerOpen : false;
+      _startDatePickerOpen = openingStartDate;
+      _dueDatePickerOpen = openingDueDate;
+      _startTimePickerOpen = target == 'startTime' ? !_startTimePickerOpen : false;
+      _dueTimePickerOpen = target == 'dueTime' ? !_dueTimePickerOpen : false;
+      if (openingStartDate) {
+        _focusedDate =
+            ScheduleDateParser.parse(_startDateController.text) ?? _focusedDate;
+      } else if (openingDueDate) {
+        _focusedDate =
+            ScheduleDateParser.parse(_dueDateController.text) ?? _focusedDate;
+      }
     });
   }
 
-  void _selectDate(DateTime date) {
+  void _selectStartDate(DateTime date) {
     setState(() {
-      _dateController.text = ScheduleDateParser.format(date);
+      _startDateController.text = ScheduleDateParser.format(date);
       _focusedDate = date;
-      _datePickerOpen = false;
+      _startDatePickerOpen = false;
     });
   }
 
-  void _selectTime(String time) {
-    setState(() => _timeController.text = time);
+  void _selectDueDate(DateTime date) {
+    setState(() {
+      _dueDateController.text = ScheduleDateParser.format(date);
+      _focusedDate = date;
+      _dueDatePickerOpen = false;
+    });
   }
 
-  /// 메모 텍스트에 "시간: HH:mm" 한 줄을 반영(있으면 교체, 없으면 추가/제거).
-  String? _composeMemo() {
-    final memo = _memoController.text.trim();
-    final time = _timeController.text.trim();
-    if (time.isEmpty) return memo.isEmpty ? null : memo;
-    final timeLine = '시간: $time';
-    return memo.isEmpty ? timeLine : '$memo\n$timeLine';
+  void _selectStartTime(String time) {
+    setState(() => _startTimeController.text = time);
+  }
+
+  void _selectDueTime(String time) {
+    setState(() => _dueTimeController.text = time);
   }
 
   void _snack(String message) {
@@ -107,15 +137,28 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  bool _normalizeDate({bool showError = false}) {
-    final raw = _dateController.text.trim();
+  bool _normalizeStartDate({bool showError = false}) {
+    final raw = _startDateController.text.trim();
     if (raw.isEmpty) return true;
     final normalized = ScheduleDateParser.normalize(raw);
     if (normalized == null) {
-      if (showError) _snack('날짜 형식을 확인해 주세요.');
+      if (showError) _snack('시작 날짜 형식을 확인해 주세요.');
       return false;
     }
-    _dateController.text = normalized;
+    _startDateController.text = normalized;
+    _focusedDate = ScheduleDateParser.parse(normalized) ?? _focusedDate;
+    return true;
+  }
+
+  bool _normalizeDueDate({bool showError = false}) {
+    final raw = _dueDateController.text.trim();
+    if (raw.isEmpty) return true;
+    final normalized = ScheduleDateParser.normalize(raw);
+    if (normalized == null) {
+      if (showError) _snack('종료 날짜 형식을 확인해 주세요.');
+      return false;
+    }
+    _dueDateController.text = normalized;
     _focusedDate = ScheduleDateParser.parse(normalized) ?? _focusedDate;
     return true;
   }
@@ -128,11 +171,14 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
 
     return {
       'title': _titleController.text.trim(),
-      'due_date': optional(_dateController.text),
+      'due_date': optional(_dueDateController.text),
+      'due_time': optional(_dueTimeController.text),
+      'start_date': optional(_startDateController.text),
+      'start_time': optional(_startTimeController.text),
       'priority': _priority,
       'completed': _completed,
       'category': _category,
-      'memo': _composeMemo(),
+      'memo': optional(_memoController.text),
       'source': widget.initialTodo?.source ?? 'user',
     };
   }
@@ -142,7 +188,17 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
       _snack('제목을 입력해 주세요.');
       return;
     }
-    if (!_normalizeDate(showError: true)) return;
+    if (!_normalizeStartDate(showError: true)) return;
+    if (!_normalizeDueDate(showError: true)) return;
+    if (_startDateController.text.trim().isNotEmpty &&
+        _dueDateController.text.trim().isNotEmpty &&
+        _dueDateController.text.trim().compareTo(
+              _startDateController.text.trim(),
+            ) <
+            0) {
+      _snack('종료 날짜는 시작 날짜보다 빠를 수 없습니다.');
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -180,7 +236,9 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
             Text(todo.title),
             const SizedBox(height: 8),
             Text('날짜: ${todo.dueDate ?? '마감일 미정'}'),
-            Text('시간: ${_timeText(todo.memo)}'),
+            Text(
+              '시간: ${(todo.dueTime ?? '').isNotEmpty ? todo.dueTime : '시간 미정'}',
+            ),
             Text('카테고리: ${TodoStyles.categoryLabel(todo.category)}'),
           ],
         ),
@@ -224,13 +282,6 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
     }
   }
 
-  String _timeText(String? memo) {
-    final match = RegExp(r'시간:\s*([^\n]+)').firstMatch(memo ?? '');
-    return match?.group(1)?.trim().isNotEmpty == true
-        ? match!.group(1)!.trim()
-        : '시간 필드 없음';
-  }
-
   @override
   Widget build(BuildContext context) {
     final title = _isEditMode ? '할 일 수정' : '할 일 추가';
@@ -272,15 +323,37 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
                     icon: Icons.title,
                     hint: '예: 자료 정리하기',
                   ),
-                  TodoDatePickerRow(
-                    controller: _dateController,
-                    expanded: _datePickerOpen,
+                  DateTimePickerRow(
+                    label: '시작날짜',
+                    icon: Icons.event_outlined,
+                    dateController: _startDateController,
+                    timeController: _startTimeController,
+                    dateExpanded: _startDatePickerOpen,
+                    timeExpanded: _startTimePickerOpen,
                     focusedDay: _focusedDate,
-                    onExpandedChanged: (_) => _closePickersExcept('date'),
+                    onDateExpandedChanged: (_) => _closePickersExcept('startDate'),
+                    onTimeExpandedChanged: (_) => _closePickersExcept('startTime'),
                     onFocusedDayChanged: (date) =>
                         setState(() => _focusedDate = date),
-                    onDateSelected: _selectDate,
-                    onNormalize: () => _normalizeDate(),
+                    onDateSelected: _selectStartDate,
+                    onTimeSelected: _selectStartTime,
+                    onNormalizeDate: () => _normalizeStartDate(),
+                  ),
+                  DateTimePickerRow(
+                    label: '종료날짜',
+                    icon: Icons.event_available_outlined,
+                    dateController: _dueDateController,
+                    timeController: _dueTimeController,
+                    dateExpanded: _dueDatePickerOpen,
+                    timeExpanded: _dueTimePickerOpen,
+                    focusedDay: _focusedDate,
+                    onDateExpandedChanged: (_) => _closePickersExcept('dueDate'),
+                    onTimeExpandedChanged: (_) => _closePickersExcept('dueTime'),
+                    onFocusedDayChanged: (date) =>
+                        setState(() => _focusedDate = date),
+                    onDateSelected: _selectDueDate,
+                    onTimeSelected: _selectDueTime,
+                    onNormalizeDate: () => _normalizeDueDate(),
                   ),
                   TodoCategorySelector(
                     value: _category,
@@ -305,12 +378,6 @@ class _TodoFormScreenState extends State<TodoFormScreen> {
                   TodoCompletedRow(
                     value: _completed,
                     onChanged: (value) => setState(() => _completed = value),
-                  ),
-                  TodoTimePickerRow(
-                    controller: _timeController,
-                    expanded: _timePickerOpen,
-                    onExpandedChanged: (_) => _closePickersExcept('time'),
-                    onTimeSelected: _selectTime,
                   ),
                   const TodoDisabledInfoRow(
                     icon: Icons.notifications_outlined,

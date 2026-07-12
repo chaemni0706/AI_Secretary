@@ -18,6 +18,9 @@ class ScheduleCreate(BaseModel):
     # 하루 종일 일정은 start_time 없이 저장 가능(서버가 00:00 로 채우고 is_all_day=1).
     start_time: Optional[str] = Field(None, description="'HH:mm' (하루 종일이면 생략 가능)")
     end_time: Optional[str] = Field(None, description="'HH:mm'")
+    end_date: Optional[str] = Field(
+        None, description="'YYYY-MM-DD' (기간 일정의 종료일. 생략하면 date와 동일)"
+    )
     category: Optional[str] = None
     priority: str = "medium"
     location: Optional[str] = None
@@ -48,6 +51,7 @@ class ScheduleUpdate(BaseModel):
     date: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    end_date: Optional[str] = None
     category: Optional[str] = None
     priority: Optional[str] = None
     location: Optional[str] = None
@@ -75,6 +79,7 @@ class ScheduleRead(BaseModel):
     date: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    end_date: Optional[str] = None
     category: Optional[str] = None
     priority: str
     location: Optional[str] = None

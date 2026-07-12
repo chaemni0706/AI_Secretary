@@ -33,7 +33,9 @@ class AppRadii {
 }
 
 class AppTextStyles {
-  static const TextStyle screenTitle = TossTypography.display;
+  // 캘린더 탭 헤더 크기에 맞춤(Bold 22). TossTypography.display(28)는 큰 금액
+  // 표시 등 다른 용도로 계속 쓰이므로, 화면 타이틀 전용 별칭만 title1로 낮춘다.
+  static const TextStyle screenTitle = TossTypography.title1;
 
   static const TextStyle sectionTitle = TextStyle(
     fontFamily: TossTypography.fontFamily,

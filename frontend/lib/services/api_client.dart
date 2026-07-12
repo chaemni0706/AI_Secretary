@@ -19,6 +19,8 @@ String _resolveBaseUrl() {
     final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
     return 'http://$host:8000';
   }
+  // 실기기(같은 Wi-Fi) 테스트 기준 PC IP. IP 가 바뀌거나 USB(adb reverse) 로
+  // 붙일 땐 --dart-define=API_BASE_URL=http://...:8000 (예: http://127.0.0.1:8000) 로 덮어쓸 것.
   return 'http://192.168.0.73:8000';
 }
 

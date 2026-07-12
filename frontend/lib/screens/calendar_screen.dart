@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../theme/app_constants.dart';
 import '../theme/app_theme.dart';
@@ -13,6 +14,7 @@ import '../widgets/calendar_event_bar.dart';
 import '../widgets/category_schedule_section.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/week_day_strip.dart';
+import '../widgets/weekly_timeline_view.dart';
 import '../widgets/day_timeline_view.dart';
 import '../widgets/year_month_picker_sheet.dart';
 import '../models/schedule_model.dart';
@@ -21,6 +23,7 @@ import '../services/dashboard_api.dart';
 import '../services/api_client.dart';
 import 'schedule_detail_screen.dart';
 import 'schedule_form_screen.dart';
+import 'title_search_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -46,6 +49,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   );
   late final DateTime _weekAnchor;
 
+  // 주간 뷰 카드 하단 화살표로 펼치는 주간 타임라인 상태(마지막 상태 기억).
+  static const String _weekTimelinePrefsKey = 'weekly_timeline_expanded';
+  bool _weekTimelineExpanded = false;
+
   // 타임라인 탭이 보이는 동안에만 1분마다 현재 시각 표시선을 갱신한다.
   Timer? _nowTimer;
 
@@ -54,6 +61,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     _weekAnchor = _weekStart(DateTime.now());
     _loadSchedules();
+    _restoreWeekTimelineExpanded();
     // 예약/AI챗 등에서 저장 후 triggerDashboardRefresh() 가 호출되면 캘린더도 갱신.
     dashboardRefresh.addListener(_loadSchedules);
   }
@@ -127,10 +135,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   String _ymd(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
-  /// 선택 날짜와 schedule.date("YYYY-MM-DD") 문자열 비교로 필터링.
+  /// 선택 날짜가 일정의 [시작일, 종료일] 범위 안에 있으면 포함한다(여러 날짜에
+  /// 걸친 일정은 그 기간 내 모든 날짜의 하단 목록에 나타나야 한다).
   List<ScheduleModel> _schedulesFor(DateTime day) {
-    final key = _ymd(day);
-    final list = _all.where((s) => s.date == key).toList();
+    final date = DateTime(day.year, day.month, day.day);
+    final list = _all.where((s) {
+      final start = _dateFromSchedule(s);
+      if (start == null) return false;
+      final end = _endDateFor(s, start);
+      return !date.isBefore(start) && !date.isAfter(end);
+    }).toList();
     list.sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
     return list;
   }
@@ -149,13 +163,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   DateTime _endDateFor(ScheduleModel schedule, DateTime startDate) {
-    final memo = schedule.memo ?? '';
-    final match = RegExp(
-      r'(?:end_date|endDate|종료일)\s*[:=]\s*(\d{4}-\d{2}-\d{2})',
-    ).firstMatch(memo);
-    if (match == null) return startDate;
+    // effectiveEndDate 는 서버가 내려주는 진짜 end_date 필드를 우선 쓰고,
+    // (구버전 AI 드래프트가 남긴) memo 안의 end_date 토큰은 폴백으로만 쓴다.
+    final endStr = schedule.effectiveEndDate;
+    if (endStr == null) return startDate;
     try {
-      final parsed = DateTime.parse(match.group(1)!);
+      final parsed = DateTime.parse(endStr);
       final end = DateTime(parsed.year, parsed.month, parsed.day);
       return end.isBefore(startDate) ? startDate : end;
     } catch (_) {
@@ -267,6 +280,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
+  void _openScheduleSearch() {
+    Navigator.push<Object>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TitleSearchScreen<ScheduleModel>(
+          title: '일정 검색',
+          hintText: '일정 제목 검색',
+          items: _all,
+          titleOf: (schedule) => schedule.title,
+          itemBuilder: (context, schedule) => ScheduleCard(
+            schedule: schedule,
+            showDate: true,
+            onTap: () {
+              Navigator.pop(context);
+              _openScheduleDetail(schedule);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openYearMonthPicker() async {
     final result = await showModalBottomSheet<DateTime>(
       context: context,
@@ -342,64 +377,101 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  // 다른 탭(할 일 등)과 같은 패턴: 화면 제목 줄과 아이콘들을 한 줄에 두고,
+  // 월 이동(◀ 연월 ▶)은 그 아래 전용 줄로 분리한다. 이전엔 이 둘을 한 줄에
+  // 같이 두다 보니 검색 아이콘이 추가되면서 폭이 부족해 "2026년 7월"이
+  // "2026년..."으로 잘렸었다 — 전용 줄을 쓰면 항상 넉넉한 폭을 쓸 수 있다.
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1);
-              });
-            },
-            child: const Icon(
-              Icons.chevron_left,
-              color: AppTheme.textPrimary,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: GestureDetector(
-              onTap: _openYearMonthPicker,
-              child: Row(
-                children: [
-                  Text(
-                    '${_focusedDay.year}년 ${_focusedDay.month}월',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                      letterSpacing: -0.4,
-                    ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '캘린더',
+                  style: AppTextStyles.screenTitle.copyWith(
+                    color: AppTheme.textPrimary,
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.expand_more,
-                    color: AppTheme.textSecondary,
-                    size: 20,
-                  ),
-                ],
+                ),
               ),
-            ),
+              AppHeaderIconButton(
+                icon: Icons.search,
+                tooltip: '일정 검색',
+                onTap: _openScheduleSearch,
+              ),
+              const SizedBox(width: 8),
+              const AppTopActions(),
+            ],
           ),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1);
-              });
-            },
-            child: const Icon(
-              Icons.chevron_right,
-              color: AppTheme.textPrimary,
-              size: 26,
-            ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _focusedDay = DateTime(
+                      _focusedDay.year,
+                      _focusedDay.month - 1,
+                    );
+                  });
+                },
+                child: const Icon(
+                  Icons.chevron_left,
+                  color: AppTheme.textPrimary,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _openYearMonthPicker,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${_focusedDay.year}년 ${_focusedDay.month}월',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.expand_more,
+                        color: AppTheme.textSecondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _focusedDay = DateTime(
+                      _focusedDay.year,
+                      _focusedDay.month + 1,
+                    );
+                  });
+                },
+                child: const Icon(
+                  Icons.chevron_right,
+                  color: AppTheme.textPrimary,
+                  size: 26,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          const AppTopActions(),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -529,6 +601,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     bool isOutside = false,
   }) {
     final segments = _monthEventSegmentsFor(day).take(2).toList();
+    // TableCalendar 는 오늘이 "선택"된 경우 selectedBuilder 만 호출해 isToday
+    // 플래그가 오지 않는다 → 오늘 여부는 여기서 직접 판정한다(선택돼도 붉은 원 유지).
+    final today = !isOutside && isSameDay(day, DateTime.now());
     // 토스식 요일 색: 일요일 red, 토요일 blue.
     final weekdayColor = day.weekday == DateTime.sunday
         ? TossColors.red
@@ -538,8 +613,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final textColor = isOutside
         ? TossColors.textAssistive
         : isSelected
-        ? Colors.white
-        : isToday
         ? TossColors.blue600
         : weekdayColor;
 
@@ -547,10 +620,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
       padding: const EdgeInsets.fromLTRB(2, 2, 2, 1),
       decoration: BoxDecoration(
+        // 선택 배경은 반투명으로 — 진한 채움이면 그 아래 일정 막대가 안 보인다.
         color: isSelected
-            ? TossColors.blue500
-            : isToday
-            ? TossColors.blueWeak
+            ? TossColors.blue500.withValues(alpha: 0.16)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
@@ -559,14 +631,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           Align(
             alignment: Alignment.topCenter,
-            child: Text(
-              '${day.day}',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 12,
-                fontWeight: isSelected || isToday
-                    ? FontWeight.w800
-                    : FontWeight.w600,
+            // 오늘 표시는 셀 전체 채움 대신 날짜 숫자를 감싸는 채워진 붉은 원 —
+            // 숫자는 흰색으로 잘 보이고 일정 막대와도 겹치지 않는다.
+            child: Container(
+              width: 21,
+              height: 21,
+              alignment: Alignment.center,
+              decoration: today
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.red.withValues(alpha: 0.9),
+                    )
+                  : null,
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  color: today ? Colors.white : textColor,
+                  fontSize: 12,
+                  height: 1,
+                  fontWeight: isSelected || today
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -584,34 +670,116 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  /// 주간일정표 + (펼치면) 주간 타임라인을 한 카드로 묶은 페이저.
+  ///
+  /// 타임라인은 별도 블록이 아니라 같은 카드 하단에서 화살표로 펼쳐지고,
+  /// 날짜 헤더 없이 그리드만 보여준다(날짜는 위 주간일정표가 담당).
+  /// 페이저 안에 함께 있으므로 타임라인 영역을 옆으로 밀어도 주가 넘어간다.
   Widget _buildWeekPager() {
-    return SizedBox(
-      height: WeekDayStrip.pageHeight,
-      child: PageView.builder(
-        controller: _weekPageController,
-        onPageChanged: (page) {
-          // 선택된 요일(오프셋)을 유지한 채 새 주로 이동한다.
-          // (예: 수요일 선택 상태로 스와이프하면 다음 주도 수요일이 선택됨)
-          final offset = _selectedDay
-              .difference(_weekStart(_selectedDay))
-              .inDays;
-          setState(
-            () => _selectedDay = _weekStartForPage(
-              page,
-            ).add(Duration(days: offset)),
-          );
-        },
-        itemBuilder: (context, page) {
-          final weekStart = _weekStartForPage(page);
-          return WeekDayStrip(
-            weekStart: weekStart,
-            selectedDay: _selectedDay,
-            hasEvent: _hasEvent,
-            onDaySelected: (day) => setState(() => _selectedDay = day),
-          );
-        },
+    final pagerHeight = WeekDayStrip.bareHeight +
+        (_weekTimelineExpanded
+            ? WeeklyTimelineBody.preferredHeight + 8
+            : 0);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: GlassCard(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        child: Column(
+          children: [
+            AnimatedSize(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOut,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: pagerHeight,
+                child: PageView.builder(
+                  controller: _weekPageController,
+                  onPageChanged: (page) {
+                    // 선택된 요일(오프셋)을 유지한 채 새 주로 이동한다.
+                    // (예: 수요일 선택 상태로 스와이프하면 다음 주도 수요일이 선택됨)
+                    final offset = _selectedDay
+                        .difference(_weekStart(_selectedDay))
+                        .inDays;
+                    setState(
+                      () => _selectedDay = _weekStartForPage(
+                        page,
+                      ).add(Duration(days: offset)),
+                    );
+                  },
+                  itemBuilder: (context, page) {
+                    final weekStart = _weekStartForPage(page);
+                    return Column(
+                      children: [
+                        SizedBox(
+                          height: WeekDayStrip.bareHeight,
+                          child: WeekDayStrip(
+                            bare: true,
+                            weekStart: weekStart,
+                            selectedDay: _selectedDay,
+                            hasEvent: _hasEvent,
+                            onDaySelected: (day) =>
+                                setState(() => _selectedDay = day),
+                          ),
+                        ),
+                        if (_weekTimelineExpanded) ...[
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: WeeklyTimelineBody(
+                              weekStart: weekStart,
+                              schedulesFor: _schedulesFor,
+                              onScheduleTap: _openScheduleDetail,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+            // 블록 하단 중앙의 접기/펼치기 화살표.
+            GestureDetector(
+              onTap: _toggleWeekTimeline,
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: double.infinity,
+                height: 26,
+                child: AnimatedRotation(
+                  turns: _weekTimelineExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOut,
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppTheme.textSecondary,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _toggleWeekTimeline() async {
+    setState(() => _weekTimelineExpanded = !_weekTimelineExpanded);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_weekTimelinePrefsKey, _weekTimelineExpanded);
+    } catch (_) {}
+  }
+
+  Future<void> _restoreWeekTimelineExpanded() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getBool(_weekTimelinePrefsKey);
+      if (saved == true && mounted) {
+        setState(() => _weekTimelineExpanded = true);
+      }
+    } catch (_) {
+      // 저장소 실패 시 기본(접힘) 유지.
+    }
   }
 
   Widget _buildDayTimeline() {

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:vosk_flutter_2/vosk_flutter_2.dart';
 
+import '../screens/voice_overlay_screen.dart';
 import 'assistant_text_sanitizer.dart';
 import 'dashboard_api.dart';
 import 'preference_store.dart';
@@ -242,10 +243,27 @@ class HotwordService {
     // (단독 "포비"/"브리핑"/"일정" 은 무시 → 일상 대화 중 오작동 방지)
     if (!hasWake || !canTrigger) return;
     // '브리핑' 이 함께 있으면 브리핑 우선("포비 오늘 일정 브리핑" 도 브리핑).
+    if (hasBrief || hasSchedule) {
+      // Siri 스타일 오버레이를 띄우고, 인식한 발화를 첫 사용자 말풍선으로 표시.
+      voiceOverlay.show();
+      voiceOverlay.addUser(text);
+    }
     if (hasBrief) {
       _trigger(_parseDayOffset(t));
     } else if (hasSchedule) {
       _triggerAddSchedule();
+    }
+  }
+
+  /// 응답 문장을 오버레이 말풍선에 추가하고 같은 문장을 TTS 로 읽는다.
+  /// (오버레이가 안 떠 있어도 말풍선 추가는 무해하며 음성은 그대로 나간다.)
+  Future<void> _say(String text) async {
+    voiceOverlay.addAssistant(text);
+    voiceOverlay.setPhase(VoicePhase.speaking);
+    try {
+      await _tts.speak(text);
+    } finally {
+      voiceOverlay.setPhase(VoicePhase.idle);
     }
   }
 
@@ -320,18 +338,22 @@ class HotwordService {
   /// 등록 가능하면 저장하고 확인 TTS, 아니면 부족한 정보를 안내한다.
   /// (VoiceScheduleScreen 의 parse→createFromDraft 흐름과 동일한 API 사용.)
   Future<void> _captureAndCreateSchedule() async {
-    await _tts.speak('네, 등록할 일정을 말씀해주세요.');
+    await _say('네, 등록할 일정을 말씀해주세요.');
     // 안내 음성이 마이크로 되들어가 STT 를 방해하지 않도록 잠깐 대기.
     await Future.delayed(const Duration(milliseconds: 400));
 
+    voiceOverlay.setPhase(VoicePhase.listening);
     final text = (await _listenForCommand())?.trim() ?? '';
+    voiceOverlay.setPhase(VoicePhase.idle);
     if (text.isEmpty) {
-      await _tts.speak('일정을 알아듣지 못했어요. 다시 시도해주세요.');
+      await _say('일정을 알아듣지 못했어요. 다시 시도해주세요.');
       return;
     }
     debugPrint('일정 등록 발화: "$text"');
+    voiceOverlay.addUser(text);
 
     try {
+      voiceOverlay.setPhase(VoicePhase.thinking);
       await preferenceStore.ensureLoaded();
       final result = await scheduleApi.parse(
         text,
@@ -343,7 +365,7 @@ class HotwordService {
       );
       if (!result.isRegisterable) {
         // 날짜/시간/제목이 빠졌으면 백엔드 안내(tts_text)나 기본 문구로 재요청.
-        await _tts.speak(
+        await _say(
           sanitizeAssistantText(
             result.ttsText,
             fallback: '날짜와 시간을 포함해서 다시 말씀해주세요. 예: 내일 오후 2시에 회의 일정.',
@@ -356,10 +378,12 @@ class HotwordService {
         intent: result.intent,
       );
       triggerDashboardRefresh(); // 홈/캘린더 대시보드 새로고침(다른 저장 경로와 동일).
-      await _tts.speak(_confirmSpeech(result.scheduleDraft));
+      await _say(_confirmSpeech(result.scheduleDraft));
     } catch (e) {
       debugPrint('음성 일정 등록 실패: $e');
-      await _tts.speak('일정을 저장하지 못했어요. 다시 시도해주세요.');
+      await _say('일정을 저장하지 못했어요. 다시 시도해주세요.');
+    } finally {
+      voiceOverlay.setPhase(VoicePhase.idle);
     }
   }
 
@@ -463,8 +487,9 @@ class HotwordService {
 
     // 해당 날짜 대시보드(일정)를 먼저 요청하고, 그동안 짧은 응답을 재생(병렬).
     final dashFuture = dashboardApi.getTodayDashboard(date: date);
-    await _tts.speak('네, $label 일정 확인할게요.');
+    await _say('네, $label 일정 확인할게요.');
     try {
+      voiceOverlay.setPhase(VoicePhase.thinking);
       final dash = await dashFuture;
       final now = _nowHm();
       // 오늘이면 "현재 시각 이후" 일정만, 미래 날짜면 그날 전체. 시간순 정렬.
@@ -477,7 +502,7 @@ class HotwordService {
             ..sort((a, b) => (a.startTime ?? '').compareTo(b.startTime ?? ''));
 
       if (items.isEmpty) {
-        await _tts.speak(dayOffset == 0 ? '오늘 남은 일정이 없어요.' : '$label 일정이 없어요.');
+        await _say(dayOffset == 0 ? '오늘 남은 일정이 없어요.' : '$label 일정이 없어요.');
         return;
       }
 
@@ -492,10 +517,12 @@ class HotwordService {
         sb.write(t.isEmpty ? '${s.title}. ' : '$t ${s.title}. ');
       }
       // 기기 TTS 로 바로 재생(/voice/tts 왕복 생략).
-      await _tts.speak(sb.toString());
+      await _say(sb.toString());
     } catch (e) {
       debugPrint('일정 브리핑 실패: $e');
-      await _tts.speak('$label 일정을 불러오지 못했어요.');
+      await _say('$label 일정을 불러오지 못했어요.');
+    } finally {
+      voiceOverlay.setPhase(VoicePhase.idle);
     }
   }
 

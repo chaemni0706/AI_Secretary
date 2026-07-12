@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/widget_mock_data.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
+import 'image_verification_screen.dart';
 
 /// 위젯에서 진입하지만 아직 전용 화면이 없는 기능들의 임시 상세 화면.
 /// 추후 실제 화면이 준비되면 위젯의 onTap 대상만 교체하면 된다.
@@ -60,7 +61,8 @@ class PreparationDetailScreen extends StatelessWidget {
   }
 }
 
-/// OCR 인증 임시 화면. 실제 OCR API 는 연결하지 않는다.
+/// OCR 인증 안내 화면. "촬영하여 인증" 버튼은 이미 구현된 할 일 인증 기능
+/// ([ImageVerificationScreen], AI비서 메뉴의 "이미지 인증"과 동일한 화면)으로 연결한다.
 class OcrVerificationDetailScreen extends StatelessWidget {
   const OcrVerificationDetailScreen({super.key});
 
@@ -70,7 +72,7 @@ class OcrVerificationDetailScreen extends StatelessWidget {
       title: 'OCR 인증',
       icon: Icons.document_scanner_outlined,
       accent: AppTheme.purple,
-      description: '영수증·서류를 촬영해 일정/할 일을 자동 인증하는 화면입니다. 실제 인식 기능은 추후 연결 예정입니다.',
+      description: '영수증·서류를 촬영해 일정/할 일을 자동 인증합니다.',
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -109,8 +111,11 @@ class OcrVerificationDetailScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: FilledButton.icon(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('카메라/OCR 인식은 준비 중입니다.')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ImageVerificationScreen(),
+                ),
               );
             },
             style: FilledButton.styleFrom(

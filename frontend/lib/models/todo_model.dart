@@ -9,6 +9,9 @@ class TodoModel {
   final String id;
   final String title;
   final String? dueDate;
+  final String? dueTime;
+  final String? startDate;
+  final String? startTime;
   final String priority; // low | medium | high
   final bool completed;
   final String? category;
@@ -20,6 +23,9 @@ class TodoModel {
     required this.id,
     required this.title,
     this.dueDate,
+    this.dueTime,
+    this.startDate,
+    this.startTime,
     this.priority = 'medium',
     this.completed = false,
     this.category,
@@ -33,6 +39,9 @@ class TodoModel {
       id: json['id']?.toString() ?? '',
       title: (json['title'] ?? '').toString(),
       dueDate: json['due_date'] as String?,
+      dueTime: json['due_time'] as String?,
+      startDate: json['start_date'] as String?,
+      startTime: json['start_time'] as String?,
       priority: (json['priority'] ?? 'medium').toString(),
       completed: json['completed'] == true,
       category: json['category'] as String?,

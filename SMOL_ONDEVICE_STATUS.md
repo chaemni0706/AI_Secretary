@@ -9,8 +9,10 @@
 
 ## 1. 현재 상태
 
-**분류: `smol_android_evidence_spike_partial`** (2026-07-12, Galaxy Z Flip3 실기기)
-(이전: … → `smol_android_generation_spike_no_cache_verified` → `smol_android_image_text_generation_spike_verified` → **generated_text → evidence code 변환 연결(부분)**.)
+**분류: `smol_android_blocker_first_integrated`** (2026-07-12, Galaxy Z Flip3 실기기)
+(이전: … → `smol_android_image_text_generation_spike_verified` → `smol_android_evidence_spike_partial` → **Smol=blocker extractor 로 일반 앱 경로 연결(smoke 통과)**.)
+- ✅ **Smol=blocker-only local-first 를 실제 인증 화면에 연결(§14)**: `ImageVerificationService.verify()` 가 `smol.inferBlocker()`(model-gated) 로 **명백한 blocker 만** 로컬 `retake_required` 처리, 그 외(positive/약함/모호/모델없음/오류)는 **서버 Qwen fallback**. 실기기 라이브 스모크: 주스→로컬 retake(non_water_beverage), 맑은물→서버 fallback(score 0), 소파→로컬 retake(unrelated_environment). **water/positive local accept 절대 없음**, false-accept 0, ANR/크래시 없음.
+- ⚠️ **모델 미포함(~356MB git 미포함)이라 일반 사용자 기기에선 `isModelAvailable()==false` → Smol inert → 서버 경로 무변경**(안전). 실기기(모델 배치)에서만 blocker 선-감지.
 - ✅ **generated_text → Rule Engine 호환 evidence 변환 성공(diagnostics-only)**: [SmolEvidenceParser](frontend/android/app/src/main/kotlin/com/example/frontend/SmolEvidenceParser.kt) 가 자유형 생성 텍스트를 task별 schema evidence code + `rule_engine_payload`(VisionAnalysis dict)로 변환. Smol 결과는 **최종 인증으로 채택하지 않음**(§10).
 - ✅ **water task 실기기 end-to-end 검증**: 노란 차 이미지 → `"A glass of yellow liquid."` → `evidence_codes=[non_water_beverage]`, `blockers=[non_water_beverage]`, `local_accept_candidate=false`, `parse_status=clean`, `water_visual_evidence=[non_water_beverage]` (8224ms). **water colored-liquid blocker 정상 작동**.
 - ✅ **실기기 6장 task 스모크 완료(gallery picker)**: image_picker 로 선택한 이미지는 앱 cache 로 복사돼 앱 프로세스가 바로 읽으므로 EROFS/FUSE 우회(§11). water 2 + study 2 + exercise 2.
@@ -378,3 +380,37 @@ diagnostics 에서 task별 정확도 충분 확인 → local-first accept 배선
 **payload → backend:** 동일(§12): water→rejected, exercise[unrelated_environment]→rejected, weak→retake_required. 오류 없이 소비.
 
 **상태:** `smol_android_evidence_spike_partial` **유지**. 프롬프트로 positive 검출을 못 여는 것을 확인(caption granularity 한계)했고, 지연·ANR·진단은 개선. Smol 의 현실적 역할 = **강한 blocker extractor + 보수적 local evidence 후보**(최종 verifier 아님). study/exercise **positive** 는 anyres/큰 모델 필요.
+
+
+## 14. Smol blocker-only local-first 앱 경로 연결 (2026-07-12, Flip3)
+
+**역할 확정:** diagnostics(§11~13) 결과 SmolVLM-500M 은 **positive verifier 로는 부적합**(caption granularity 한계)하나 **강한 blocker / 보수적 local reject extractor** 로는 안정적(주스→non_water_beverage, 소파→unrelated_environment). 이 역할로만 앱 경로에 연결.
+
+**정책(3분류):**
+- **local_blocker_detected** → 로컬 `retake_required`(서버 skip). 조건: `local_reject_candidate` + `parse_status∈{clean,repaired}` + `blockers` 비어있지 않음. (rejected 보다 재촬영 우선 = 보수적)
+- **fallback_required** → 서버 Qwen fallback. positive(visible_water 등)/약함(weak)/모호(uncertain)/생성실패/모델없음/예외 전부.
+- **local_accept_candidate** → **항상 false**(미개방). water 는 어떤 경우에도 local verified 아님.
+
+**구현:**
+- [smol_ondevice_verifier.dart](frontend/lib/services/smol_ondevice_verifier.dart) `inferBlocker(imageFile, task)` → 명백한 blocker map 또는 null. **fallback-safe**(예외/미지원/모델없음 → null). positive 는 절대 반환 안 함.
+- [image_verification_service.dart](frontend/lib/services/image_verification_service.dart) `verify()` 맨 앞에 blocker-first 분기 추가 → 아니면 기존 서버 fallback(+ water review 정책 유지).
+- [image_verification_screen.dart](frontend/lib/screens/image_verification_screen.dart) 실제 인증 화면을 `verificationApi` 직호출에서 **`imageVerificationService.verify()`** 로 연결. 결과 모델 `VerificationResult`→`ImageVerificationResult`.
+- [image_verification_result.dart](frontend/lib/models/image_verification_result.dart) `smolBlockerDetected` getter + task별 재촬영 문구 + `score/reasons`(raw). **`reviewRequired` 를 getter 로 전환**(water verified → 항상 review; `...data` 로 덮여도 water 자동성공 방지 = 안전장치).
+
+**안전 성질:**
+- **모델 미포함이라 일반 기기에선 Smol inert → 서버 경로 그대로**(무변경). 모델 배치된 실기기에서만 blocker 선-감지.
+- **local accept/positive verified 없음.** blocker 만 로컬, 그 외 서버.
+- 추론은 백그라운드 스레드(ANR 없음, §13).
+
+**실기기 라이브 스모크(실제 인증 화면):**
+| task | 이미지 | 경로 | 판정 | 표시 |
+|---|---|---|---|---|
+| water | 오렌지주스 | **Smol blocker(로컬)** | `retake_required` | "물이 아닌 음료 단서" + 로컬(Smol) 감지, 근거 non_water_beverage |
+| water | 맑은 물 | **서버 fallback** | `retake_required`(서버) | 점수 0, 서버 rule 근거(품질/근거부족), Smol 라벨 없음 |
+| exercise | 소파(휴식) | **Smol blocker(로컬)** | `retake_required` | "운동 장면 아님 단서" + 로컬(Smol) 감지, 근거 unrelated_environment |
+
+→ blocker→로컬 retake, non-blocker→서버 fallback 모두 정상. water positive local accept 없음. ANR/크래시 없음.
+
+**Dart 테스트([image_verification_service_test.dart](frontend/test/image_verification_service_test.dart)):** blocker→로컬 retake+서버 skip / null→서버 fallback / water verified→review(자동성공 아님) / 오류(null 계약)→서버. + 기존 verification_result 테스트 유지. **10/10 통과.**
+
+**아직 남은 것:** study/exercise **positive** local accept 미개방(caption granularity 한계, 서버가 담당). anyres/큰 모델로 positive 안정화 시 개방 검토. `smol_android_runtime_verified`(positive 포함 완성)는 아직 아님.

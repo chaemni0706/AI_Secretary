@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../models/verification_result.dart';
+import '../models/image_verification_result.dart';
 import '../services/api_client.dart' show baseUrl, ApiException;
 import '../services/camera_capture_service.dart';
-import '../services/verification_api.dart';
+import '../services/image_verification_service.dart';
 import 'smol_diagnostics_screen.dart';
 
 /// 이미지 인증 화면.
@@ -37,7 +37,7 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
 
   File? _image;
   bool _loading = false;
-  VerificationResult? _result;
+  ImageVerificationResult? _result;
   String? _error;
 
   bool get _isExercise => _verificationType == 'exercise';
@@ -86,9 +86,11 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
       _result = null;
     });
     try {
-      final result = await verificationApi.submitImageVerification(
-        verificationType: _verificationType,
+      // Smol **blocker-only** local-first → 아니면 서버 Qwen fallback(오케스트레이터).
+      // 모델이 없는 일반 기기에선 Smol 이 inert → 서버 경로 그대로.
+      final result = await imageVerificationService.verify(
         imageFile: image,
+        task: _verificationType,
         activityType: _isExercise ? _activityType : null,
       );
       if (!mounted) return;
@@ -267,11 +269,11 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
     );
   }
 
-  Widget _resultCard(VerificationResult r) {
+  Widget _resultCard(ImageVerificationResult r) {
     // 자동 인증 확정 불가(needsRetake)는 verified 와 구분해 amber 로 표시(자동 성공 아님 → 재촬영 안내).
     final (color, icon) = r.needsRetake
         ? (const Color(0xFFF9A825), Icons.camera_alt_outlined)
-        : switch (r.result) {
+        : switch (r.finalResult) {
             'verified' => (const Color(0xFF2E7D32), Icons.check_circle),
             'retake_required' => (const Color(0xFFEF6C00), Icons.refresh),
             _ => (const Color(0xFFC62828), Icons.cancel),
@@ -295,14 +297,17 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text('타입: ${r.verificationType}  ·  판정: ${r.result}'
+            Text('타입: ${r.task}  ·  판정: ${r.finalResult}'
+                '${r.smolBlockerDetected ? '  ·  로컬(Smol) 감지' : ''}'
                 '${r.score != null ? '  ·  점수: ${r.score}' : ''}'),
             if (r.needsRetake) ...[
               const SizedBox(height: 6),
-              const Text(
-                '사진상 물처럼 보이지만 물의 종류나 촬영 맥락을 확실히 판단하기 어려워 '
-                '자동 인증할 수 없어요. 다른 사진으로 다시 촬영해 주세요.',
-                style: TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
+              Text(
+                r.smolBlockerDetected
+                    ? '로컬 분석에서 인증 조건과 다른 단서가 감지됐어요. 과제에 맞는 장면이 잘 보이도록 다시 촬영해 주세요.'
+                    : '사진상 물처럼 보이지만 물의 종류나 촬영 맥락을 확실히 판단하기 어려워 '
+                        '자동 인증할 수 없어요. 다른 사진으로 다시 촬영해 주세요.',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFF9A825)),
               ),
               const SizedBox(height: 4),
               const Text('위 “카메라 촬영” 으로 다시 시도할 수 있어요.',

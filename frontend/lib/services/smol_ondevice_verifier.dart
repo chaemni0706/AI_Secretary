@@ -122,6 +122,49 @@ class SmolOndeviceVerifier {
     if (res['fallback_required'] == true || res['success'] != true) return null;
     return res; // 서버와 동일 evidence schema 로 정규화된 결과(향후 네이티브 구현 시)
   }
+
+  /// **Blocker-only local-first**: Smol 은 positive verifier 가 아니라 **보수적 blocker extractor**.
+  /// 온디바이스 생성→evidence 에서 **명백한 blocker(local_reject_candidate + clean parse + blockers 존재)** 가
+  /// 나올 때만 blocker 결과 map 을 반환한다. 그 외(positive/약함/모호/오류/모델 없음)는 **null → 서버 fallback**.
+  ///
+  /// 안전 성질:
+  /// - 모델이 앱에 없으면(일반 사용자 기기, ~356MB git 미포함) `isModelAvailable()==false` → 항상 null → 서버 경로 무변경.
+  /// - **positive/verified 는 절대 반환하지 않는다**(local accept 금지). water 도 blocker 만, accept 없음.
+  /// - 예외/미지원/타임아웃 → null(서버 fallback). Flutter 로 예외 던지지 않음.
+  ///
+  /// 반환(비-null): { local_blocker_detected:true, task, engine:'smol_ondevice',
+  ///   evidence_codes, blockers, uncertainty, parse_status, generated_text, reason }
+  Future<Map<String, dynamic>?> inferBlocker({
+    required File imageFile,
+    required String task,
+  }) async {
+    try {
+      if (!await isModelAvailable()) return null; // 모델 없으면 서버 fallback
+      final res = await imageTextGen(imageFile: imageFile, task: task);
+      if (res == null) return null;
+      if (res['status'] != 'image_text_generation_ok') return null; // 생성 실패/미지원 → 서버
+      final ev = (res['evidence'] as Map?) ?? const {};
+      final parse = (ev['parse_status'] ?? '').toString();
+      final blockers = (ev['blockers'] as List?) ?? const [];
+      final localReject = res['local_reject_candidate'] == true || ev['local_reject_candidate'] == true;
+      // **명백한 blocker만** 로컬 처리: reject 후보 + 파싱 신뢰(clean/repaired) + blocker 코드 존재.
+      final confident = localReject && blockers.isNotEmpty && {'clean', 'repaired'}.contains(parse);
+      if (!confident) return null; // positive/약함/모호 → 서버 fallback
+      return {
+        'local_blocker_detected': true,
+        'task': task,
+        'engine': 'smol_ondevice',
+        'evidence_codes': (ev['evidence_codes'] as List?) ?? const [],
+        'blockers': blockers,
+        'uncertainty': (ev['uncertainty'] ?? '').toString(),
+        'parse_status': parse,
+        'generated_text': (res['generated_text'] ?? '').toString(),
+        'reason': (ev['reason'] ?? '').toString(),
+      };
+    } catch (_) {
+      return null; // fallback-safe: 어떤 오류든 서버로
+    }
+  }
 }
 
 const smolOndeviceVerifier = SmolOndeviceVerifier();

@@ -50,7 +50,27 @@ class ImageVerificationService {
     required String task,
     String? activityType,
   }) async {
-    // 1) Smol 온디바이스 1차 (현재 stub → null)
+    // 0) Smol **blocker-only** local-first: 명백한 blocker(주스/커피/소파 등)면 서버 없이 로컬 재촬영 안내.
+    //    positive/약함/모호/모델없음/오류는 모두 null → 아래 서버 fallback. **local accept 는 절대 없음.**
+    final blocker = await smol.inferBlocker(imageFile: imageFile, task: task);
+    if (blocker != null) {
+      return ImageVerificationResult.fromMap({
+        'task': task,
+        'final_result': 'retake_required', // 보수적: rejected 보다 재촬영 우선
+        'engine_used': 'smol_ondevice',
+        'fallback_used': false,
+        'review_required': false,
+        'review_reason': '',
+        'local_result': 'blocker',
+        'smol_blocker_detected': true,
+        'blockers': blocker['blockers'],
+        'evidence_codes': blocker['evidence_codes'],
+        'rule_reason': blocker['reason'],
+        'generated_text': blocker['generated_text'],
+      });
+    }
+
+    // 1) Smol 온디바이스 positive accept (현재 미개방 → inferEvidence stub → null)
     final local = await smol.inferEvidence(
       imageFile: imageFile, task: task, activityType: activityType);
     if (local != null && _canAcceptLocal(local, task)) {
@@ -71,6 +91,7 @@ class ImageVerificationService {
     final reviewRequired = data['review_required'] == true ||
         (finalResult == 'verified' && task == 'water');
     return ImageVerificationResult.fromMap({
+      ...data, // 서버 원본(score/rule_evidence 등) 먼저 — 아래 계산값이 우선하도록 덮어씀
       'task': task,
       'final_result': finalResult,
       'engine_used': 'server_fallback',
@@ -80,7 +101,6 @@ class ImageVerificationService {
       'local_result': local == null ? 'unknown' : (local['final_result'] ?? 'unknown'),
       'fallback_result': finalResult,
       'rule_reason': server.reasons.isNotEmpty ? server.reasons.first : '',
-      ...data,
     });
   }
 }

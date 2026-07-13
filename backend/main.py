@@ -98,3 +98,21 @@ except Exception as exc:  # noqa: BLE001 - optional feature must never block sta
     logging.getLogger("uvicorn.error").warning(
         "Medicine OCR/Routines 라우터를 로드하지 못해 비활성화합니다: %s", exc
     )
+
+# --------------------------------------------------------------------------- #
+# Optional: 개인화 추천 라우터 (M1 빈 시간 / M2 미룰 일정 / M3 장소)
+#
+# 자체 "/api/v1/recommend" prefix 를 가지므로 추가 prefix 없이 등록한다.
+# M1/M3 는 joblib/sklearn/pandas 에 의존하므로(모델은 첫 요청 시 lazy load)
+# 의존성/모델 파일 문제로 핵심 앱 기동이 막히지 않도록 방어적으로 감싼다.
+# --------------------------------------------------------------------------- #
+try:
+    from backend.routers import recommend as _recommend_router
+
+    app.include_router(_recommend_router.router)
+except Exception as exc:  # noqa: BLE001 - optional feature must never block startup
+    import logging
+
+    logging.getLogger("uvicorn.error").warning(
+        "개인화 추천 라우터를 로드하지 못해 비활성화합니다: %s", exc
+    )

@@ -1,0 +1,15 @@
+{
+  "_comment": "M2(미룰 일정) 규칙 기반 스코어링 설정. reschedule_rules.json과 같은 방식 — 가중 선형 합(가중치 합=1.0), 점수는 0..1 정규화. 점수가 높을수록 '미루기 좋은' 후보. *_level 변수는 level_min..level_max 리커트 척도. has_other_people 감점은 사용자의 사교 성향(social_score)이 높을수록 커진다: penalty = social_penalty_base + social_penalty_scale * social_norm.",
+  "level_min": 1,
+  "level_max": 5,
+  "weights": {
+    "reschedulability": 0.3,
+    "low_importance": 0.2,
+    "low_urgency": 0.2,
+    "low_penalty_if_postponed": 0.15,
+    "fatigue_burden": 0.05,
+    "no_other_people": 0.1
+  },
+  "social_penalty_base": 0.5,
+  "social_penalty_scale": 0.5
+}

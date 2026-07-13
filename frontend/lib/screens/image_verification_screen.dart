@@ -8,6 +8,8 @@ import '../models/image_verification_result.dart';
 import '../services/api_client.dart' show baseUrl, ApiException;
 import '../services/camera_capture_service.dart';
 import '../services/image_verification_service.dart';
+import '../services/streak_store.dart';
+import '../widgets/exercise_streak_badge.dart';
 import 'smol_diagnostics_screen.dart';
 
 /// 이미지 인증 화면.
@@ -48,12 +50,16 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   ImageVerificationResult? _result;
   String? _error;
 
+  /// 운동 인증 성공 시 계산된 연속 일수(스트릭). null 이면 배지 미표시.
+  int? _streak;
+
   bool get _isExercise => _verificationType == 'exercise';
 
   Future<void> _capture({bool fromGallery = false}) async {
     setState(() {
       _error = null;
       _result = null;
+      _streak = null;
     });
     try {
       File? file;
@@ -92,6 +98,7 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
       _loading = true;
       _error = null;
       _result = null;
+      _streak = null;
     });
     try {
       // Smol **blocker-only** local-first → 아니면 서버 Qwen fallback(오케스트레이터).
@@ -102,7 +109,16 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
         activityType: _isExercise ? _activityType : null,
       );
       if (!mounted) return;
-      setState(() => _result = result);
+      // 운동 인증 성공 → 오늘 성공을 기록하고 연속 일수(스트릭) 계산.
+      int? streak;
+      if (_isExercise && result.finalResult == 'verified' && !result.needsRetake) {
+        streak = await streakStore.recordSuccess('exercise');
+      }
+      if (!mounted) return;
+      setState(() {
+        _result = result;
+        _streak = streak;
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -158,10 +174,27 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
             const SizedBox(height: 16),
             if (_error != null) _errorCard(_error!),
             if (_result != null) _resultCard(_result!),
+            if (_streak != null) ...[
+              const SizedBox(height: 12),
+              // 시연 팁: 배지를 길게 누르면 지난 6일을 성공 처리해
+              // "7일 연속" 상태를 바로 재현할 수 있다(화면 표시는 없음).
+              GestureDetector(
+                onLongPress: _seedStreakDemo,
+                child: ExerciseStreakBadge(streak: _streak!),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  /// 시연용: 지난 6일을 성공 처리 → 오늘 인증 성공과 합쳐 "7일 연속"을 재현.
+  Future<void> _seedStreakDemo() async {
+    await streakStore.seedDemo('exercise', 6);
+    final streak = await streakStore.currentStreak('exercise');
+    if (!mounted) return;
+    setState(() => _streak = streak);
   }
 
   Widget _serverHint() => Text(
@@ -186,6 +219,7 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
             _verificationType = e.key;
             _result = null;
             _error = null;
+            _streak = null;
           }),
         );
       }).toList(),

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 from sqlalchemy.orm import Session
@@ -143,6 +143,27 @@ def _build_coaching_message(
 # --------------------------------------------------------------------------- #
 # 1. reservation_recommendation — place/store discovery (NOT schedule_create)
 # --------------------------------------------------------------------------- #
+def _places_context(places) -> dict | None:
+    """추천 결과 상위 3곳을 다음 턴 참조용 context(places_suggested)로 요약한다.
+    "거기로 해줘"/"첫 번째로 예약" 같은 후속 발화가 카드를 탭하지 않아도
+    업체 예약으로 이어지게 한다. places 가 비면 None."""
+    if not places:
+        return None
+    return {
+        "type": "places_suggested",
+        "places": [
+            {
+                "name": getattr(p, "name", None),
+                "address": getattr(p, "address", None),
+                "road_address": getattr(p, "road_address", None),
+                "category": getattr(p, "category", None),
+                "phone": getattr(p, "phone", None),
+            }
+            for p in places[:3]
+        ],
+    }
+
+
 def _handle_reservation_recommendation(req: VoiceRouteRequest) -> VoiceRouteData:
     naver_ready = settings.naver_configured
     _logger.info(
@@ -189,6 +210,7 @@ def _handle_reservation_recommendation(req: VoiceRouteRequest) -> VoiceRouteData
                 payload={"query": data.query, "category": category or ""},
             ),
             data=data.model_dump(),
+            context=_places_context(places),
         )
 
     places = data.recommended_places
@@ -213,6 +235,7 @@ def _handle_reservation_recommendation(req: VoiceRouteRequest) -> VoiceRouteData
             payload={"query": data.query},
         ),
         data=data.model_dump(),
+        context=_places_context(places),
     )
 
 
@@ -225,17 +248,25 @@ def _handle_emotion_schedule_coaching(db: Session, req: VoiceRouteRequest) -> Vo
     todays = _todays_schedules(db, user_id, date_str)
     now_iso = _naive_now_iso(req)
 
-    schedule_context = ScheduleContext(
-        current_time=now_iso,
-        today_schedule=[
+    # 내일 일정도 함께 전달 → 재조정 추천이 '내일' 후보를 낼 때 충돌을 거른다.
+    tomorrow_str = (datetime.fromisoformat(date_str) + timedelta(days=1)).date().isoformat()
+    tomorrows = _todays_schedules(db, user_id, tomorrow_str)
+
+    def _events(items):
+        return [
             ScheduleEvent(
                 id=s.id, title=s.title, category=s.category, priority=s.priority,
                 start_time=f"{s.date}T{s.start_time}:00",
                 end_time=f"{s.date}T{s.end_time or s.start_time}:00",
                 is_fixed=False,
             )
-            for s in todays if s.start_time
-        ],
+            for s in items if s.start_time
+        ]
+
+    schedule_context = ScheduleContext(
+        current_time=now_iso,
+        today_schedule=_events(todays),
+        tomorrow_schedule=_events(tomorrows),
     )
     # 학습된 선호(집중 시간대)를 user_profile 로 전달 → reschedule 추천 점수에 반영.
     learned = memory_service.build_recommendation_profile(db, user_id)
@@ -249,6 +280,18 @@ def _handle_emotion_schedule_coaching(db: Session, req: VoiceRouteRequest) -> Vo
 
     solutions_raw = [s.model_dump() for s in chat_data.solutions]
     reschedule_raw = [c.model_dump() for c in chat_data.reschedule_candidates]
+    # 명시적 미루기/변경 요청인데 chat 파이프라인이 재조정 후보를 만들지 않았다면
+    # (분류기가 다른 카테고리를 고른 경우) 추천기를 직접 호출해 시간 후보를 보장한다.
+    if not reschedule_raw and _is_reschedule_request(req.text or ""):
+        try:
+            from backend.services import reschedule_recommender
+            reschedule_raw = reschedule_recommender.recommend(
+                schedule_context=schedule_context.model_dump(),
+                user_profile={"preferred_time_blocks": list(blocks)} if blocks else None,
+            )
+        except Exception:
+            _logger.exception("[VOICE ROUTE] direct reschedule recommend failed")
+            reschedule_raw = []
     # 공감(chat_orchestrator) + 오늘 일정 요약 + 휴식/일정 조정 제안을 항상
     # 함께 담는다 — chat_data.tts_text 단독으로는 공감 문장만 짧게 나온다.
     tts_text = _build_coaching_message(chat_data.answer, todays, solutions_raw, reschedule_raw)
@@ -559,6 +602,50 @@ def _clarify_tts(category, title, missing, req: VoiceRouteRequest, fallback: str
         return fallback
 
 
+# --------------------------------------------------------------------------- #
+# 멀티턴: 추천 직후 후속 발화의 업체 참조 해석 (places_suggested)
+# --------------------------------------------------------------------------- #
+_ORDINAL_REFS = (
+    (("첫 번째", "첫번째", "첫째", "첫", "1번", "일번"), 0),
+    (("두 번째", "두번째", "둘째", "2번"), 1),
+    (("세 번째", "세번째", "셋째", "3번"), 2),
+)
+_DEICTIC_REFS = (
+    "거기", "여기", "저기", "이걸로", "그걸로", "저걸로",
+    "이 업체", "그 업체", "그곳", "이곳",
+)
+_AFFIRM_REFS = ("응", "어", "네", "예", "그래", "좋아", "좋아요", "오케이", "콜", "웅")
+
+
+def _resolve_place_reference(text: str, places: list) -> dict | None:
+    """추천 직후 후속 발화가 어느 업체를 가리키는지 해석한다.
+    우선순위: 업체 이름 > 순서 표현(첫 번째/2번) > 지시어(거기/그걸로) >
+    짧은 긍정("응")·예약 지시("예약해줘") → 첫 번째 후보.
+    참조를 찾지 못하면 None(일반 분류로 통과)."""
+    text = (text or "").strip()
+    if not text or not places:
+        return None
+    # 1) 업체 이름 직접 언급 (전체 이름 또는 2글자 이상 토큰).
+    for p in places:
+        name = str(p.get("name") or "").strip()
+        if not name:
+            continue
+        if name in text or any(len(tok) >= 2 and tok in text for tok in name.split()):
+            return p
+    # 2) 순서 표현.
+    for words, idx in _ORDINAL_REFS:
+        if idx < len(places) and any(w in text for w in words):
+            return places[idx]
+    # 3) 지시어 → 첫 번째(화면 첫 카드) 후보.
+    if any(w in text for w in _DEICTIC_REFS):
+        return places[0]
+    # 4) 짧은 긍정 또는 "예약해줘" 류 → 첫 번째 후보.
+    compact = text.replace(" ", "").rstrip(".!?~")
+    if compact in _AFFIRM_REFS or "예약" in text:
+        return places[0]
+    return None
+
+
 def _merge_selected_place(parsed, place: dict):
     """사용자가 추천 카드에서 고른 업체(selected_place context)를 일정 draft에
     병합한다. 제목이 비었거나 일반적이면 '{업체명} 예약'으로 채우고, 장소가
@@ -575,13 +662,19 @@ def _merge_selected_place(parsed, place: dict):
     # 업체명 기반 제목("{업체명} 예약")으로 교체한다.
     _filler_tokens = {
         "", "예약", "일정", "새", "약속", "그럼", "그거", "그걸로", "이거",
-        "이걸로", "저걸로", "여기로", "거기로", "로", "으로", "에", "에서",
-        "쯤", "까지", "부터", "걸로",
+        "이걸로", "저걸로", "여기로", "거기로", "거기", "여기", "로", "으로",
+        "에", "에서", "쯤", "까지", "부터", "걸로", "응", "네", "그래", "좋아",
+        "첫", "첫째", "첫번째", "두", "둘째", "두번째", "세", "셋째", "세번째",
+        "번째", "번째로", "1번", "2번", "3번",
     }
     meaningful = [t for t in title.split() if t not in _filler_tokens]
     if not meaningful:
         title = f"{name} 예약"
-    elif name not in title:
+    elif name in title:
+        # 업체명에 조사/지시어만 붙은 제목("맑은 피부과로")을 정돈한다.
+        rest = [t for t in title.replace(name, " ").split() if t not in _filler_tokens]
+        title = f"{name} {' '.join(rest)}".strip() if rest else f"{name} 예약"
+    else:
         title = f"{name} {' '.join(meaningful)}"
 
     location = draft.location or (
@@ -847,7 +940,75 @@ def _handle_schedule_modify(db: Session, req: VoiceRouteRequest, ctx: dict) -> V
 # --------------------------------------------------------------------------- #
 # 7. fallback_chat
 # --------------------------------------------------------------------------- #
+# 일정/예약 계열 신호 — 여기까지 온(=분류 실패) 발화라도 상담으로 새지 않고
+# 의도를 되묻는다.
+_ACTION_SIGNALS = (
+    "예약", "일정", "등록", "잡아", "변경", "바꿔", "옮겨", "옮기", "미뤄", "미루",
+    "미룰", "연기", "취소", "삭제",
+)
+# 맥락 없이 온 짧은 긍정/지시 발화 — 무엇에 대한 것인지 확인이 필요하다.
+_SHORT_AFFIRMS = {
+    "응", "어", "네", "예", "그래", "좋아", "좋아요", "오케이", "콜", "웅",
+    "해줘", "그렇게해줘", "그렇게해", "거기로해줘", "거기로", "그걸로해줘",
+    "그걸로", "이걸로해줘", "이걸로", "그거로해줘",
+}
+_CASUAL_SYSTEM = (
+    "너는 한국어 개인 비서 '포비'야. 사용자와 짧고 자연스러운 대화체로 이야기해. "
+    "한두 문장으로만 답하고, 상담사 같은 말투나 기계적인 설명, 목록 나열은 하지 마. "
+    "일정이나 예약 도움이 필요해 보이면 가볍게 한 마디로만 제안해."
+)
+
+
+def _has_emotion_words(text: str) -> bool:
+    """감정 토로 발화인지(공감/코칭 파이프라인 유지 판단용)."""
+    try:
+        kws = voice_intent_router._rules()["emotion_schedule_coaching"]["emotion_keywords"]
+        return any(k in text for k in kws)
+    except Exception:
+        return False
+
+
+def _simple_reply(text: str) -> VoiceRouteData:
+    return VoiceRouteData(
+        intent="fallback_chat",
+        tts_text=text,
+        screen_action=ScreenAction(type="none", payload={}),
+        data={"answer": text},
+    )
+
+
 def _handle_fallback_chat(req: VoiceRouteRequest) -> VoiceRouteData:
+    text = (req.text or "").strip()
+    compact = text.replace(" ", "").rstrip(".!?~")
+
+    # 1) 일정/예약 신호가 있는데 의도 분류가 안 된 발화 → 상담으로 보내지 않고
+    #    무엇을 원하는지 자연스럽게 되묻는다.
+    if any(sig in text for sig in _ACTION_SIGNALS):
+        return _simple_reply("일정을 등록해드릴까요, 아니면 관련 정보를 찾아드릴까요?")
+
+    # 2) 맥락 없는 짧은 긍정/지시("응", "거기로 해줘") → 무엇에 대한 것인지 확인.
+    if compact in _SHORT_AFFIRMS:
+        return _simple_reply("네! 어떤 걸 도와드릴까요? 일정 등록이나 예약 추천처럼 말씀해 주세요.")
+
+    # 3) 감정 토로 → 기존 공감/코칭 파이프라인 유지.
+    if _has_emotion_words(text):
+        chat_data = chat_orchestrator.respond(ChatRespondRequest(message=req.text))
+        tts_text = chat_data.tts_text or chat_data.answer
+        return VoiceRouteData(
+            intent="fallback_chat",
+            tts_text=tts_text,
+            screen_action=ScreenAction(type="none", payload={}),
+            data={"answer": chat_data.answer},
+        )
+
+    # 4) 일반 잡담 → LLM 짧은 대화체(활성 시). 실패/비활성 시 기존 파이프라인.
+    if llm_service.is_enabled():
+        reply = llm_service.generate(
+            f'사용자: "{text}"', system=_CASUAL_SYSTEM, temperature=0.6, max_tokens=150,
+        )
+        if reply:
+            return _simple_reply(reply)
+
     chat_data = chat_orchestrator.respond(ChatRespondRequest(message=req.text))
     tts_text = chat_data.tts_text or chat_data.answer
     return VoiceRouteData(
@@ -855,6 +1016,20 @@ def _handle_fallback_chat(req: VoiceRouteRequest) -> VoiceRouteData:
         tts_text=tts_text,
         screen_action=ScreenAction(type="none", payload={}),
         data={"answer": chat_data.answer},
+    )
+
+
+# 일정 미루기/재조정 요청 감지 — "저녁 강의 미룰 수 있을까?" 같은 발화가
+# fallback(상담)으로 흐르지 않고 재조정 추천 파이프라인으로 가게 한다.
+_RESCHEDULE_VERBS = ("미뤄", "미룰", "미루", "연기", "옮겨", "옮길", "옮기")
+_SCHEDULE_REF_WORDS = (
+    "일정", "스케줄", "약속", "회의", "미팅", "강의", "수업", "공부", "운동", "모임",
+)
+
+
+def _is_reschedule_request(text: str) -> bool:
+    return any(v in text for v in _RESCHEDULE_VERBS) and any(
+        r in text for r in _SCHEDULE_REF_WORDS
     )
 
 
@@ -913,6 +1088,59 @@ def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
                 result = _handle_fallback_chat(req)
             result.debug = {"matched_keywords": {"selected_place": True}}
             return result
+
+    # 멀티턴 추천 후속: 직전 턴이 업체 추천(places_suggested)이었다면, "거기로
+    # 해줘"/"첫 번째로 예약"/"미소가득 치과로 해줘" 같은 후속 발화를 해당 업체의
+    # 예약(일정 등록)으로 잇는다. 참조를 못 찾으면 일반 분류로 통과시키되,
+    # 아주 짧아 의도를 알 수 없는 발화만 후보를 유지한 채 자연스럽게 되묻는다.
+    if (
+        sel_ctx.get("type") == "places_suggested"
+        and isinstance(sel_ctx.get("places"), list)
+        and sel_ctx["places"]
+    ):
+        pre = voice_intent_router.select_voice_intent(text, context=req.context)
+        if pre.get("intent") in (
+            "schedule_create", "reservation_recommendation", "fallback_chat",
+        ):
+            place = _resolve_place_reference(text, sel_ctx["places"])
+            if place is not None:
+                try:
+                    result = _handle_schedule_create(db, req, place=place)
+                except Exception:
+                    _logger.exception(
+                        "[VOICE ROUTE] places_suggested create failed text=%r", text,
+                    )
+                    result = _handle_fallback_chat(req)
+                result.debug = {"matched_keywords": {"places_suggested": True}}
+                return result
+            if pre.get("intent") == "fallback_chat" and len(text) <= 12:
+                names = ", ".join(
+                    str(p.get("name")) for p in sel_ctx["places"][:3] if p.get("name")
+                )
+                result = VoiceRouteData(
+                    intent="reservation_recommendation",
+                    tts_text=(
+                        f"어느 곳으로 할까요? {names} 중에서 이름이나 "
+                        "'첫 번째'처럼 말씀해 주세요."
+                    ),
+                    screen_action=ScreenAction(type="none", payload={}),
+                    data={},
+                    context=sel_ctx,  # 후보 유지 → 다음 발화에서 다시 해석.
+                )
+                result.debug = {"matched_keywords": {"places_suggested_clarify": True}}
+                return result
+
+    # 일정 미루기/변경 요청 → 감정 코칭·재조정 추천 파이프라인(시간 후보 생성).
+    # (직전 일정 수정(schedule_created) 게이트가 위에서 먼저 처리되므로,
+    #  여기 오는 것은 컨텍스트 없는 일반 재조정 요청이다.)
+    if _is_reschedule_request(text):
+        try:
+            result = _handle_emotion_schedule_coaching(db, req)
+        except Exception:
+            _logger.exception("[VOICE ROUTE] reschedule request failed text=%r", text)
+            result = _handle_fallback_chat(req)
+        result.debug = {"matched_keywords": {"reschedule_request": True}}
+        return result
 
     classified = voice_intent_router.select_voice_intent_hybrid(text, context=req.context)
     intent = classified["intent"]

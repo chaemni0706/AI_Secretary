@@ -169,6 +169,7 @@ def recommend(
         return []
 
     events = schedule_context.get("today_schedule", []) or []
+    tomorrow_events = schedule_context.get("tomorrow_schedule", []) or []
     now = _parse_dt(schedule_context.get("current_time"))
 
     target = _select_target(events, rules, target_event_id)
@@ -191,109 +192,134 @@ def recommend(
     preferred_blocks = set(profile.get("preferred_time_blocks", []) or [])
     preferred_hours = set(profile.get("preferred_study_hours", []) or [])
 
-    busy = _busy_intervals(events, exclude_id=target.get("id"))
-
-    win_start = day + timedelta(hours=wh["start_hour"])
-    win_end = day + timedelta(hours=wh["end_hour"])
-    # do not propose a slot in the past
-    lower_bound = max(win_start, now) if now else win_start
+    # 오늘 + 내일 두 날짜의 후보를 만든다. 충돌 검사는 각 날짜의 일정으로 한다.
+    # (내일 일정은 schedule_context.tomorrow_schedule 로 전달받는다 — 없으면 빈 목록)
+    day_specs = [
+        (0, "오늘", day, events, _busy_intervals(events, exclude_id=target.get("id"))),
+        (1, "내일", day + timedelta(days=1), tomorrow_events,
+         _busy_intervals(tomorrow_events, exclude_id=None)),
+    ]
 
     scored: List[dict] = []
-    cursor = win_start
-    while cursor + timedelta(minutes=duration) <= win_end:
-        s = cursor
-        e = cursor + timedelta(minutes=duration)
-        cursor = cursor + timedelta(minutes=step)
+    for day_offset, day_label, d, day_events, busy in day_specs:
+        win_start = d + timedelta(hours=wh["start_hour"])
+        win_end = d + timedelta(hours=wh["end_hour"])
+        # do not propose a slot in the past (only meaningful for today)
+        lower_bound = max(win_start, now) if (now and day_offset == 0) else win_start
 
-        if s < lower_bound:
-            continue
-        # hard constraint: skip anything that starts at the target's own slot
-        if s == t_start:
-            continue
-        # hard constraint: no overlap with existing schedules
-        if _overlaps(s, e, busy):
-            continue
+        cursor = win_start
+        while cursor + timedelta(minutes=duration) <= win_end:
+            s = cursor
+            e = cursor + timedelta(minutes=duration)
+            cursor = cursor + timedelta(minutes=step)
 
-        hour = s.hour
-        block = _block_of(hour, blocks)
-        gap_after = _nearest_gap_after(e, busy)
-        is_too_late = hour >= rules["too_late_hour"]
-        near_high = _near_high_priority(s, e, events, target.get("id"))
+            if s < lower_bound:
+                continue
+            # hard constraint: skip anything that starts at the target's own slot
+            if s == t_start:
+                continue
+            # hard constraint: no overlap with that day's existing schedules
+            if _overlaps(s, e, busy):
+                continue
 
-        features = {
-            "candidate_start_hour": hour,
-            "candidate_day_of_week": s.weekday(),
-            "duration_minutes": duration,
-            "gap_before_minutes": None,
-            "gap_after_minutes": gap_after,
-            "is_morning": block == "morning",
-            "is_afternoon": block == "afternoon",
-            "is_evening": block == "evening",
-            "is_late_night": block == "late_night",
-            "is_too_late": is_too_late,
-            "event_category": target.get("category"),
-            "event_priority": target.get("priority"),
-            "schedule_load_score": round(len(events) / 10.0, 2),
-            "preferred_time_block_match": block in preferred_blocks if block else False,
-            "preferred_hour_match": hour in preferred_hours,
-            "near_high_priority_event": near_high,
-            "emotion_state": emotion_state,
-        }
+            hour = s.hour
+            block = _block_of(hour, blocks)
+            gap_after = _nearest_gap_after(e, busy)
+            is_too_late = hour >= rules["too_late_hour"]
+            near_high = _near_high_priority(s, e, day_events, target.get("id"))
 
-        # ---- weighted scoring (ML-ready: linear over binary/continuous feats) ----
-        raw = 0.0
-        raw += weights["no_conflict"] * 1.0  # reached here => no conflict
-        raw += weights["preferred_time_block_match"] * (1.0 if features["preferred_time_block_match"] else 0.0)
-        raw += weights["preferred_hour_match"] * (1.0 if features["preferred_hour_match"] else 0.0)
-        raw += weights["gap_after_ok"] * (1.0 if (gap_after is None or gap_after >= 15) else 0.0)
-        raw += weights["not_too_late"] * (0.0 if is_too_late else 1.0)
-        raw += weights["not_near_high_priority"] * (0.0 if near_high else 1.0)
-        score = round(max(0.0, min(1.0, raw)), 2)  # weights sum to 1.0 -> already normalized
-
-        reason_bits = ["기존 일정과 충돌하지 않습니다"]
-        if features["preferred_time_block_match"] or features["preferred_hour_match"]:
-            reason_bits.append("선호하는 시간대와 잘 맞습니다")
-        if gap_after is None or gap_after >= 15:
-            reason_bits.append("다음 일정 전까지 여유 시간이 있습니다")
-        if not is_too_late:
-            reason_bits.append("늦은 시간대가 아닙니다")
-        reason = ", ".join(reason_bits) + "."
-
-        model_basis_features = ["기존 일정과 충돌 없음"]
-        if features["preferred_time_block_match"] or features["preferred_hour_match"]:
-            model_basis_features.append("사용자 선호 시간대와 일치")
-        if gap_after is None or gap_after >= 15:
-            model_basis_features.append("다음 일정 전 여유 시간 확보")
-        if not is_too_late:
-            model_basis_features.append("늦은 시간대가 아님")
-
-        title = f"{target.get('title') or '일정'}을(를) {s.strftime('%H:%M')}로 옮기기"
-
-        scored.append(
-            {
-                "category": "schedule_adjustment",
-                "solution_type": "reschedule_low_priority",
-                "title": title,
-                "reason": reason,
-                "score": score,
-                "model_basis": {
-                    "method": "ml_ready_weighted_ranking",
-                    "features": model_basis_features,
-                    "feature_vector": features,
-                },
-                "action_buttons": ["이 시간으로 변경", "다른 시간 보기", "그대로 둘게요"],
-                "requires_user_confirmation": True,
-                "_start_hour": hour,  # sort tiebreaker, stripped below
+            features = {
+                "candidate_start_hour": hour,
+                "candidate_day_of_week": s.weekday(),
+                "candidate_day_offset": day_offset,
+                "duration_minutes": duration,
+                "gap_before_minutes": None,
+                "gap_after_minutes": gap_after,
+                "is_morning": block == "morning",
+                "is_afternoon": block == "afternoon",
+                "is_evening": block == "evening",
+                "is_late_night": block == "late_night",
+                "is_too_late": is_too_late,
+                "event_category": target.get("category"),
+                "event_priority": target.get("priority"),
+                "schedule_load_score": round(len(events) / 10.0, 2),
+                "preferred_time_block_match": block in preferred_blocks if block else False,
+                "preferred_hour_match": hour in preferred_hours,
+                "near_high_priority_event": near_high,
+                "emotion_state": emotion_state,
             }
-        )
 
-    # highest score first, then earlier start time
-    scored.sort(key=lambda c: (-c["score"], c["_start_hour"]))
+            # ---- weighted scoring (ML-ready: linear over binary/continuous feats) ----
+            raw = 0.0
+            raw += weights["no_conflict"] * 1.0  # reached here => no conflict
+            raw += weights["preferred_time_block_match"] * (1.0 if features["preferred_time_block_match"] else 0.0)
+            raw += weights["preferred_hour_match"] * (1.0 if features["preferred_hour_match"] else 0.0)
+            raw += weights["gap_after_ok"] * (1.0 if (gap_after is None or gap_after >= 15) else 0.0)
+            raw += weights["not_too_late"] * (0.0 if is_too_late else 1.0)
+            raw += weights["not_near_high_priority"] * (0.0 if near_high else 1.0)
+            score = round(max(0.0, min(1.0, raw)), 2)  # weights sum to 1.0 -> already normalized
+
+            reason_bits = ["기존 일정과 충돌하지 않습니다"]
+            if features["preferred_time_block_match"] or features["preferred_hour_match"]:
+                reason_bits.append("선호하는 시간대와 잘 맞습니다")
+            if gap_after is None or gap_after >= 15:
+                reason_bits.append("다음 일정 전까지 여유 시간이 있습니다")
+            if not is_too_late:
+                reason_bits.append("늦은 시간대가 아닙니다")
+            reason = ", ".join(reason_bits) + "."
+
+            model_basis_features = ["기존 일정과 충돌 없음"]
+            if features["preferred_time_block_match"] or features["preferred_hour_match"]:
+                model_basis_features.append("사용자 선호 시간대와 일치")
+            if gap_after is None or gap_after >= 15:
+                model_basis_features.append("다음 일정 전 여유 시간 확보")
+            if not is_too_late:
+                model_basis_features.append("늦은 시간대가 아님")
+
+            when_label = f"{day_label} {s.strftime('%H:%M')}" if day_offset else s.strftime("%H:%M")
+            title = f"{target.get('title') or '일정'}을(를) {when_label}로 옮기기"
+
+            scored.append(
+                {
+                    "category": "schedule_adjustment",
+                    "solution_type": "reschedule_low_priority",
+                    "title": title,
+                    "reason": reason,
+                    "score": score,
+                    # 프론트가 탭 한 번으로 실제 변경(PATCH)할 수 있도록
+                    # 기계가 읽을 수 있는 제안 값을 함께 내려준다.
+                    "target_event_id": target.get("id"),
+                    "target_title": target.get("title"),
+                    "day_label": day_label,
+                    "suggested_date": s.date().isoformat(),
+                    "suggested_start_time": s.strftime("%H:%M"),
+                    "suggested_end_time": e.strftime("%H:%M"),
+                    "model_basis": {
+                        "method": "ml_ready_weighted_ranking",
+                        "features": model_basis_features,
+                        "feature_vector": features,
+                    },
+                    "action_buttons": ["이 시간으로 변경", "다른 시간 보기", "그대로 둘게요"],
+                    "requires_user_confirmation": True,
+                    "_start_hour": hour,  # sort tiebreaker, stripped below
+                    "_day_offset": day_offset,
+                }
+            )
+
+    # highest score first, then today before tomorrow, then earlier start time
+    scored.sort(key=lambda c: (-c["score"], c["_day_offset"], c["_start_hour"]))
+
+    # keep a focused shortlist — 내일 후보가 있으면 최소 2개는 포함시켜
+    # "내일 오전으로 미루기" 같은 선택지가 항상 보이게 한다.
+    shortlist = scored[:5]
+    if not any(c["_day_offset"] == 1 for c in shortlist):
+        toms = [c for c in scored if c["_day_offset"] == 1][:2]
+        if toms:
+            shortlist = shortlist[: 5 - len(toms)] + toms
+
     for c in scored:
         c.pop("_start_hour", None)
-
-    # keep a focused shortlist
-    shortlist = scored[:5]
+        c.pop("_day_offset", None)
 
     # 설명 문장만 LLM로 자연스럽게(최상위 후보 1개만 → 비용 1콜). 계산/후보/점수는
     # 위 규칙 결과 그대로 유지되며, 실패 시 규칙 reason 을 그대로 쓴다.

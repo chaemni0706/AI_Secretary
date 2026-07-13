@@ -4,10 +4,14 @@ import '../screens/calendar_screen.dart';
 import '../screens/place_recommendation_screen.dart';
 import '../services/briefing_scheduler_service.dart';
 import '../services/dashboard_api.dart';
+import '../services/schedule_api.dart';
 import '../services/voice_router_api.dart';
 import '../theme/app_theme.dart';
 import 'glass_card.dart';
 import 'place_carousel_card.dart';
+
+/// 선택 진행 중 강조색(살구) — 시연 시나리오 색상.
+const Color _kApricot = Color(0xFFF2A66D);
 
 /// `POST /api/v1/voice/route` 결과를 화면에 그리는 공용 위젯 모음.
 ///
@@ -104,6 +108,15 @@ Widget buildVoiceIntentCard(
 Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
   final solutions = (data['solutions'] as List?) ?? const [];
   final today = (data['today_schedule'] as List?) ?? const [];
+  // 재조정 시간 후보(백엔드 reschedule_recommender 결과). 탭하면 실제로
+  // 일정 시간이 변경된다(PATCH).
+  final rescheduleCandidates = ((data['reschedule_candidates'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((c) => Map<String, dynamic>.from(c))
+      .where((c) =>
+          (c['target_event_id'] ?? '').toString().isNotEmpty &&
+          (c['suggested_start_time'] ?? '').toString().isNotEmpty)
+      .toList();
   return GlassCard(
     padding: const EdgeInsets.all(14),
     child: Column(
@@ -180,6 +193,19 @@ Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
             );
           }),
         ],
+        if (rescheduleCandidates.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            '"${rescheduleCandidates.first['target_title'] ?? '일정'}" 옮길 시간 후보',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          RescheduleCandidateChips(candidates: rescheduleCandidates),
+        ],
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -191,14 +217,141 @@ Widget _buildCoachingCard(BuildContext context, Map<String, dynamic> data) {
                 rootNavigator: true,
               ).push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
             }),
-            _actionChip('휴식 추가', null),
-            _actionChip('일정 미루기', null),
-            _actionChip('알림 설정', null),
           ],
         ),
       ],
     ),
   );
+}
+
+/// 재조정 시간 후보 칩 목록. 탭 → (살구색 진행) → PATCH 로 실제 일정 이동 →
+/// (그린 체크) 순으로 바뀐다. 하나를 적용하면 나머지는 비활성화된다.
+class RescheduleCandidateChips extends StatefulWidget {
+  final List<Map<String, dynamic>> candidates;
+
+  const RescheduleCandidateChips({super.key, required this.candidates});
+
+  @override
+  State<RescheduleCandidateChips> createState() =>
+      _RescheduleCandidateChipsState();
+}
+
+class _RescheduleCandidateChipsState extends State<RescheduleCandidateChips> {
+  int? _busyIndex; // PATCH 진행 중인 칩
+  int? _appliedIndex; // 적용 완료된 칩
+
+  String _label(Map<String, dynamic> c) {
+    final day = (c['day_label'] ?? '').toString();
+    final start = (c['suggested_start_time'] ?? '').toString();
+    return day.isEmpty ? start : '$day $start';
+  }
+
+  Future<void> _apply(int i) async {
+    if (_busyIndex != null || _appliedIndex != null) return;
+    final c = widget.candidates[i];
+    final id = (c['target_event_id'] ?? '').toString();
+    setState(() => _busyIndex = i);
+    try {
+      await scheduleApi.update(id, {
+        'date': c['suggested_date'],
+        'start_time': c['suggested_start_time'],
+        'end_time': c['suggested_end_time'],
+      });
+      triggerDashboardRefresh();
+      if (!mounted) return;
+      setState(() {
+        _busyIndex = null;
+        _appliedIndex = i;
+      });
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              '"${c['target_title'] ?? '일정'}"을(를) ${_label(c)}로 옮겼어요 ✓',
+            ),
+          ),
+        );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busyIndex = null);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('일정을 옮기지 못했어요. 다시 시도해 주세요.')),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var i = 0; i < widget.candidates.length; i++) _chip(i),
+      ],
+    );
+  }
+
+  Widget _chip(int i) {
+    final applied = _appliedIndex == i;
+    final busy = _busyIndex == i;
+    final disabled = _appliedIndex != null && !applied;
+
+    final Color bg = applied
+        ? AppTheme.green
+        : busy
+        ? _kApricot.withValues(alpha: 0.25)
+        : AppTheme.blue.withValues(alpha: disabled ? 0.05 : 0.12);
+    final Color fg = applied
+        ? Colors.white
+        : disabled
+        ? AppTheme.textSecondary
+        : AppTheme.blue;
+
+    return GestureDetector(
+      onTap: (applied || busy || disabled) ? null : () => _apply(i),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: busy ? _kApricot : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (applied) ...[
+              const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+              const SizedBox(width: 4),
+            ],
+            if (busy) ...[
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              _label(widget.candidates[i]),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 Widget _actionChip(String label, VoidCallback? onTap) {

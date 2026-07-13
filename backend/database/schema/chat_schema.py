@@ -30,6 +30,8 @@ class ScheduleEvent(BaseModel):
 class ScheduleContext(BaseModel):
     current_time: Optional[str] = Field(None, description="ISO 8601")
     today_schedule: List[ScheduleEvent] = Field(default_factory=list)
+    # 내일 일정(선택). 일정 재조정 추천이 '내일' 후보를 낼 때 충돌 검사에 쓴다.
+    tomorrow_schedule: List[ScheduleEvent] = Field(default_factory=list)
 
 
 class UserProfile(BaseModel):
@@ -107,6 +109,13 @@ class RescheduleCandidate(BaseModel):
     model_basis: Dict[str, Any] = Field(default_factory=dict)
     action_buttons: List[str] = Field(default_factory=list)
     requires_user_confirmation: bool = True
+    # 프론트가 탭 한 번으로 실제 변경(PATCH)할 수 있게 하는 제안 값(선택).
+    target_event_id: Optional[str] = None
+    target_title: Optional[str] = None
+    day_label: Optional[str] = Field(None, description="오늘 | 내일")
+    suggested_date: Optional[str] = Field(None, description="YYYY-MM-DD")
+    suggested_start_time: Optional[str] = Field(None, description="HH:MM")
+    suggested_end_time: Optional[str] = Field(None, description="HH:MM")
 
 
 class ChatRespondData(BaseModel):

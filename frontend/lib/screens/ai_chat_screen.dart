@@ -56,8 +56,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
   /// 기기 GPS 좌표(업체 추천 등 위치 기반용). 성공 시 세션 캐시.
   Map<String, dynamic>? _deviceLocation;
 
-  /// 추천 카드에서 "이 업체로 예약"으로 고른 업체 context.
-  /// 다음 발화 한 번에만 유효하며 전송 시 비운다.
+  /// 예약 흐름의 멀티턴 context. 카드 탭(selected_place), 추천 결과
+  /// (places_suggested), 서버가 돌려준 다음 턴 context(schedule_pending 등)를
+  /// 담아 다음 발화 요청에 실어 보낸다. 전송 시 비우고 응답으로 갱신한다.
   Map<String, dynamic>? _pendingPlaceContext;
 
   /// 위치를 얻으면 좌표 반환. 못 얻으면(권한 거부/서비스 OFF) 안내 스낵바를 띄우고 null.
@@ -285,6 +286,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
           _voiceStatus = null;
         });
         handleVoiceSideEffects(route);
+        // 서버가 준 다음 턴 context(schedule_pending/places_suggested 등)를
+        // 이어받아 멀티턴이 끊기지 않게 한다.
+        _pendingPlaceContext = route.context;
         final answer = route.ttsText.trim().isNotEmpty
             ? route.ttsText
             : '예약을 처리했어요.';
@@ -305,7 +309,32 @@ class _AiChatScreenState extends State<AiChatScreen> {
       } catch (_) {
         intent = 'schedule_create'; // 분류 실패 시 기존 동작(일정 파싱)으로 안전 폴백
       }
-      const consultIntents = {'fallback_chat', 'emotion_schedule_coaching'};
+      const consultIntents = {'fallback_chat'};
+
+      // 감정 기반 일정 코칭 → /voice/route 로 위임해 코칭 카드(시간 후보 칩
+      // 포함)를 채팅 안에 렌더링한다. (voice_chat_screen 과 동일한 경로)
+      if (intent == 'emotion_schedule_coaching') {
+        final route = await voiceRouterApi.route(
+          text,
+          currentDatetime: now,
+          assistantTone: preferenceStore.assistantTone,
+          responseLength: preferenceStore.responseLength,
+          reminderStrength: preferenceStore.reminderStrength,
+        );
+        if (!mounted) return;
+        setState(() {
+          _lastParse = null;
+          _parsing = false;
+          _voiceStatus = null;
+        });
+        _pendingPlaceContext = route.context;
+        final answer = route.ttsText.trim().isNotEmpty
+            ? route.ttsText
+            : '이야기 들려주셔서 고마워요. 오늘 일정을 같이 볼까요?';
+        _addMessage(answer, isUser: false, route: route);
+        if (_fromVoice) await _speak(answer);
+        return;
+      }
 
       // 2) 위치 기반 업체 추천 → /voice/route 로 위임하고 채팅 안에 추천 카드 렌더.
       if (intent == 'reservation_recommendation') {
@@ -323,6 +352,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
           _parsing = false;
           _voiceStatus = null;
         });
+        // 추천 결과 context(places_suggested)를 보관 → "거기로 해줘" 같은
+        // 후속 발화가 카드 탭 없이도 예약으로 이어진다.
+        _pendingPlaceContext = route.context;
         final answer = route.ttsText.trim().isNotEmpty
             ? route.ttsText
             : '주변에서 추천할 만한 곳을 찾아봤어요.';

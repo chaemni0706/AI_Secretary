@@ -53,6 +53,20 @@ INTENTS = (
 _HOURS_RE = re.compile(r"(\d+)\s*시간\s*전")
 _MINUTES_RE = re.compile(r"(\d+)\s*분\s*전")
 
+# 일정 미루기/재조정 요청 신호 — "저녁 강의 미룰 수 있을까?"처럼 감정 단어 없이
+# 기존 일정을 미루려는 발화. 날짜/시간 신호가 이를 '일정 생성'으로 가로채거나
+# fallback(상담)으로 흘리지 않도록 분류 단계에서 직접 잡는다.
+_RESCHEDULE_VERBS = ("미뤄", "미룰", "미루", "연기", "옮겨", "옮길", "옮기")
+_RESCHEDULE_REF_WORDS = (
+    "일정", "스케줄", "약속", "회의", "미팅", "강의", "수업", "공부", "운동", "모임",
+)
+
+
+def _reschedule_signal(text: str) -> List[str]:
+    verbs = [v for v in _RESCHEDULE_VERBS if v in text]
+    refs = [r for r in _RESCHEDULE_REF_WORDS if r in text]
+    return verbs + refs if (verbs and refs) else []
+
 
 @lru_cache(maxsize=1)
 def _rules() -> dict:
@@ -271,6 +285,13 @@ def select_voice_intent(text: str, context: Optional[dict] = None) -> dict:
         sched_hits = _matched(text, cfg["schedule_ref_keywords"])
         if emo_hits and sched_hits:
             matched_keywords["emotion_schedule_coaching"] = emo_hits + sched_hits
+            return _result("emotion_schedule_coaching", matched_keywords)
+
+        # 2.5 일정 미루기/재조정 — 감정 단어가 없어도 코칭(재조정 추천) 흐름으로.
+        #     schedule_create 의 날짜/시간 신호(step 6)보다 먼저 검사해야 한다.
+        resched = _reschedule_signal(text)
+        if resched:
+            matched_keywords["emotion_schedule_coaching"] = resched
             return _result("emotion_schedule_coaching", matched_keywords)
 
         # 3. daily_briefing

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/briefing_model.dart';
 import '../services/briefing_api.dart';
 import '../services/api_client.dart';
+import '../services/local_demo_notification_service.dart';
 import '../services/voice_api.dart';
 import '../services/voice_tts_service.dart';
 
@@ -21,6 +24,15 @@ class _BriefingScreenState extends State<BriefingScreen> {
 
   final VoiceTtsService _ttsService = VoiceTtsService();
   bool _speaking = false;
+
+  /// S1 시연(우산 브리핑) 진행 중 여부. 중복 실행을 막는다.
+  bool _demoRunning = false;
+
+  /// S1 시연용 브리핑 문장(시나리오 고정 대사).
+  /// 실제 날씨와 무관하게 "비 예보 + 우산" 시연을 재현하기 위해 고정한다.
+  static const String _demoUmbrellaTts =
+      '좋은 아침이에요. 오늘은 회의 두 개, 할 일 다섯 개가 있어요. '
+      '비 소식이 있으니 우산 챙기세요.';
 
   @override
   void initState() {
@@ -59,6 +71,38 @@ class _BriefingScreenState extends State<BriefingScreen> {
     setState(() => _speaking = true);
     await voiceApi.speak(_ttsService, text, source: 'briefing');
     if (mounted) setState(() => _speaking = false);
+  }
+
+  /// S1 시연: 버튼을 누르면 2초 뒤 우산 알림을 표시하고,
+  /// 동시에 우산 브리핑 TTS 를 재생한다.
+  Future<void> _runUmbrellaDemo() async {
+    if (_demoRunning) return;
+    setState(() => _demoRunning = true);
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) {
+      _demoRunning = false;
+      return;
+    }
+
+    // 알림 표시를 기다리지 않고(unawaited) TTS 를 바로 시작해 "동시에" 나오게 한다.
+    unawaited(
+      localDemoNotifications.showBriefingNotification(
+        title: '☂️ 우산 챙기세요',
+        body: '오늘 비 예보가 있어요. 외출 전에 우산을 준비하세요.',
+      ),
+    );
+
+    setState(() => _speaking = true);
+    await voiceApi.speak(_ttsService, _demoUmbrellaTts, source: 'briefing');
+    if (mounted) {
+      setState(() {
+        _speaking = false;
+        _demoRunning = false;
+      });
+    } else {
+      _demoRunning = false;
+    }
   }
 
   Future<void> _loadBriefing() async {
@@ -136,6 +180,29 @@ class _BriefingScreenState extends State<BriefingScreen> {
             : _error != null
             ? _buildError()
             : _buildContent(),
+        // S1 시연용 버튼: 화면 맨 아래 고정.
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: OutlinedButton.icon(
+            onPressed: _demoRunning ? null : _runUmbrellaDemo,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.blue,
+              side: BorderSide(color: AppTheme.blue.withValues(alpha: 0.4)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            icon: const Icon(Icons.umbrella_rounded, size: 20),
+            label: Text(
+              _demoRunning ? '시연 준비 중…' : '시연: 우산 브리핑',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -43,6 +43,7 @@ INTENTS = (
     "reservation_recommendation",
     "emotion_schedule_coaching",
     "daily_briefing",
+    "weather_query",
     "schedule_query",
     "reminder_setting",
     "schedule_create",
@@ -173,6 +174,7 @@ _LLM_ASSIST_INTENTS = (
     "emotion_schedule_coaching",
     "reservation_recommendation",
     "daily_briefing",
+    "weather_query",
 )
 _LLM_MIN_CONFIDENCE = 0.6
 _LLM_SYSTEM = (
@@ -194,6 +196,7 @@ def _llm_classify(text: str) -> Optional[dict]:
         "- emotion_schedule_coaching: 감정 토로/고민 상담(피곤·스트레스 등)\n"
         "- reservation_recommendation: 장소·가게·맛집 추천 요청\n"
         "- daily_briefing: 오늘 하루 요약/브리핑\n"
+        "- weather_query: 오늘/지금 날씨·기온·비 여부 안내 요청\n"
         "- fallback_chat: 위 어디에도 해당 안 되는 일반 대화\n"
         '반드시 JSON만 출력: {"intent": "<후보 중 하나>", "confidence": 0.0~1.0}'
     )
@@ -276,6 +279,14 @@ def select_voice_intent(text: str, context: Optional[dict] = None) -> dict:
         if hits:
             matched_keywords["daily_briefing"] = hits
             return _result("daily_briefing", matched_keywords)
+
+        # 3.5 weather_query — 현재 날씨 안내. 브리핑 다음에 검사해 "오늘 일정이랑
+        # 날씨"는 브리핑으로 유지하고, '날씨'만 있는 발화를 여기서 잡는다.
+        cfg = rules.get("weather_query", {})
+        hits = _matched(text, cfg.get("strong", [])) + _matched(text, cfg.get("weak", []))
+        if hits:
+            matched_keywords["weather_query"] = hits
+            return _result("weather_query", matched_keywords)
 
         # 4. schedule_query — strong 키워드 또는 '조회 질의 신호'(생성 동사 없음).
         cfg = rules["schedule_query"]

@@ -295,6 +295,73 @@ def _weather_note() -> str:
         return "오늘 일정 중심으로 안내해드릴게요."
 
 
+def _current_weather_sentence(w, lat, lon) -> str:
+    """현재 날씨 한 문장(+습도/기온 범위). 좌표로 지역명을 알면 앞에 붙인다."""
+    region = None
+    try:
+        if lat is not None and lon is not None:
+            region = weather_service.region_label(lat, lon)
+    except Exception:
+        region = None
+    place = f"{region.split()[-1]} " if region else ""
+
+    n = w.now
+    bits = []
+    if getattr(n, "sky", None):
+        bits.append(n.sky)
+    precip = (getattr(n, "precipitation", None) or "").strip()
+    if precip and precip != "없음":
+        bits.append(precip)
+    if getattr(n, "temp_c", None) is not None:
+        bits.append(f"{round(n.temp_c)}도")
+    head = (
+        f"지금 {place}날씨는 {', '.join(bits)}예요."
+        if bits else f"지금 {place}날씨 정보를 알려드릴게요."
+    )
+
+    tail_bits = []
+    if getattr(n, "humidity", None) is not None:
+        tail_bits.append(f"습도는 {n.humidity}%")
+    if getattr(w, "temp_min", None) is not None and getattr(w, "temp_max", None) is not None:
+        tail_bits.append(f"최저 {round(w.temp_min)}도 최고 {round(w.temp_max)}도")
+    tail = f" {', '.join(tail_bits)}예요." if tail_bits else ""
+    return (head + tail).strip()
+
+
+def _handle_weather_query(req: VoiceRouteRequest) -> VoiceRouteData:
+    """"날씨 알려줘" → 현재 날씨를 음성으로 안내. 좌표가 있으면 그 지역 기준."""
+    loc = dict(req.location or {})
+    lat, lon = loc.get("latitude"), loc.get("longitude")
+    try:
+        w = weather_service.get_weather(lat, lon)
+    except Exception:
+        _logger.exception("[VOICE ROUTE] weather_query 날씨 조회 실패")
+        return VoiceRouteData(
+            intent="weather_query",
+            tts_text="지금은 날씨 정보를 가져오지 못했어요. 잠시 후 다시 시도해 주세요.",
+            screen_action=ScreenAction(type="none", payload={}),
+            data={},
+        )
+
+    tts_text = _current_weather_sentence(w, lat, lon)
+    n = w.now
+    return VoiceRouteData(
+        intent="weather_query",
+        tts_text=tts_text,
+        screen_action=ScreenAction(type="none", payload={}),
+        data={
+            "now": {
+                "sky": getattr(n, "sky", None),
+                "precipitation": getattr(n, "precipitation", None),
+                "temp_c": getattr(n, "temp_c", None),
+                "humidity": getattr(n, "humidity", None),
+            },
+            "temp_min": getattr(w, "temp_min", None),
+            "temp_max": getattr(w, "temp_max", None),
+        },
+    )
+
+
 def _handle_daily_briefing(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
     user_id, _ = repo.ensure_default_owner(db)
     date_str = _today(req)
@@ -802,6 +869,8 @@ def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
             result = _handle_emotion_schedule_coaching(db, req)
         elif intent == "daily_briefing":
             result = _handle_daily_briefing(db, req)
+        elif intent == "weather_query":
+            result = _handle_weather_query(req)
         elif intent == "schedule_query":
             result = _handle_schedule_query(db, req)
         elif intent == "reminder_setting":

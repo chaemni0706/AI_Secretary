@@ -8,8 +8,10 @@ import 'package:vosk_flutter_2/vosk_flutter_2.dart';
 import '../screens/voice_overlay_screen.dart';
 import 'assistant_text_sanitizer.dart';
 import 'dashboard_api.dart';
+import 'device_location.dart';
 import 'preference_store.dart';
 import 'schedule_api.dart';
+import 'voice_router_api.dart';
 import 'voice_stt_service.dart' show VoiceSttService;
 import 'voice_tts_service.dart';
 
@@ -22,6 +24,7 @@ import 'voice_tts_service.dart';
 ///
 /// 지원 명령(웨이크워드와 같은 발화에 함께 있어야 실행):
 ///   * "브리핑"          → 해당 날짜(오늘/내일/모레) 일정 브리핑 낭독.
+///   * "날씨"            → 현재 날씨를 /voice/route(weather_query)로 받아 낭독.
 ///   * "일정/등록/추가"  → 2단계 일정 등록. Vosk 는 문법 제한이라 자유로운
 ///     날짜·제목을 한 번에 못 잡으므로, 트리거만 감지한 뒤 자유 음성 인식
 ///     ([VoiceSttService])으로 일정 문장을 받아 파싱·저장한다.
@@ -42,6 +45,9 @@ class HotwordService {
   // 일정 등록 트리거 키워드. 이 중 하나가 웨이크워드와 함께 감지되면
   // 2단계 일정 등록 흐름(자유 음성 인식 → 파싱 → 저장)으로 진입한다.
   static const List<String> _scheduleKeywords = ['일정', '등록', '추가'];
+  // 날씨 안내 트리거 키워드. 웨이크워드와 함께 '날씨' 가 있으면 현재 날씨를
+  // /voice/route(weather_query) 로 위임해 음성으로 안내한다.
+  static const List<String> _weatherKeywords = ['날씨'];
 
   // grammar(문법 제한) 후보: Vosk 가 이 단어들만 후보로 인식하고 나머지는
   // '[unk]' 로 흘린다 → 헛인식↓, 목표 단어 적중률↑. 모델 사전에 있는(로그에서
@@ -51,6 +57,7 @@ class HotwordService {
     '후비', '보비', // 웨이크워드 후보(모델이 '포비'를 이렇게 출력)
     '오늘', '내일', '모레', '브리핑', // 상대 날짜 + 브리핑 명령
     '일정', '등록', '추가', // 일정 등록 트리거
+    '날씨', // 날씨 안내 트리거
     '[unk]',
   ];
 
@@ -192,7 +199,7 @@ class HotwordService {
         await FlutterForegroundTask.startService(
           serviceId: 512,
           notificationTitle: '포비 대기 중',
-          notificationText: '"포비 브리핑" 또는 "포비 일정 등록"이라고 불러보세요.',
+          notificationText: '"포비 브리핑", "포비 날씨", "포비 일정 등록"이라고 불러보세요.',
           callback: hotwordFgCallback,
         );
       }
@@ -236,20 +243,24 @@ class HotwordService {
 
     final hasWake = _wakeWords.any(t.contains);
     final hasBrief = _briefKeywords.any(t.contains);
+    final hasWeather = _weatherKeywords.any(t.contains);
     final hasSchedule = _scheduleKeywords.any(t.contains);
     final canTrigger = !_inCooldown();
 
     // 오탐 방지: 웨이크워드가 같은 발화에 함께 있을 때만 실행.
     // (단독 "포비"/"브리핑"/"일정" 은 무시 → 일상 대화 중 오작동 방지)
     if (!hasWake || !canTrigger) return;
-    // '브리핑' 이 함께 있으면 브리핑 우선("포비 오늘 일정 브리핑" 도 브리핑).
-    if (hasBrief || hasSchedule) {
+    // 우선순위: 브리핑 > 날씨 > 일정 등록.
+    // ('포비 오늘 일정 브리핑' 은 브리핑, '포비 날씨' 는 날씨 안내)
+    if (hasBrief || hasWeather || hasSchedule) {
       // Siri 스타일 오버레이를 띄우고, 인식한 발화를 첫 사용자 말풍선으로 표시.
       voiceOverlay.show();
       voiceOverlay.addUser(text);
     }
     if (hasBrief) {
       _trigger(_parseDayOffset(t));
+    } else if (hasWeather) {
+      _triggerWeather();
     } else if (hasSchedule) {
       _triggerAddSchedule();
     }
@@ -309,6 +320,59 @@ class HotwordService {
         }
       }
       _busy = false;
+    }
+  }
+
+  /// 날씨 안내 트리거: 인식 일시정지 → 현재 날씨 TTS → 대기 재개.
+  /// (브리핑 흐름 [_trigger] 과 동일한 정지/재개·쿨다운 규칙을 따른다.)
+  Future<void> _triggerWeather() async {
+    _busy = true;
+    try {
+      await _speech?.stop();
+      await _speakWeather();
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 800));
+      _lastTriggerAt = DateTime.now();
+      if (_running && !_suspended) {
+        try {
+          await _speech?.start();
+        } catch (e) {
+          debugPrint('인식 재개 실패: $e');
+        }
+      }
+      _busy = false;
+    }
+  }
+
+  /// 현재 날씨를 백엔드 /voice/route(weather_query)로 받아 음성으로 읽는다.
+  /// 위치가 있으면 그 지역 기준, 없으면 서버 기본값. 실패 시 안내 문구로 대체.
+  Future<void> _speakWeather() async {
+    await _say('네, 날씨 확인할게요.');
+    try {
+      await preferenceStore.ensureLoaded();
+      Map<String, dynamic>? loc;
+      try {
+        loc = await DeviceLocation.currentLatLon();
+      } catch (_) {
+        loc = null;
+      }
+      final result = await voiceRouterApi.route(
+        '날씨 어때',
+        currentDatetime: _nowIso(),
+        location: loc,
+        assistantTone: preferenceStore.assistantTone,
+        responseLength: preferenceStore.responseLength,
+        reminderStrength: preferenceStore.reminderStrength,
+      );
+      final text = result.ttsText.trim();
+      await _say(
+        text.isEmpty
+            ? '지금은 날씨 정보를 가져오지 못했어요.'
+            : sanitizeAssistantText(text),
+      );
+    } catch (e) {
+      debugPrint('날씨 안내 실패: $e');
+      await _say('날씨 정보를 가져오지 못했어요. 잠시 후 다시 시도해주세요.');
     }
   }
 

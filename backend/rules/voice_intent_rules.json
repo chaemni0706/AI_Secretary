@@ -4,6 +4,7 @@
     "reservation_recommendation",
     "emotion_schedule_coaching",
     "daily_briefing",
+    "weather_query",
     "schedule_query",
     "reminder_setting",
     "schedule_create",
@@ -36,6 +37,14 @@
       "오늘 일정이랑 날씨", "브리핑 해줘", "브리핑 들려줘"
     ],
     "weak": ["브리핑", "하루 요약"]
+  },
+  "weather_query": {
+    "_comment": "현재 날씨 안내 전용. daily_briefing 다음(브리핑 문구가 우선)에 검사되며, '날씨'가 포함되되 일정/브리핑 표지가 없는 발화를 잡는다.",
+    "strong": [
+      "날씨 알려줘", "날씨 어때", "날씨 어떄", "날씨 어떤지", "날씨 좀",
+      "오늘 날씨", "지금 날씨", "현재 날씨", "밖에 날씨", "날씨는 어때", "날씨 확인"
+    ],
+    "weak": ["날씨", "기온", "비 와", "비 온", "우산 필요", "더워", "추워"]
   },
   "schedule_query": {
     "_comment": "strong-only trigger — bare 'weak' hits (e.g. lone '일정') must never steal a schedule_create utterance like '병원 일정 추가해줘'. In addition to 'strong', a query SIGNAL fires when the utterance is interrogative about existing schedules and has NO create verb (voice_intent_router._schedule_query_signal): (ref_terms AND query_markers) OR ((ref_terms OR date_terms) AND whatson_markers). This stops queries like '내일 뭐 있어?', '모레 회의 언제야' from leaking into schedule_create via the date/time signal.",

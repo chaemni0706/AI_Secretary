@@ -15,6 +15,10 @@ class LocalDemoNotificationService {
   static const String _channelName = '가계부 결제 알림(시연)';
   static const String _channelDesc = '시연용 금융 결제/입금 알림';
 
+  static const String _briefingChannelId = 'briefing_demo';
+  static const String _briefingChannelName = '브리핑 알림(시연)';
+  static const String _briefingChannelDesc = '시연용 브리핑/날씨 알림';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -42,6 +46,13 @@ class LocalDemoNotificationService {
         importance: Importance.high,
       );
       await android?.createNotificationChannel(channel);
+      const briefingChannel = AndroidNotificationChannel(
+        _briefingChannelId,
+        _briefingChannelName,
+        description: _briefingChannelDesc,
+        importance: Importance.high,
+      );
+      await android?.createNotificationChannel(briefingChannel);
       // Android 13+ 알림 권한. 거부돼도 등록 흐름은 계속된다.
       try {
         await android?.requestNotificationsPermission();
@@ -77,6 +88,32 @@ class LocalDemoNotificationService {
       await _plugin.show(_id++, title, body, details);
     } catch (e) {
       debugPrint('[LocalDemoNotif] show error: $e');
+    }
+  }
+
+  /// 브리핑(날씨/우산 등) 시연용 로컬 알림을 즉시 표시한다.
+  /// 표시 실패는 삼킨다(브리핑 TTS 재생과 독립적).
+  Future<void> showBriefingNotification({
+    required String title,
+    required String body,
+  }) async {
+    try {
+      await _ensureInit();
+      if (!_initialized) return;
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _briefingChannelId,
+          _briefingChannelName,
+          channelDescription: _briefingChannelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+          ticker: '브리핑 알림',
+        ),
+        iOS: DarwinNotificationDetails(),
+      );
+      await _plugin.show(_id++, title, body, details);
+    } catch (e) {
+      debugPrint('[LocalDemoNotif] show briefing error: $e');
     }
   }
 }

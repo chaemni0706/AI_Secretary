@@ -559,7 +559,42 @@ def _clarify_tts(category, title, missing, req: VoiceRouteRequest, fallback: str
         return fallback
 
 
-def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
+def _merge_selected_place(parsed, place: dict):
+    """사용자가 추천 카드에서 고른 업체(selected_place context)를 일정 draft에
+    병합한다. 제목이 비었거나 일반적이면 '{업체명} 예약'으로 채우고, 장소가
+    비어 있으면 업체 주소(없으면 업체명)를 넣는다. 제목이 채워지므로
+    missing_fields 의 title 도 함께 해소한다."""
+    name = str(place.get("name") or "").strip()
+    if not name:
+        return parsed
+
+    draft = parsed.schedule_draft
+    title = (draft.title or "").strip()
+    # 규칙 파서가 "그럼 이걸로 …10시로 예약해줘" 같은 발화에서 조사/지시어만
+    # 제목으로 남기는 경우가 있어, 의미 없는 토큰을 걷어낸 뒤 남는 게 없으면
+    # 업체명 기반 제목("{업체명} 예약")으로 교체한다.
+    _filler_tokens = {
+        "", "예약", "일정", "새", "약속", "그럼", "그거", "그걸로", "이거",
+        "이걸로", "저걸로", "여기로", "거기로", "로", "으로", "에", "에서",
+        "쯤", "까지", "부터", "걸로",
+    }
+    meaningful = [t for t in title.split() if t not in _filler_tokens]
+    if not meaningful:
+        title = f"{name} 예약"
+    elif name not in title:
+        title = f"{name} {' '.join(meaningful)}"
+
+    location = draft.location or (
+        str(place.get("road_address") or place.get("address") or "").strip() or name
+    )
+    updated_draft = draft.model_copy(update={"title": title, "location": location})
+    missing = [m for m in parsed.missing_fields if m != "title"]
+    return parsed.model_copy(update={"schedule_draft": updated_draft, "missing_fields": missing})
+
+
+def _handle_schedule_create(
+    db: Session, req: VoiceRouteRequest, place: dict | None = None
+) -> VoiceRouteData:
     parsed = parse_schedule(ScheduleParseRequest(
         input=req.text, input_type="voice", current_datetime=req.current_datetime,
         timezone=req.timezone, assistant_tone=req.assistant_tone,
@@ -567,6 +602,13 @@ def _handle_schedule_create(db: Session, req: VoiceRouteRequest) -> VoiceRouteDa
     ))
     # 규칙 우선 + LLM 갭필(enhanced). 플래그 꺼짐/실패 시 규칙 결과 그대로.
     parsed = _augment_schedule_with_llm(parsed, req)
+    # 추천 카드에서 고른 업체가 있으면 draft 에 자동 반영(제목/장소).
+    if place:
+        parsed = _merge_selected_place(parsed, place)
+        # 업체 예약 발화("내일 오전 10시로 예약해줘")는 intent 가 unknown 으로
+        # 남을 수 있다. 업체명으로 제목이 확보됐으면 일정 등록으로 승격한다.
+        if parsed.intent not in ("create_schedule", "create_todo") and parsed.schedule_draft.title:
+            parsed = parsed.model_copy(update={"intent": "create_schedule"})
     draft = parsed.schedule_draft
     registerable = (
         parsed.intent in ("create_schedule", "create_todo")
@@ -854,6 +896,23 @@ def route(db: Session, req: VoiceRouteRequest) -> VoiceRouteData:
             result = _handle_fallback_chat(req)
         result.debug = {"matched_keywords": {"schedule_modify": True}}
         return result
+
+    # 멀티턴 업체 예약: 직전에 추천 카드에서 업체를 골랐다면("이 업체로 예약"),
+    # 이번 발화(예: "내일 오전 10시로 예약해줘")를 그 업체의 일정 등록으로 처리한다.
+    # 브리핑/날씨/감정 등 명백히 다른 intent 로 분류되면 그쪽을 우선한다.
+    sel_ctx = req.context or {}
+    if sel_ctx.get("type") == "selected_place" and isinstance(sel_ctx.get("place"), dict):
+        pre = voice_intent_router.select_voice_intent(text, context=req.context)
+        if pre.get("intent") in (
+            "schedule_create", "reservation_recommendation", "fallback_chat",
+        ):
+            try:
+                result = _handle_schedule_create(db, req, place=sel_ctx["place"])
+            except Exception:
+                _logger.exception("[VOICE ROUTE] selected_place create failed text=%r", text)
+                result = _handle_fallback_chat(req)
+            result.debug = {"matched_keywords": {"selected_place": True}}
+            return result
 
     classified = voice_intent_router.select_voice_intent_hybrid(text, context=req.context)
     intent = classified["intent"]

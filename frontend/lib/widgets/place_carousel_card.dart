@@ -20,9 +20,15 @@ class PlaceCarouselCard extends StatefulWidget {
   State<PlaceCarouselCard> createState() => _PlaceCarouselCardState();
 }
 
+/// 선택 강조용 살구색(시연 시나리오 색).
+const Color _kApricot = Color(0xFFF2A66D);
+
 class _PlaceCarouselCardState extends State<PlaceCarouselCard> {
   final _controller = PageController(viewportFraction: 0.86);
   int _page = 0;
+
+  /// "이 업체로 예약"으로 고른 카드 인덱스(살구색 테두리 강조).
+  int? _selectedIndex;
 
   @override
   void dispose() {
@@ -77,7 +83,11 @@ class _PlaceCarouselCardState extends State<PlaceCarouselCard> {
               padding: const EdgeInsets.only(right: 8),
               child: _PlaceCard(
                 place: widget.places[i],
-                onSelect: () => widget.onSelect(widget.places[i]),
+                selected: _selectedIndex == i,
+                onSelect: () {
+                  setState(() => _selectedIndex = i);
+                  widget.onSelect(widget.places[i]);
+                },
               ),
             ),
           ),
@@ -108,12 +118,28 @@ class _PlaceCarouselCardState extends State<PlaceCarouselCard> {
 class _PlaceCard extends StatelessWidget {
   final RecommendedPlace place;
   final VoidCallback onSelect;
+  final bool selected;
 
-  const _PlaceCard({required this.place, required this.onSelect});
+  const _PlaceCard({
+    required this.place,
+    required this.onSelect,
+    this.selected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    // 선택된 카드는 살구색 테두리로 강조한다(시연 포인트).
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(TossRadius.lg),
+        border: Border.all(
+          color: selected ? _kApricot : Colors.transparent,
+          width: 2,
+        ),
+      ),
+      child: GlassCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,17 +201,23 @@ class _PlaceCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: onSelect,
+              onPressed: selected ? null : onSelect,
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.blue,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: _kApricot,
+                disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 minimumSize: const Size(0, 34),
               ),
-              child: const Text('이 업체로 예약', style: TextStyle(fontSize: 13)),
+              child: Text(
+                selected ? '선택됨 ✓' : '이 업체로 예약',
+                style: const TextStyle(fontSize: 13),
+              ),
             ),
           ),
         ],
+      ),
       ),
     );
   }

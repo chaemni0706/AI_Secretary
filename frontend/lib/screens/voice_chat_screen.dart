@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/voice_intent_card.dart';
+import '../models/recommended_place_model.dart';
 import '../models/voice_chat_message.dart';
 import '../services/device_location.dart';
 import '../services/preference_store.dart';
@@ -171,6 +172,28 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
 
   // --------------------------------------------------------------------- //
   // 발화 전송 → 통합 라우팅 → 응답 표시 + TTS
+  /// 추천 카드에서 "이 업체로 예약"을 눌렀을 때: 선택한 업체를 다음 발화의
+  /// context(selected_place)로 실어, "내일 오전 10시로 예약해줘" 같은 후속
+  /// 발화가 그 업체의 일정 등록으로 이어지게 한다.
+  void _onSelectPlace(RecommendedPlace p) {
+    _pendingContext = {
+      'type': 'selected_place',
+      'place': {
+        'name': p.name,
+        'address': p.address,
+        'road_address': p.roadAddress,
+        'category': p.category,
+        'phone': p.phone,
+      },
+    };
+    final guide = '${p.name}(으)로 진행할게요. 언제로 예약할까요?';
+    setState(() {
+      _messages.add(VoiceChatMessage(role: ChatRole.assistant, text: guide));
+    });
+    _scrollToBottom();
+    _ttsService.speak(guide);
+  }
+
   // --------------------------------------------------------------------- //
   Future<void> _sendMessage(String text) async {
     final trimmed = text.trim();
@@ -466,7 +489,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
             ),
             if (m.route != null) ...[
               const SizedBox(height: 10),
-              buildVoiceIntentCard(context, m.route!),
+              buildVoiceIntentCard(context, m.route!, onSelectPlace: _onSelectPlace),
             ],
           ],
         ),

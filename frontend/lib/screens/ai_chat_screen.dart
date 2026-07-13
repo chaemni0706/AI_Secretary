@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/recommended_place_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/voice_intent_card.dart';
@@ -54,6 +55,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   /// 기기 GPS 좌표(업체 추천 등 위치 기반용). 성공 시 세션 캐시.
   Map<String, dynamic>? _deviceLocation;
+
+  /// 추천 카드에서 "이 업체로 예약"으로 고른 업체 context.
+  /// 다음 발화 한 번에만 유효하며 전송 시 비운다.
+  Map<String, dynamic>? _pendingPlaceContext;
 
   /// 위치를 얻으면 좌표 반환. 못 얻으면(권한 거부/서비스 OFF) 안내 스낵바를 띄우고 null.
   Future<Map<String, dynamic>?> _ensureLocation() async {
@@ -221,6 +226,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
   }
 
+  /// 추천 카드에서 "이 업체로 예약"을 눌렀을 때: 선택한 업체를 다음 발화의
+  /// context(selected_place)로 보관해, "내일 오전 10시로 예약해줘" 같은 후속
+  /// 발화가 그 업체의 일정 등록으로 이어지게 한다.
+  void _onSelectPlace(RecommendedPlace p) {
+    _pendingPlaceContext = {
+      'type': 'selected_place',
+      'place': {
+        'name': p.name,
+        'address': p.address,
+        'road_address': p.roadAddress,
+        'category': p.category,
+        'phone': p.phone,
+      },
+    };
+    _addMessage('${p.name}(으)로 진행할게요. 언제로 예약할까요?', isUser: false);
+  }
+
   /// 1) 자연어 → parse
   ///
   /// TTS 정책(의도된 동작):
@@ -242,6 +264,34 @@ class _AiChatScreenState extends State<AiChatScreen> {
     try {
       await preferenceStore.ensureLoaded();
       final now = DateTime.now().toIso8601String();
+
+      // 0) 직전에 추천 카드에서 업체를 골랐다면("이 업체로 예약"), 이번 발화를
+      //    그 업체의 예약(일정 등록)으로 /voice/route 에 위임한다.
+      final placeCtx = _pendingPlaceContext;
+      _pendingPlaceContext = null; // 한 번만 유효.
+      if (placeCtx != null) {
+        final route = await voiceRouterApi.route(
+          text,
+          currentDatetime: now,
+          context: placeCtx,
+          assistantTone: preferenceStore.assistantTone,
+          responseLength: preferenceStore.responseLength,
+          reminderStrength: preferenceStore.reminderStrength,
+        );
+        if (!mounted) return;
+        setState(() {
+          _lastParse = null;
+          _parsing = false;
+          _voiceStatus = null;
+        });
+        handleVoiceSideEffects(route);
+        final answer = route.ttsText.trim().isNotEmpty
+            ? route.ttsText
+            : '예약을 처리했어요.';
+        _addMessage(answer, isUser: false, route: route);
+        if (_fromVoice) await _speak(answer);
+        return;
+      }
 
       // 1) 먼저 의도를 분류한다(부수효과 없는 /voice/classify 게이트).
       //    명백한 대화/상담 의도만 상담으로 보내고, 나머지(일정 등록·예약·조회 등)는
@@ -524,7 +574,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
               _ChatBubble(message: msg),
               Padding(
                 padding: const EdgeInsets.fromLTRB(36, 4, 8, 4),
-                child: buildVoiceIntentCard(context, msg.route!),
+                child: buildVoiceIntentCard(
+                  context,
+                  msg.route!,
+                  onSelectPlace: _onSelectPlace,
+                ),
               ),
             ],
           );

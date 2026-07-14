@@ -49,6 +49,12 @@ async def test_image_verification_multipart_uses_mock_analyzer(monkeypatch):
         "backend.services.image_verification_service.get_default_vision_analyzer",
         lambda: MockVisionAnalyzer(analysis),
     )
+    # 오늘 production patch: Smol 단독 verified 는 없음 -- 항상 Qwen7B 로 escalate 되므로
+    # 동등한 evidence 를 내는 mock 을 Qwen7B 자리에도 주입한다(실제 모델 호출 없이 라우팅만 검증).
+    monkeypatch.setattr(
+        "backend.services.image_verification_service.get_qwen7b_analyzer",
+        lambda: MockVisionAnalyzer(analysis.model_copy(update={"model_name": "qwen7b-mock"})),
+    )
 
     response = await _post_multipart(
         data={"verification_type": "study"},
@@ -126,6 +132,10 @@ async def test_exercise_multipart_uses_activity_type_and_mock_analyzer(monkeypat
     monkeypatch.setattr(
         "backend.services.image_verification_service.get_default_vision_analyzer",
         lambda: MockVisionAnalyzer(analysis),
+    )
+    monkeypatch.setattr(
+        "backend.services.image_verification_service.get_qwen7b_analyzer",
+        lambda: MockVisionAnalyzer(analysis.model_copy(update={"model_name": "qwen7b-mock"})),
     )
 
     response = await _post_multipart(

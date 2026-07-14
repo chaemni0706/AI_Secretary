@@ -112,6 +112,22 @@ class VisionAnalysis(BaseModel):
     study_visual_evidence: list[StudyVisualEvidence] = Field(default_factory=list)
     water_visual_evidence: list[WaterVisualEvidence] = Field(default_factory=list)
     exercise_visual_evidence: list[ExerciseVisualEvidence] = Field(default_factory=list)
+    # --- Qwen7B fallback contract additions (backend/services/qwen_evidence_parser.py) ---
+    # Explicit, model-reported blockers -- distinct from the task evidence enums above so the
+    # backend FP guard (image_verification_fp_guard.py) can veto on them without re-deriving
+    # blocker semantics from the positive-evidence lists. Never used by Rule Engine scoring
+    # itself (that still reads only the *_visual_evidence fields, unchanged).
+    blockers: list[str] = Field(default_factory=list)
+    # Model's own confidence signal. "low" = confident; anything else routes water `verified`
+    # to review_required instead of the old blanket per-task policy (image_verification_service.py).
+    uncertainty: Literal["low", "medium", "high"] = "low"
+    scene_complexity: Literal["simple", "moderate", "complex"] = "simple"
+    # Diagnostics only (never read by Rule Engine): which model produced this analysis and
+    # what the evidence parser had to do to get here. Surfaced in logs/response for requirement
+    # "parser_status/model_name must be visible", never hidden on failure.
+    model_name: str = ""
+    parser_version: str = ""
+    parser_status: Literal["clean", "repaired", "failed", "not_applicable"] = "not_applicable"
 
 
 class LocationInput(BaseModel):
@@ -161,6 +177,14 @@ class ImageVerificationData(BaseModel):
         description="verified 이지만 비시각 맥락 확인이 필요해 자동 확정 대신 secondary_review 로 보내야 하는지",
     )
     review_reason: str = Field(default="", description="review 사유(예: water_non_visual_context_risk)")
+    # --- Qwen7B fallback pipeline diagnostics (image_verification_service.py) ---
+    # Always populated (never silently blank on failure) so callers/logs can see exactly which
+    # engine produced the final result and why, per this task's logging requirement.
+    engine_used: str = Field(
+        default="", description="smol_quality_gate | smol_strong_blocker | smol_plus_qwen7b | fail_safe"
+    )
+    fallback_reason: str = Field(default="", description="why Qwen7B fallback did/didn't run")
+    guard_reason: str = Field(default="", description="backend FP guard veto reason, if any")
 
 
 class ImageVerificationResponse(BaseModel):

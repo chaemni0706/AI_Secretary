@@ -1,12 +1,14 @@
-"""backend 로컬 VLM analyzer 연결 + study fallback 재판정 테스트 (경량, 모델 로딩 없음).
+"""backend 로컬 VLM analyzer 연결 + Qwen7B 범용 fallback 재판정 테스트 (경량, 모델 로딩 없음).
 
 - 기본 provider 가 OpenAI 가 아니라 로컬(smolvlm)로 선택되는지
 - 어댑터 정규화 dict → VisionAnalysis 변환(evidence 유지 / object allowed 필터 / _raw_text 제거)
-- _should_study_fallback 판단 로직
-- verify_image_upload 의 study fallback 재판정 경로(1차 근거 부족 → fallback 결과로 Rule Engine 재판정)
+- _smol_immediate_stop 판단 로직(오늘 production patch: study 전용 → 3-task 공용 라우팅으로 교체)
+- verify_image_upload 의 fallback 재판정 경로(Smol 근거 부족/불확실 → Qwen7B 결과로 Rule Engine 재판정)
 
-torch/모델 없이 동작: 1차 provider(로컬)는 이 환경에서 available()=False → unusable 로 안전 처리되고,
-fallback analyzer 는 테스트가 MockVisionAnalyzer 로 주입한다.
+torch/모델 없이 동작: 1차 provider(로컬)는 이 환경에서 available()=False → unusable 로 안전 처리되고
+("Local VLM 'smolvlm' is not loaded." 는 infra failure 마커에 해당해 fallback 을 강제 트리거한다),
+fallback analyzer 는 테스트가 MockVisionAnalyzer 로 주입한다(fallback_analyzer= 또는 하위호환
+study_fallback_analyzer=).
 """
 
 from __future__ import annotations
@@ -79,42 +81,51 @@ def test_local_analyzer_unavailable_returns_unusable_no_openai_message():
     assert not any("OpenAI API key" in i for i in va.quality.issues)
 
 
-# --- _should_study_fallback 판단 로직 ---
+# --- _smol_immediate_stop 판단 로직 (3-task 공용 라우팅) ---
 
-from backend.services.image_verification_service import _should_study_fallback, verify_image_upload
+from backend.services.image_verification_service import _smol_immediate_stop, verify_image_upload
 from backend.database.schema.image_verification_schema import ImageVerificationData, RuleEvidence, RuleScoreBreakdown
 
 
-def _mk_result(result, codes, study_ev):
+def _mk_result(task, result, codes, study_ev=None, quality_usable=True, quality_issues=None):
     data = ImageVerificationData(
-        verification_type="study", result=result, score=0, mandatory_passed=False,
+        verification_type=task, result=result, score=0, mandatory_passed=False,
         score_breakdown=RuleScoreBreakdown(),
-        vlm_analysis=VisionAnalysis(study_visual_evidence=study_ev),
+        vlm_analysis=VisionAnalysis(
+            study_visual_evidence=study_ev or [],
+            quality=ImageQuality(usable=quality_usable, issues=quality_issues or []),
+        ),
         rule_evidence=[RuleEvidence(code=c, message="") for c in codes],
     )
-    return data, data.vlm_analysis
+    return data
 
 
-@pytest.mark.parametrize("result,codes,study_ev,expected", [
-    ("verified", [], ["open_textbook"], False),                       # 통과 → fallback 불필요
-    ("verified", [], ["open_textbook", "handwritten_notes"], False),  # 통과 → fallback 불필요
-    ("retake_required", ["study_pattern_missing"], [], True),         # 근거 없음
-    ("retake_required", ["quality_unusable"], ["open_textbook"], True),   # 트리거 코드
-    ("retake_required", ["study_priority:uncertain_screen_content"], ["uncertain_screen_content"], True),
-    # 근거가 2개 미만이면(예: handwritten_notes 1개만) 비트리거 코드여도 상위 모델로 재확인
-    ("retake_required", ["gps"], ["open_textbook"], True),
-    ("rejected", ["study_pattern_missing"], ["open_textbook"], True),
-    # 근거 2개 이상 + 비트리거 코드 → fallback 안함(불필요한 Qwen 호출 방지)
-    ("rejected", ["gps"], ["open_textbook", "handwritten_notes"], False),
-    ("retake_required", ["gps"], ["open_textbook", "lecture_video"], False),
+@pytest.mark.parametrize("task,result,codes,quality_usable,quality_issues,expected_stop", [
+    # verified 는 절대 즉시-정지 대상이 아님 -- Smol 단독 verified 는 항상 Qwen7B 로 escalate 된다.
+    ("study", "verified", [], True, [], False),
+    ("water", "verified", [], True, [], False),
+    # 명확한 strong blocker -> 즉시 정지(추가 Qwen7B 호출 불필요)
+    ("water", "rejected", ["water_priority:empty_container"], True, [], True),
+    ("study", "rejected", ["study_priority:gaming_content"], True, [], True),
+    ("exercise", "rejected", ["exercise_priority:unrelated_environment"], True, [], True),
+    # 근거 부족/불확실(strong blocker 아님) -> escalate(정지 아님)
+    ("study", "retake_required", ["study_pattern_missing"], True, [], False),
+    ("water", "retake_required", ["water_pattern_missing"], True, [], False),
+    # 진짜 이미지 품질 문제(quality_unusable, infra 실패 아님) -> 즉시 정지
+    ("study", "retake_required", ["quality_unusable"], False, ["image is blurry"], True),
+    # quality.usable=False 지만 "모델 미로딩" 같은 infra 실패 마커 -> 정지 아님, escalate 되어야 함
+    ("study", "retake_required", ["quality_unusable"], False, ["Local VLM 'smolvlm' is not loaded."], False),
+    ("water", "retake_required", ["quality_unusable"], False, ["Qwen7B inference error: RuntimeError"], False),
 ])
-def test_should_study_fallback(result, codes, study_ev, expected):
-    res, analysis = _mk_result(result, codes, study_ev)
-    assert _should_study_fallback(res, analysis) is expected
+def test_smol_immediate_stop(task, result, codes, quality_usable, quality_issues, expected_stop):
+    data = _mk_result(task, result, codes, quality_usable=quality_usable, quality_issues=quality_issues)
+    stop, _reason = _smol_immediate_stop(task, data)
+    assert stop is expected_stop
 
 
-def test_verify_image_upload_study_fallback_reevaluates():
-    """1차(기본 로컬)가 근거 부족이면 주입된 fallback 결과로 Rule Engine 재판정한다."""
+def test_verify_image_upload_fallback_reevaluates():
+    """Smol(기본 로컬, 이 환경에서는 미로딩=infra 실패)이 근거 부족/미로딩이면
+    주입된 fallback(Qwen7B 대역)의 evidence 와 병합해 Rule Engine 이 재판정한다."""
     if not STUDY_IMG.exists():
         pytest.skip("study fixture 이미지 없음")
     strong = VisionAnalysis(
@@ -123,6 +134,28 @@ def test_verify_image_upload_study_fallback_reevaluates():
                  ImageObjectObservation(label="pen", confidence=0.7),
                  ImageObjectObservation(label="desk", confidence=0.7)],
         study_visual_evidence=["open_textbook", "handwritten_notes", "problem_solving_material"],
+        model_name="qwen7b-mock",
+    )
+    fallback = MockVisionAnalyzer(strong)
+    with STUDY_IMG.open("rb") as f:
+        data = verify_image_upload(
+            f, filename="study_02.png", content_type="image/png",
+            verification_type="study", analyzer=None, fallback_analyzer=fallback,
+        )
+    # fallback 의 evidence 가 병합되어 채워져야 한다(OpenAI 메시지 없음).
+    assert data.vlm_analysis.study_visual_evidence  # 비어있지 않음
+    assert not any("OpenAI API key" in i for i in data.vlm_analysis.quality.issues)
+    assert data.engine_used == "smol_plus_qwen7b"
+
+
+def test_verify_image_upload_fallback_reevaluates_backward_compat_param_name():
+    """하위호환: study_fallback_analyzer= 이름으로도 여전히 동작한다."""
+    if not STUDY_IMG.exists():
+        pytest.skip("study fixture 이미지 없음")
+    strong = VisionAnalysis(
+        quality=ImageQuality(usable=True),
+        study_visual_evidence=["open_textbook", "handwritten_notes"],
+        model_name="qwen7b-mock",
     )
     fallback = MockVisionAnalyzer(strong)
     with STUDY_IMG.open("rb") as f:
@@ -130,6 +163,4 @@ def test_verify_image_upload_study_fallback_reevaluates():
             f, filename="study_02.png", content_type="image/png",
             verification_type="study", analyzer=None, study_fallback_analyzer=fallback,
         )
-    # fallback 의 VisionAnalysis 로 재판정되어 study 근거가 채워져야 한다(OpenAI 메시지 없음).
-    assert data.vlm_analysis.study_visual_evidence  # 비어있지 않음
-    assert not any("OpenAI API key" in i for i in data.vlm_analysis.quality.issues)
+    assert data.vlm_analysis.study_visual_evidence

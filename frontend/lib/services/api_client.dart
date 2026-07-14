@@ -34,12 +34,17 @@ class ApiException implements Exception {
   final int? statusCode;
   final String? requestUri;
   final dynamic responseBody;
+  // 서버가 아직 처리 중(예: 무거운 VLM 추론)이라 응답이 늦어 클라이언트 타임아웃에
+  // 걸린 경우인지 여부. 연결 거부/오프라인 등 다른 네트워크 오류와 구분해, UI가
+  // "이미지가 거절됐다"가 아니라 "서버가 아직 분석 중일 수 있다"고 정직하게 안내하게 한다.
+  final bool isTimeout;
 
   ApiException(
     this.message, {
     this.statusCode,
     this.requestUri,
     this.responseBody,
+    this.isTimeout = false,
   });
 
   /// 서버에 도달하지 못한 오류(연결 거부/타임아웃/오프라인 등)인지 여부.
@@ -191,17 +196,30 @@ class ApiClient {
         options: Options(
           contentType: 'multipart/form-data',
           // 이미지 전송 + 판정 시간을 고려해 여유 있게.
+          // 주의(Phase 12): 이 60초는 "가짜 300초짜리 fp32 reference 엔진을 가리기 위해"
+          // 늘린 값이 아니다 -- 그 반대로, 이 값을 300초+ 로 늘려서 느린 백엔드를 숨기지
+          // 않기로 한 명시적 결정이다. reference_fp32 Qwen7B 엔진(~300-320초/call)은 이
+          // 타임아웃보다 근본적으로 느리므로, 그 경로를 타는 요청은 여기서 정직하게
+          // 타임아웃 처리된다 -- 원인은 이미지가 아니라 서버 쪽 모델 지연이라는 것을
+          // isTimeout 플래그로 UI에 전달한다. 실제 해법은 이 값을 늘리는 게 아니라
+          // (qwen_recovery/qwen7b_quantized_engine_report.md) 더 빠른 엔진/다른 GPU다.
           sendTimeout: const Duration(seconds: 60),
           receiveTimeout: const Duration(seconds: 60),
         ),
       );
       return _unwrap(res);
     } on DioException catch (e) {
+      final isTimeout = e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionTimeout;
       throw ApiException(
-        '네트워크 오류: ${e.message ?? e.type.name}',
+        isTimeout
+            ? '서버 응답이 지연되고 있어요. 모델이 아직 이미지를 분석 중일 수 있습니다.'
+            : '네트워크 오류: ${e.message ?? e.type.name}',
         statusCode: e.response?.statusCode,
         requestUri: e.requestOptions.uri.toString(),
         responseBody: e.response?.data,
+        isTimeout: isTimeout,
       );
     }
   }

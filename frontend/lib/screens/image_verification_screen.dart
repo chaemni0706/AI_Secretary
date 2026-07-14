@@ -45,8 +45,15 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
 
   File? _image;
   bool _loading = false;
+  // 버튼 disable(setState 반영)과 별개로, 연타로 인한 이중 제출을 막기 위한 즉시-동기 가드.
+  // (_loading 은 setState 이후에만 true가 되므로, 그 사이의 두 번째 탭을 막지 못할 수 있다.)
+  bool _submitInFlight = false;
+  VerificationStage? _stage;
   ImageVerificationResult? _result;
   String? _error;
+  // 타임아웃(서버가 아직 무거운 분석 중일 가능성)과, 서버가 명확히 응답한 거절을 구분해
+  // 사용자에게 다른 안내를 보여주기 위한 플래그.
+  bool _errorIsTimeout = false;
 
   bool get _isExercise => _verificationType == 'exercise';
 
@@ -83,14 +90,20 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
   }
 
   Future<void> _submit() async {
+    // 동기 가드: setState 가 반영되기 전 짧은 창(연타)에도 두 번째 제출이 새지 않도록
+    // _loading(비동기 반영) 과 별개로 즉시 체크한다.
+    if (_submitInFlight) return;
     final image = _image;
     if (image == null) {
       setState(() => _error = '먼저 사진을 촬영하거나 선택해 주세요.');
       return;
     }
+    _submitInFlight = true;
     setState(() {
       _loading = true;
+      _stage = VerificationStage.localAnalysis;
       _error = null;
+      _errorIsTimeout = false;
       _result = null;
     });
     try {
@@ -100,17 +113,29 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
         imageFile: image,
         task: _verificationType,
         activityType: _isExercise ? _activityType : null,
+        onStage: (stage) {
+          if (mounted) setState(() => _stage = stage);
+        },
       );
       if (!mounted) return;
       setState(() => _result = result);
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message);
+      setState(() {
+        // 타임아웃은 "이미지가 거절됐다"가 아니라 "서버가 아직 분석 중일 수 있다"는
+        // 뜻이므로, 모델 지연 상태와 이미지 거절을 구분해 안내한다.
+        _error = e.message;
+        _errorIsTimeout = e.isTimeout;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = '요청 중 오류가 발생했습니다: $e');
     } finally {
-      if (mounted) setState(() => _loading = false);
+      _submitInFlight = false;
+      if (mounted) setState(() {
+        _loading = false;
+        _stage = null;
+      });
     }
   }
 
@@ -244,6 +269,17 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
     );
   }
 
+  // 로컬 1차 분석 / 서버 검증 단계를 사용자가 구분해 볼 수 있도록 문구를 분리한다
+  // (UI 멈춤처럼 보이지 않게, 지금 뭘 하고 있는지 항상 알 수 있게 하기 위함).
+  String get _submitLabel {
+    if (!_loading) return '인증 요청';
+    return switch (_stage) {
+      VerificationStage.localAnalysis => '기기에서 1차 분석 중...',
+      VerificationStage.serverVerification => '서버에서 검증 중... (시간이 걸릴 수 있어요)',
+      null => '인증 중...',
+    };
+  }
+
   Widget _submitButton() {
     return SizedBox(
       width: double.infinity,
@@ -252,21 +288,38 @@ class _ImageVerificationScreenState extends State<ImageVerificationScreen> {
         icon: _loading
             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.verified_outlined),
-        label: Text(_loading ? '인증 중...' : '인증 요청'),
+        label: Text(_submitLabel),
       ),
     );
   }
 
   Widget _errorCard(String msg) {
+    // 타임아웃(서버가 아직 무거운 분석 중일 수 있음)은 "이미지가 잘못됐다"는 거절과
+    // 다른 의미이므로, 색/아이콘/추가 안내 문구를 구분해서 보여준다.
+    final color = _errorIsTimeout ? const Color(0xFFEF6C00) : const Color(0xFFC62828);
+    final icon = _errorIsTimeout ? Icons.hourglass_top : Icons.error_outline;
     return Card(
-      color: const Color(0xFFFDECEC),
+      color: _errorIsTimeout ? const Color(0xFFFFF3E0) : const Color(0xFFFDECEC),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.error_outline, color: Color(0xFFC62828)),
-            const SizedBox(width: 10),
-            Expanded(child: Text(msg, style: const TextStyle(color: Color(0xFFC62828)))),
+            Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: 10),
+                Expanded(child: Text(msg, style: TextStyle(color: color))),
+              ],
+            ),
+            if (_errorIsTimeout) ...[
+              const SizedBox(height: 6),
+              Text(
+                '사진이 거절된 것이 아니라, 서버 모델 분석이 오래 걸려 응답 대기 시간을 초과했어요. '
+                '잠시 후 같은 사진으로 다시 시도해 주세요.',
+                style: TextStyle(fontSize: 12, color: color),
+              ),
+            ],
           ],
         ),
       ),

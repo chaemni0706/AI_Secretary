@@ -1,0 +1,10 @@
+image_id,task,gt_label,final_result,guard_reason,evidence
+water_004,water,FAIL,verified,,"""visible_water;filled_container"""
+intake_009,water,FAIL,verified,,"""visible_water;filled_container"""
+intake_010,water,FAIL,verified,,"""visible_water;filled_container"""
+intake_032,study,FAIL,verified,,"""handwritten_notes;open_textbook"""
+water_009,water,FAIL,verified,,"""visible_water;filled_container"""
+study_011,study,FAIL,verified,,"""code_editor;open_textbook;uncertain_screen_content"""
+water_020,water,FAIL,verified,,"""visible_water;filled_container"""
+exercise_012,study,BORDERLINE,verified,,"""highlighted_text;open_textbook"""
+water_035,water,FAIL,verified,,"""visible_water;filled_container"""

@@ -22,8 +22,21 @@ from backend.database.schema.image_verification_schema import (
     WakeupSessionCreateRequest,
 )
 from backend.services import verification_orchestrator as orchestrator
+from backend.services.qwen7b_vision_analyzer import get_qwen7b_analyzer
 
 router = APIRouter(prefix="/verification", tags=["verification"])
+
+
+@router.get(
+    "/qwen7b/health",
+    summary="Qwen2.5-VL-7B fallback engine 상태 확인 (model identity + loaded 여부)",
+)
+async def qwen7b_health():
+    """실제 model_id/loaded/device 를 반환한다 -- 로딩 실패 시에도 loaded=false 로 정직하게 보고하며,
+    절대 loaded=true 를 위장하지 않는다. 이 엔드포인트가 호출되지 않는 동안 모델은 로드되지 않는다
+    (지연 로딩; 최초 verify 요청 또는 이 health check 호출 시 1회 로드)."""
+    status = get_qwen7b_analyzer().health_check()
+    return success_response(message="Qwen7B health check", data=status)
 
 
 @router.post(

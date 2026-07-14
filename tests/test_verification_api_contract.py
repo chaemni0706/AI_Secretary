@@ -22,6 +22,9 @@ from backend.database.schema.image_verification_schema import (
 from backend.services.vision_analyzer import MockVisionAnalyzer
 
 ANALYZER_PATH = "backend.services.image_verification_service.get_default_vision_analyzer"
+# 오늘 production patch: Smol 단독 verified 없음 -- 항상 Qwen7B 로 escalate 되므로 "verified" 계약
+# 테스트는 Qwen7B 자리에도 동등 evidence mock 을 주입해야 한다(실제 모델 미호출, 라우팅/계약만 검증).
+QWEN7B_PATH = "backend.services.image_verification_service.get_qwen7b_analyzer"
 
 
 def _img(fmt="JPEG"):
@@ -83,6 +86,8 @@ def _envelope(body, *, success=True):
 @pytest.mark.anyio
 async def test_water_verified_contract(monkeypatch):
     monkeypatch.setattr(ANALYZER_PATH, lambda: MockVisionAnalyzer(WATER_PASS))
+    monkeypatch.setattr(QWEN7B_PATH, lambda: MockVisionAnalyzer(
+        WATER_PASS.model_copy(update={"model_name": "qwen7b-mock"})))
     r = await _post("/api/v1/verification/image/water",
                     files={"file": ("w.jpg", _img(), "image/jpeg")})
     assert r.status_code == 200
@@ -108,6 +113,8 @@ async def test_water_rejected_contract(monkeypatch):
 @pytest.mark.anyio
 async def test_exercise_verified_contract(monkeypatch):
     monkeypatch.setattr(ANALYZER_PATH, lambda: MockVisionAnalyzer(GYM_PASS))
+    monkeypatch.setattr(QWEN7B_PATH, lambda: MockVisionAnalyzer(
+        GYM_PASS.model_copy(update={"model_name": "qwen7b-mock"})))
     r = await _post("/api/v1/verification/image/exercise",
                     data={"activity_type": "gym"},
                     files={"file": ("e.jpg", _img(), "image/jpeg")})
@@ -129,6 +136,8 @@ async def test_exercise_missing_activity_type_422():
 @pytest.mark.anyio
 async def test_study_verified_contract(monkeypatch):
     monkeypatch.setattr(ANALYZER_PATH, lambda: MockVisionAnalyzer(STUDY_PASS))
+    monkeypatch.setattr(QWEN7B_PATH, lambda: MockVisionAnalyzer(
+        STUDY_PASS.model_copy(update={"model_name": "qwen7b-mock"})))
     r = await _post("/api/v1/verification/image/study",
                     files={"file": ("s.jpg", _img(), "image/jpeg")})
     assert r.status_code == 200

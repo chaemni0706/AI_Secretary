@@ -85,16 +85,32 @@ void main() {
     expect(calls, ['study']); // 서버가 호출됨
   });
 
-  test('water 서버 verified → review_required(재촬영), 로컬 accept 아님', () async {
+  test('water 서버 verified + review_required=true → 재촬영, 로컬 accept 아님', () async {
+    // 서버가 evidence/uncertainty 기반으로 review 가 필요하다고 명시한 경우.
     final calls = <String>[];
     final svc = ImageVerificationService(
       smol: const _FakeSmol(blocker: null),
-      api: _FakeApi(_server('water', 'verified'), calls),
+      api: _FakeApi(_server('water', 'verified', review: true), calls),
     );
     final r = await svc.verify(imageFile: img, task: 'water');
-    expect(r.reviewRequired, isTrue); // water verified → review(재촬영)
+    expect(r.reviewRequired, isTrue);
     expect(r.needsRetake, isTrue);
     expect(r.isVerified, isFalse);
+    expect(calls, ['water']);
+  });
+
+  test('water 서버 verified + review_required=false(명확한 clear water) → review 없이 verified', () async {
+    // Phase 12 이전의 클라이언트 강제 override(water verified 는 항상 review)는 제거되었다 --
+    // 서버가 명확한 clear water 라고 판단해 review_required=false 를 준 값을 그대로 신뢰한다.
+    final calls = <String>[];
+    final svc = ImageVerificationService(
+      smol: const _FakeSmol(blocker: null),
+      api: _FakeApi(_server('water', 'verified', review: false), calls),
+    );
+    final r = await svc.verify(imageFile: img, task: 'water');
+    expect(r.reviewRequired, isFalse);
+    expect(r.needsRetake, isFalse);
+    expect(r.isVerified, isTrue);
     expect(calls, ['water']);
   });
 
@@ -108,5 +124,34 @@ void main() {
     expect(r.engineUsed, 'server_fallback');
     expect(r.finalResult, 'rejected');
     expect(calls, ['exercise']);
+  });
+
+  test('onStage 콜백이 로컬 분석 → 서버 검증 순서로 호출됨 (UI 진행상태 표시용)', () async {
+    final calls = <String>[];
+    final stages = <VerificationStage>[];
+    final svc = ImageVerificationService(
+      smol: const _FakeSmol(blocker: null),
+      api: _FakeApi(_server('study', 'verified'), calls),
+    );
+    await svc.verify(imageFile: img, task: 'study', onStage: stages.add);
+    expect(stages, [VerificationStage.localAnalysis, VerificationStage.serverVerification]);
+  });
+
+  test('Smol blocker 감지 시 onStage 는 로컬 단계만 호출되고 서버 단계는 호출 안 됨', () async {
+    final calls = <String>[];
+    final stages = <VerificationStage>[];
+    final svc = ImageVerificationService(
+      smol: const _FakeSmol(blocker: {
+        'local_blocker_detected': true,
+        'blockers': ['non_water_beverage'],
+        'evidence_codes': ['non_water_beverage'],
+        'reason': 'water: colored/non-water beverage blocker',
+        'generated_text': 'Orange juice.',
+      }),
+      api: _FakeApi(_server('water', 'verified'), calls),
+    );
+    await svc.verify(imageFile: img, task: 'water', onStage: stages.add);
+    expect(stages, [VerificationStage.localAnalysis]);
+    expect(calls, isEmpty);
   });
 }

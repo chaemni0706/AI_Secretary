@@ -664,3 +664,65 @@ def test_wake_up_unusable_quality_requires_retake():
         "wake_up", _wake_up_analysis(["person", "window"], usable=False), ImageVerificationContext()
     )
     assert data.result == "retake_required"
+
+
+# --- Phase 11.F: study strong-positive combo bonus (not a threshold change) ---
+
+def test_study_single_weak_evidence_still_retake_required():
+    """Regression guard for the real study_002.jpg case found in Phase 11 E2E
+    testing: open_textbook alone + one minor object (35pts) must NOT verify --
+    this is a genuine single-evidence case, not something the combo bonus
+    should paper over."""
+    analysis = VisionAnalysis(
+        objects=[ImageObjectObservation(label="pen", confidence=0.7)],
+        study_visual_evidence=["open_textbook"],
+    )
+    data = evaluate_image_verification("study", analysis, ImageVerificationContext())
+    assert data.result == "retake_required"
+    assert not any(e.code.startswith("study_strong_combo") for e in data.rule_evidence)
+
+
+def test_study_strong_combo_textbook_plus_handwritten_notes_verifies():
+    """Two independent real study signals together (25+20=45pts, under the
+    50pt threshold on raw scores alone) should verify via the combo bonus --
+    without the bonus this would incorrectly stay retake_required despite
+    genuinely strong evidence."""
+    analysis = VisionAnalysis(
+        study_visual_evidence=["open_textbook", "handwritten_notes"],
+    )
+    data = evaluate_image_verification("study", analysis, ImageVerificationContext())
+    assert data.result == "verified"
+    assert any(e.code == "study_strong_combo:textbook_plus_handwritten_notes" for e in data.rule_evidence)
+
+
+def test_study_strong_combo_does_not_override_entertainment_blocker():
+    """A strong-positive combo must never override a priority rejection --
+    entertainment content still wins regardless of the combo bonus."""
+    analysis = VisionAnalysis(
+        objects=[ImageObjectObservation(label="monitor", confidence=0.7)],
+        study_visual_evidence=["open_textbook", "handwritten_notes", "gaming_content"],
+    )
+    data = evaluate_image_verification("study", analysis, ImageVerificationContext())
+    assert data.result == "rejected"
+
+
+def test_study_strong_combo_workbook_plus_problem_solving_verifies():
+    analysis = VisionAnalysis(
+        study_visual_evidence=["open_workbook", "problem_solving_material"],
+    )
+    data = evaluate_image_verification("study", analysis, ImageVerificationContext())
+    assert data.result == "verified"
+
+
+def test_study_combo_bonus_never_exceeds_verified_threshold():
+    """Even with many strong signals already scoring well above the
+    threshold on their own, the combo bonus must not push score in a way
+    that breaks the 0-100 clamp or double-counts."""
+    analysis = VisionAnalysis(
+        objects=[ImageObjectObservation(label="desk", confidence=0.7),
+                 ImageObjectObservation(label="laptop", confidence=0.7)],
+        study_visual_evidence=["open_textbook", "handwritten_notes", "code_editor"],
+    )
+    data = evaluate_image_verification("study", analysis, ImageVerificationContext())
+    assert data.result == "verified"
+    assert data.score <= 100

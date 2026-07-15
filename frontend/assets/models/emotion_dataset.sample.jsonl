@@ -1,0 +1,12 @@
+{"text": "오늘 아무 일도 없었어", "label": "neutral"}
+{"text": "점심 뭐 먹을지 고민이야", "label": "neutral"}
+{"text": "요즘 너무 지치고 피곤해", "label": "tired"}
+{"text": "번아웃이 온 것 같아", "label": "tired"}
+{"text": "내일 발표 때문에 너무 불안해", "label": "anxious"}
+{"text": "자꾸 초조하고 걱정돼", "label": "anxious"}
+{"text": "진짜 짜증나고 답답해", "label": "angry"}
+{"text": "계속 화가 나", "label": "angry"}
+{"text": "요즘 마음이 자꾸 슬퍼", "label": "sad"}
+{"text": "혼자인 것 같아 외로워", "label": "sad"}
+{"text": "할 일이 너무 많아서 못 하겠어", "label": "burden_high"}
+{"text": "다 미루고 싶고 시간이 없어", "label": "burden_high"}

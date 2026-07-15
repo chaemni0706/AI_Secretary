@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "reservation_type_aliases": {
+    "hospital": ["병원", "진료", "치과", "의원", "클리닉", "검진"],
+    "beauty": ["미용실", "커트", "염색", "펌", "네일", "시술", "헤어"],
+    "restaurant": ["식당", "음식점", "레스토랑", "카페", "점심", "저녁", "회식"],
+    "meeting": ["회의", "미팅", "면담", "상담"],
+    "etc": []
+  },
+  "action_type_aliases": {
+    "cancel_reservation": ["취소", "못 갈", "못 가", "방문 어렵", "방문이 어렵"],
+    "change_reservation": ["변경", "바꾸", "바꿀", "미루", "앞당기", "조정"],
+    "confirm_reservation": ["확정", "그 시간으로", "그때로", "진행 부탁", "확정한다"],
+    "check_reservation": ["되어 있는지", "되어있는지", "예약됐", "예약 되어", "예약돼"],
+    "ask_availability": ["예약 가능", "가능한지", "자리 있", "시간 있", "예약 문의", "물어봐", "문의"]
+  },
+  "default_action_type": "ask_availability",
+  "default_purpose": {
+    "hospital": "진료",
+    "beauty": "커트 또는 시술",
+    "restaurant": "",
+    "meeting": "",
+    "etc": ""
+  },
+  "templates": [
+    {
+      "action_type": "ask_availability",
+      "reservation_type": "restaurant",
+      "required_fields": ["when_raw", "people"],
+      "main": "안녕하세요. {when_e} {subject}{people_text}예약이 가능한지 문의드립니다.",
+      "alternatives": [
+        "안녕하세요. {ampm_slot}에 {people_text}예약이 가능한 자리가 있는지 문의드립니다.",
+        "안녕하세요. {when} 예약 가능 여부와 가능 인원 확인 부탁드립니다."
+      ]
+    },
+    {
+      "action_type": "ask_availability",
+      "reservation_type": "hospital",
+      "required_fields": ["when_raw", "pword"],
+      "main": "안녕하세요. {when_jjeum} {pword} 예약이 가능한지 문의드립니다. 가능한 시간이 있을까요?",
+      "alternatives": [
+        "안녕하세요. {ampm_slot}에 {pword} 예약이 가능한 시간이 있는지 문의드립니다.",
+        "안녕하세요. {when} {pword} 예약 가능 여부를 확인 부탁드립니다."
+      ]
+    },
+    {
+      "action_type": "ask_availability",
+      "reservation_type": "beauty",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. {when_jjeum} {pword} 예약 가능한 시간이 있을까요?",
+      "alternatives": [
+        "안녕하세요. {ampm_slot}에 {pword} 예약이 가능한지 문의드립니다.",
+        "안녕하세요. {when} 미용실 예약 가능 여부를 확인 부탁드립니다."
+      ]
+    },
+    {
+      "action_type": "ask_availability",
+      "reservation_type": "meeting",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. {when_e} 회의 일정 조율이 가능할지 확인 부탁드립니다.",
+      "alternatives": [
+        "안녕하세요. {ampm_slot} 중으로 회의 일정을 조율하고 싶은데 가능한 시간을 알려주실 수 있을까요?",
+        "안녕하세요. {when} 회의 진행 가능 여부를 확인 부탁드립니다."
+      ]
+    },
+    {
+      "action_type": "ask_availability",
+      "reservation_type": "etc",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. {when_jjeum} 예약 가능 여부 문의드립니다.",
+      "alternatives": [
+        "안녕하세요. {ampm_slot}에 예약이 가능한지 문의드립니다.",
+        "안녕하세요. {when} 예약 가능 여부 확인 부탁드립니다."
+      ]
+    },
+
+    {
+      "action_type": "confirm_reservation",
+      "reservation_type": "etc",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. 안내해주신 {when}으로 예약 확정 부탁드립니다. 감사합니다.",
+      "alternatives": [
+        "안녕하세요. {when}으로 예약 진행 부탁드립니다. 확인 후 회신 주시면 감사하겠습니다.",
+        "안녕하세요. 말씀해주신 {when} 시간으로 예약 확정하겠습니다. 감사합니다."
+      ]
+    },
+    {
+      "action_type": "change_reservation",
+      "reservation_type": "etc",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. 기존 예약을 {when}으로 변경 가능할지 문의드립니다. 가능하다면 변경 부탁드립니다. 감사합니다.",
+      "alternatives": [
+        "안녕하세요. 예약 시간을 {when}으로 조정할 수 있을지 확인 부탁드립니다.",
+        "안녕하세요. {when}으로 예약 변경이 가능한지 문의드립니다. 감사합니다."
+      ]
+    },
+    {
+      "action_type": "cancel_reservation",
+      "reservation_type": "etc",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. 부득이하게 {when} 예약 취소를 요청드립니다. 번거롭게 해드려 죄송합니다. 감사합니다.",
+      "alternatives": [
+        "안녕하세요. 사정이 생겨 {when} 예약을 취소하고자 합니다. 양해 부탁드립니다.",
+        "안녕하세요. {when} 예약 취소 부탁드립니다. 죄송합니다."
+      ]
+    },
+    {
+      "action_type": "check_reservation",
+      "reservation_type": "etc",
+      "required_fields": ["when_raw"],
+      "main": "안녕하세요. {when_e} 예약이 되어 있는지 확인 부탁드립니다. 감사합니다.",
+      "alternatives": [
+        "안녕하세요. {when} 예약이 정상적으로 잡혀 있는지 확인 부탁드립니다.",
+        "안녕하세요. 제 예약이 {when}으로 되어 있는지 확인해 주시면 감사하겠습니다."
+      ]
+    }
+  ],
+  "llm_fallback_rules": [
+    {
+      "condition": "tone_style_constraint",
+      "description": "사용자가 구체적인 tone/style constraint를 요구한 경우",
+      "example": "너무 딱딱하지 않게, 예의 있게 써줘"
+    },
+    {
+      "condition": "apology_or_special_context",
+      "description": "요청에 apology, explanation, special context가 포함된 경우",
+      "example": "지난번에 취소해서 죄송하다는 말도 넣어줘"
+    },
+    {
+      "condition": "complex_slot_combination",
+      "description": "slot 조합이 복잡하여 deterministic template만으로 자연스러운 문장 생성이 어려운 경우",
+      "example": "조건이 여러 개라 문장이 어색한 경우"
+    }
+  ]
+}

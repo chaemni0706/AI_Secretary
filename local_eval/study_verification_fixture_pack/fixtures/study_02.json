@@ -1,0 +1,45 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study_desk",
+  "objects": [
+    {
+      "label": "book",
+      "confidence": 0.99,
+      "evidence": "여러 권의 펼쳐진 교재"
+    },
+    {
+      "label": "workbook",
+      "confidence": 0.98,
+      "evidence": "형광펜 표시가 있는 문제집"
+    },
+    {
+      "label": "notebook",
+      "confidence": 0.96,
+      "evidence": "필기가 많은 노트"
+    },
+    {
+      "label": "pen",
+      "confidence": 0.98,
+      "evidence": "필기구가 보임"
+    },
+    {
+      "label": "desk",
+      "confidence": 0.99,
+      "evidence": "학습 자료가 놓인 책상"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "highlighted_text"
+  ],
+  "water_visual_evidence": []
+}

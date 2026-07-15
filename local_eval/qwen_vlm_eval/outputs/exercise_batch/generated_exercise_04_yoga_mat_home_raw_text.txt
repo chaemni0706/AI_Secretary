@@ -1,0 +1,40 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "home_workout",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "exercise mat"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A blue exercise mat is placed on a light-colored surface."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "description": "A blue rectangular object on a light-colored surface."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "description": "The background is plain and does not contain any other relevant objects or activities."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "description": "The object appears to be an exercise mat based on its shape and color."
+    }
+  ],
+  "text_observed": [
+    "home workout: exercise mat"
+  ],
+  "confidence": 0.95
+}
+```

@@ -1,0 +1,32 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "gaming_cafe",
+  "objects": [
+    {
+      "label": "monitor",
+      "confidence": 0.99,
+      "evidence": "게임 화면"
+    },
+    {
+      "label": "keyboard",
+      "confidence": 0.98,
+      "evidence": "키보드"
+    },
+    {
+      "label": "desk",
+      "confidence": 0.98,
+      "evidence": "PC방 책상"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "gaming_content"
+  ],
+  "water_visual_evidence": []
+}

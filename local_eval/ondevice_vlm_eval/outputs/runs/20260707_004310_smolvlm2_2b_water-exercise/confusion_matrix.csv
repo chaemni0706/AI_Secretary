@@ -1,0 +1,3 @@
+model_name,verification_type,tp,tn,fp,fn
+SmolVLM2-2.2B-Instruct,water,11,7,0,0
+SmolVLM2-2.2B-Instruct,exercise,5,5,1,1

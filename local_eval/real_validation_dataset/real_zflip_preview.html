@@ -1,0 +1,121 @@
+<!doctype html><meta charset='utf-8'><title>real_zflip labeling tool</title><style>body{font-family:sans-serif;background:#111;color:#eee;margin:0}header{position:sticky;top:0;background:#181818;padding:12px 16px;border-bottom:1px solid #333;z-index:10}header h1{font-size:16px;margin:0 0 8px}button{background:#2d6cdf;color:#fff;border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;margin-right:8px}button.sec{background:#444}#status{color:#9fd;font-size:12px;margin-left:8px}#count{color:#fc9;font-size:13px;font-weight:bold}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding:16px}.card{background:#1c1c1c;border-radius:8px;padding:10px;border:1px solid #2a2a2a}.card.done{border-color:#2d6cdf}.card img{width:100%;height:220px;object-fit:cover;border-radius:6px;background:#000}.fn{font-size:11px;color:#999;word-break:break-all;margin:6px 0}.rowlab{font-size:12px;color:#bbb;margin:6px 0 2px}.opts label{display:inline-block;font-size:12px;margin:2px 8px 2px 0;cursor:pointer}.evid{display:none}.evid.show{display:block}select,input[type=text]{background:#222;color:#eee;border:1px solid #444;border-radius:4px;padding:4px;font-size:12px}input[type=text]{width:100%}</style><script>window.__ROWS__=[{"image": "real_zflip/20260707_212538.jpg", "name": "20260707_212538.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212541.jpg", "name": "20260707_212541.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212546.jpg", "name": "20260707_212546.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212550.jpg", "name": "20260707_212550.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212555.jpg", "name": "20260707_212555.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212601.jpg", "name": "20260707_212601.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212608.jpg", "name": "20260707_212608.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212610.jpg", "name": "20260707_212610.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212625.jpg", "name": "20260707_212625.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212631.jpg", "name": "20260707_212631.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212636.jpg", "name": "20260707_212636.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212803.jpg", "name": "20260707_212803.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212828.jpg", "name": "20260707_212828.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212846.jpg", "name": "20260707_212846.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212857.jpg", "name": "20260707_212857.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212902.jpg", "name": "20260707_212902.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212911.jpg", "name": "20260707_212911.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212915.jpg", "name": "20260707_212915.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212939.jpg", "name": "20260707_212939.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_212944.jpg", "name": "20260707_212944.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213017.jpg", "name": "20260707_213017.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213030.jpg", "name": "20260707_213030.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213051.jpg", "name": "20260707_213051.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213056.jpg", "name": "20260707_213056.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213059.jpg", "name": "20260707_213059.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213102.jpg", "name": "20260707_213102.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213114.jpg", "name": "20260707_213114.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213123.jpg", "name": "20260707_213123.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213149.jpg", "name": "20260707_213149.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213243.jpg", "name": "20260707_213243.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213257.jpg", "name": "20260707_213257.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213321.jpg", "name": "20260707_213321.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213354.jpg", "name": "20260707_213354.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}, {"image": "real_zflip/20260707_213456.jpg", "name": "20260707_213456.jpg", "verification_type": "", "ground_truth": "", "exercise_activity_type": "", "expected_evidence": [], "description": ""}];window.__VOCAB__={"water": ["visible_water", "filled_container", "empty_container", "non_water_beverage"], "exercise": ["treadmill_present", "dumbbell_present", "exercise_pose_visible", "unrelated_environment"], "study": ["open_textbook", "handwritten_notes", "pdf_document", "gaming_content"]};window.__ACTS__=["gym", "running", "home_workout", "swimming", "yoga", "pilates"];window.__CSVNAME__="real_zflip_annotation.csv";</script>
+<header>
+  <h1>Z Flip3 real images — 라벨링 도구</h1>
+  <button onclick="saveCSV()">CSV 저장</button>
+  <label class="sec" style="display:inline-block"><button class="sec" onclick="document.getElementById('loadf').click()">CSV 불러오기</button></label>
+  <input id="loadf" type="file" accept=".csv" style="display:none" onchange="loadCSV(this.files[0])">
+  <button class="sec" onclick="if(confirm('로컬 임시저장을 지웁니다.')){localStorage.removeItem(LSKEY);location.reload()}">초기화</button>
+  <span id="count"></span><span id="status"></span>
+</header>
+<div id="grid" class="grid"></div>
+<script>
+const ROWS = window.__ROWS__, VOCAB = window.__VOCAB__, ACTS = window.__ACTS__;
+const CSVNAME = window.__CSVNAME__, LSKEY = "zflip_annot_v1";
+const FIELDS = ["image","verification_type","ground_truth","exercise_activity_type","expected_evidence","description"];
+const state = {};  // image -> {verification_type, ground_truth, exercise_activity_type, expected_evidence:[], description}
+
+function blank(){return {verification_type:"",ground_truth:"",exercise_activity_type:"",expected_evidence:[],description:""};}
+function initState(){
+  ROWS.forEach(r=>{state[r.image]={verification_type:r.verification_type||"",ground_truth:r.ground_truth||"",
+    exercise_activity_type:r.exercise_activity_type||"",expected_evidence:(r.expected_evidence||[]).slice(),
+    description:r.description||""};});
+  try{const saved=JSON.parse(localStorage.getItem(LSKEY)||"{}");
+    Object.keys(saved).forEach(k=>{if(state[k])state[k]=Object.assign(blank(),saved[k]);});}catch(e){}
+}
+function persist(){localStorage.setItem(LSKEY,JSON.stringify(state));updateCount();}
+function updateCount(){
+  const n=ROWS.length, done=ROWS.filter(r=>state[r.image].verification_type&&state[r.image].ground_truth).length;
+  document.getElementById("count").textContent=done+" / "+n+" 완료";
+}
+function setStatus(t){const s=document.getElementById("status");s.textContent=t;setTimeout(()=>{if(s.textContent===t)s.textContent="";},4000);}
+
+function evidenceBox(img){
+  const st=state[img], vt=st.verification_type; if(!vt||!VOCAB[vt])return "";
+  return "<div class='rowlab'>evidence</div><div class='opts'>"+VOCAB[vt].map(ev=>
+    "<label><input type='checkbox' data-img='"+img+"' data-ev='"+ev+"' "+
+    (st.expected_evidence.indexOf(ev)>=0?"checked":"")+" onchange='onEvid(this)'> "+ev+"</label>").join("")+"</div>";
+}
+function activityBox(img){
+  const st=state[img]; if(st.verification_type!=="exercise")return "";
+  return "<div class='rowlab'>activity</div><select data-img='"+img+"' onchange='onAct(this)'>"+
+    "<option value=''>(선택)</option>"+ACTS.map(a=>"<option "+(st.exercise_activity_type===a?"selected":"")+">"+a+"</option>").join("")+"</select>";
+}
+function cardHTML(r){
+  const st=state[r.image], img=r.image, done=st.verification_type&&st.ground_truth;
+  const typeR=["water","exercise","study"].map(t=>"<label><input type='radio' name='t_"+img+"' data-img='"+img+"' value='"+t+"' "+(st.verification_type===t?"checked":"")+" onchange='onType(this)'> "+t+"</label>").join("");
+  const gtR=["PASS","FAIL"].map(g=>"<label><input type='radio' name='g_"+img+"' data-img='"+img+"' value='"+g+"' "+(st.ground_truth===g?"checked":"")+" onchange='onGT(this)'> "+g+"</label>").join("");
+  return "<div class='card"+(done?" done":"")+"' id='card_"+cssid(img)+"'>"+
+    "<img src='images/"+img+"' loading='lazy'>"+
+    "<div class='fn'>"+r.name+"</div>"+
+    "<div class='rowlab'>type</div><div class='opts'>"+typeR+"</div>"+
+    "<div class='rowlab'>ground_truth</div><div class='opts'>"+gtR+"</div>"+
+    "<div class='actwrap'>"+activityBox(img)+"</div>"+
+    "<div class='evidwrap'>"+evidenceBox(img)+"</div>"+
+    "<div class='rowlab'>description</div><input type='text' data-img='"+img+"' value=\""+esc(st.description)+"\" oninput='onDesc(this)'>"+
+    "</div>";
+}
+function cssid(s){return s.replace(/[^a-zA-Z0-9]/g,"_");}
+function esc(s){return (s||"").replace(/"/g,"&quot;");}
+function rerenderExtras(img){
+  const c=document.getElementById("card_"+cssid(img)); if(!c)return;
+  c.querySelector(".actwrap").innerHTML=activityBox(img);
+  c.querySelector(".evidwrap").innerHTML=evidenceBox(img);
+  c.classList.toggle("done", !!(state[img].verification_type&&state[img].ground_truth));
+}
+function onType(el){const img=el.dataset.img;state[img].verification_type=el.value;
+  // 타입이 바뀌면 새 어휘에 없는 evidence 는 정리
+  state[img].expected_evidence=state[img].expected_evidence.filter(e=>(VOCAB[el.value]||[]).indexOf(e)>=0);
+  if(el.value!=="exercise")state[img].exercise_activity_type="";
+  rerenderExtras(img);persist();}
+function onGT(el){state[el.dataset.img].ground_truth=el.value;rerenderExtras(el.dataset.img);persist();}
+function onAct(el){state[el.dataset.img].exercise_activity_type=el.value;persist();}
+function onDesc(el){state[el.dataset.img].description=el.value;persist();}
+function onEvid(el){const st=state[el.dataset.img],ev=el.dataset.ev,i=st.expected_evidence.indexOf(ev);
+  if(el.checked&&i<0)st.expected_evidence.push(ev); else if(!el.checked&&i>=0)st.expected_evidence.splice(i,1);persist();}
+
+function q(v){v=(v==null?"":String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function buildCSV(){
+  const lines=[FIELDS.join(",")];
+  ROWS.forEach(r=>{const st=state[r.image];
+    lines.push([q(r.image),q(st.verification_type),q(st.ground_truth),q(st.exercise_activity_type),
+      q(st.expected_evidence.join(";")),q(st.description)].join(","));});
+  return lines.join("\n")+"\n";
+}
+async function saveCSV(){
+  const text=buildCSV();
+  if(window.showSaveFilePicker){
+    try{const h=await showSaveFilePicker({suggestedName:CSVNAME,types:[{description:"CSV",accept:{"text/csv":[".csv"]}}]});
+      const w=await h.createWritable();await w.write(text);await w.close();
+      setStatus("저장 완료 → apply-csv 로 편입하세요");return;
+    }catch(e){if(e&&e.name==="AbortError")return;}
+  }
+  const blob=new Blob([text],{type:"text/csv"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=CSVNAME;a.click();
+  setStatus("다운로드됨 → annotations/ 에 덮어쓰기");
+}
+function parseCSV(text){
+  const rows=[];let i=0,f="",row=[],inq=false;
+  while(i<text.length){const c=text[i];
+    if(inq){if(c==='"'){if(text[i+1]==='"'){f+='"';i+=2;continue;}inq=false;i++;continue;}f+=c;i++;continue;}
+    if(c==='"'){inq=true;i++;continue;}
+    if(c===','){row.push(f);f="";i++;continue;}
+    if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f="";i++;continue;}
+    f+=c;i++;}
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows.filter(r=>r.length>1||(r.length===1&&r[0]!==""));
+}
+function loadCSV(file){if(!file)return;const rd=new FileReader();
+  rd.onload=()=>{const rows=parseCSV(rd.result);if(!rows.length)return;
+    const head=rows[0];const idx={};FIELDS.forEach(fn=>idx[fn]=head.indexOf(fn));
+    rows.slice(1).forEach(r=>{const img=r[idx.image];if(!img||!state[img])return;
+      state[img].verification_type=r[idx.verification_type]||"";
+      state[img].ground_truth=(r[idx.ground_truth]||"").toUpperCase();
+      state[img].exercise_activity_type=r[idx.exercise_activity_type]||"";
+      state[img].expected_evidence=(r[idx.expected_evidence]||"").split(";").filter(Boolean);
+      state[img].description=r[idx.description]||"";});
+    persist();render();setStatus("CSV 불러옴");};
+  rd.readAsText(file);}
+
+function render(){document.getElementById("grid").innerHTML=ROWS.map(cardHTML).join("");updateCount();}
+initState();render();
+</script>

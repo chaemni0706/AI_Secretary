@@ -1,0 +1,93 @@
+{
+  "_comment": "Rule-based empathy-strategy selector. score_empathy sums matched keyword weights per signal; select_strategy combines those signals with the intent to pick one of the six strategies. 'fallback_llm_classification' is used only when no signal is confident.",
+  "signals": {
+    "emotion_expression": {
+      "_desc": "User is voicing a feeling / affect.",
+      "keywords": [
+        "힘들",
+        "지쳐",
+        "지친",
+        "피곤",
+        "졸려",
+        "졸리",
+        "우울",
+        "슬퍼",
+        "슬프",
+        "외로",
+        "불안",
+        "걱정",
+        "짜증",
+        "화가",
+        "화나",
+        "스트레스",
+        "번아웃",
+        "속상",
+        "답답",
+        "무기력",
+        "눈물",
+        "막막",
+        "벅차",
+        "너무 많아",
+        "감당"
+      ],
+      "weight": 2
+    },
+    "solution_request": {
+      "_desc": "User is asking for help solving / deciding something.",
+      "keywords": [
+        "어떻게 해",
+        "뭐부터",
+        "어떡해",
+        "어떻게 하",
+        "정리해",
+        "도와줘",
+        "해결",
+        "방법",
+        "추천해",
+        "알려줘",
+        "어쩌지",
+        "뭘 해야",
+        "어떻게 해야",
+        "해야 할지",
+        "모르겠"
+      ],
+      "weight": 2
+    },
+    "sharing_wish": {
+      "_desc": "User just wants to talk / be heard, no task.",
+      "keywords": [
+        "그냥 얘기",
+        "그냥 이야기",
+        "얘기하고 싶",
+        "이야기하고 싶",
+        "말동무",
+        "들어줘",
+        "대화하고 싶",
+        "심심"
+      ],
+      "weight": 3
+    },
+    "task_intent": {
+      "_desc": "Clear functional request with little affect.",
+      "keywords": [
+        "예약",
+        "일정",
+        "문자",
+        "등록",
+        "추가",
+        "브리핑",
+        "언제",
+        "몇 시"
+      ],
+      "weight": 1
+    }
+  },
+  "strategy_descriptions": {
+    "affective": "정서적 공감. 감정을 인정하고 위로합니다.",
+    "cognitive": "인지적 공감. 상황을 정리하고 해결책을 제안합니다.",
+    "sharing": "공유적 공감. 일반적인 상황으로 함께 공감합니다.",
+    "mixed_affective_cognitive": "감정 인정과 해결 제안을 함께 하는 혼합 전략입니다.",
+    "direct_task": "감정보다 기능 수행이 명확할 때 사용하는 전략입니다.",
+    "fallback_llm_classification": "rule-based 분류가 애매할 때 사용하는 fallback 전략입니다."
+  }
+}

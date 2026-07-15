@@ -1,0 +1,13 @@
+filename,exercise_activity_type,expected_label,predicted_label,match,score
+generated_exercise_01_gym_dumbbell.png,gym,PASS,PASS,True,50
+generated_exercise_02_treadmill_gym.png,gym,PASS,PASS,True,50
+generated_exercise_03_weight_bench.png,gym,PASS,PASS,True,65
+generated_exercise_04_yoga_mat_home.png,home_workout,PASS,PASS,True,50
+generated_exercise_05_resistance_band_home.png,home_workout,PASS,PASS,True,50
+generated_exercise_06_person_workout_pose.png,home_workout,PASS,PASS,True,50
+generated_exercise_07_office_desk.png,gym,FAIL,FAIL,True,0
+generated_exercise_08_bedroom_no_exercise.png,gym,FAIL,FAIL,True,0
+generated_exercise_09_food_table.png,gym,FAIL,FAIL,True,0
+generated_exercise_10_empty_room.png,home_workout,FAIL,FAIL,True,0
+generated_exercise_11_shoes_only.png,gym,BORDERLINE,BORDERLINE_CASE,True,0
+generated_exercise_12_water_bottle_only.png,gym,FAIL,FAIL,True,0

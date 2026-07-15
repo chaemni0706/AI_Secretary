@@ -1,0 +1,37 @@
+type: water
+allowed_labels:
+  - cup
+  - glass
+  - tumbler
+  - water_bottle
+  - pet_bottle
+  - water_container
+  - water_dispenser
+mandatory:
+  quality_usable: true
+  water_patterns: true
+thresholds:
+  verified: 60
+  retake_required: 40
+scoring:
+  base_score: 0
+  object_scores:
+    cup: 15
+    glass: 15
+    tumbler: 15
+    water_bottle: 15
+    pet_bottle: 15
+    water_container: 15
+    water_dispenser: 0
+  water_evidence_scores:
+    visible_water: 30
+    visible_clear_liquid: 30
+    filled_container: 20
+    sealed_water_bottle: 60
+  water_pattern_scores:
+    dispenser_receiving_water: 60
+  similar_object_groups:
+    - labels: [cup, glass, tumbler, water_bottle, pet_bottle, water_container]
+      max_score: 15
+gps:
+  enabled: false

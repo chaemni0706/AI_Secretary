@@ -1,0 +1,55 @@
+[
+  {
+    "image": "exercise/fail/exercise_real_07.png",
+    "verification_type": "exercise",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 1698.3,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 50,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "barbell_present",
+      "weight_machine_present",
+      "exercise_mat_present",
+      "home_workout_environment"
+    ],
+    "rule_evidence": [
+      "exercise_core_equipment:gym",
+      "exercise_mandatory_match:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "exercise/fail/exercise_real_09.png",
+    "verification_type": "exercise",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 1717.4,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "barbell_present",
+      "weight_machine_present",
+      "gym_environment"
+    ],
+    "rule_evidence": [
+      "exercise_environment:gym",
+      "exercise_core_equipment:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  }
+]

@@ -1,0 +1,29 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study",
+  "objects": [
+    {
+      "label": "monitor",
+      "confidence": 0.8,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [
+    "study_content_on_screen",
+    "non_study_screen",
+    "uncertain_screen_content"
+  ],
+  "study_visual_evidence": [
+    "study_content_on_screen",
+    "non_study_screen",
+    "uncertain_screen_content"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

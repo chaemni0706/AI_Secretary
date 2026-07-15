@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "message": "일정 정보를 추출했습니다.",
+  "data": {
+    "intent": "create_schedule",
+    "confidence": 0.94,
+    "slots": {
+      "title": "병원",
+      "date_expression": "내일",
+      "time_expression": "오후 2시",
+      "date": "2026-06-30",
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "category": "hospital",
+      "location": null
+    },
+    "schedule_draft": {
+      "title": "병원",
+      "category": "hospital",
+      "date": "2026-06-30",
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "location": null,
+      "memo": null,
+      "priority": "high",
+      "source": "ai"
+    },
+    "missing_fields": []
+  }
+}

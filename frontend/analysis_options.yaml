@@ -9,6 +9,14 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  # 앱 코드가 아닌 산출물은 분석에서 제외한다:
+  # - plugins/**: 번들된 서드파티 플러그인(vosk_flutter_2)의 example 앱 등
+  #   (앱 빌드 트리에 포함되지 않으며 자체 의존성이 없어 분석 시 오류만 유발)
+  exclude:
+    - plugins/**
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

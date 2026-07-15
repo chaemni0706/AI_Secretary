@@ -1,0 +1,24 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "hand holding glass with lemon slice",
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.8,
+      "evidence": "fallback_from_description"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [
+    "filled_container",
+    "visible_clear_liquid"
+  ],
+  "exercise_visual_evidence": []
+}

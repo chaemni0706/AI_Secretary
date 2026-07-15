@@ -1,0 +1,61 @@
+{
+  "verification_type": "study",
+  "result": "retake_required",
+  "score": 35,
+  "mandatory_passed": true,
+  "score_breakdown": {
+    "base_score": 0,
+    "object_score": 35,
+    "text_score": 0,
+    "scene_score": 0,
+    "gps_score": 0,
+    "total_score": 35
+  },
+  "vlm_analysis": {
+    "quality": {
+      "brightness": "normal",
+      "blur": "low",
+      "usable": true,
+      "issues": []
+    },
+    "scene": "lecture_video",
+    "objects": [
+      {
+        "label": "workbook",
+        "confidence": 0.9,
+        "evidence": "position=[213, 204, 368, 315]"
+      },
+      {
+        "label": "study_timer",
+        "confidence": 0.9,
+        "evidence": "position=[417, 169, 530, 254]"
+      }
+    ],
+    "visible_text": [
+      "56:43"
+    ],
+    "visual_evidence": [
+      "open_workbook",
+      "study_timer",
+      "[]"
+    ],
+    "study_visual_evidence": [
+      "open_workbook",
+      "study_timer"
+    ],
+    "water_visual_evidence": [],
+    "exercise_visual_evidence": []
+  },
+  "rule_evidence": [
+    {
+      "code": "study_evidence:study_timer",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 10
+    },
+    {
+      "code": "study_evidence:open_workbook",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 25
+    }
+  ]
+}

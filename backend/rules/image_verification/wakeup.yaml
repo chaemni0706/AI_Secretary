@@ -1,0 +1,40 @@
+type: wakeup
+allowed_labels:
+  - bed
+  - pillow
+  - window
+  - alarm_clock
+  - sunlight
+mandatory:
+  quality_usable: true
+  min_allowed_objects: 1
+  any_of_objects:
+    - bed
+    - pillow
+    - window
+    - alarm_clock
+    - sunlight
+  requires_scheduled_time: true
+  scheduled_time_window_minutes: 60
+thresholds:
+  verified: 70
+  retake_required: 40
+scoring:
+  base_score: 20
+  object_scores:
+    bed: 25
+    pillow: 20
+    window: 20
+    alarm_clock: 20
+    sunlight: 25
+  scene_scores:
+    bedroom: 20
+    morning_room: 20
+  text_keywords:
+    am: 10
+    alarm: 10
+  similar_object_groups:
+    - labels: [bed, pillow]
+      max_score: 30
+gps:
+  enabled: false

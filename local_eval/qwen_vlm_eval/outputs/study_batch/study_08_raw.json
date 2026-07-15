@@ -1,0 +1,59 @@
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "bbox_2d": [
+        71,
+        45,
+        268,
+        253
+      ],
+      "label": "study_content_on_screen"
+    }
+  ],
+  "scenes": [
+    {
+      "bbox_2d": [
+        0,
+        0,
+        476,
+        364
+      ],
+      "label": "study"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "bbox_2d": [
+        71,
+        45,
+        268,
+        253
+      ],
+      "label": "study_content_on_screen"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "bbox_2d": [
+        0,
+        0,
+        476,
+        364
+      ],
+      "label": "non_study_screen"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "bbox_2d": [
+        0,
+        0,
+        476,
+        364
+      ],
+      "label": "uncertain_screen_content"
+    }
+  ]
+}

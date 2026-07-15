@@ -1,0 +1,123 @@
+현재 저장소에는 인증사진 기능이 구현되어 있다.
+이번 작업은 공부 인증 규칙과 Fixture 기반 검증을 추가하는 작업이다.
+
+작업 원칙:
+1. 팀장 프로젝트의 기존 폴더 구조와 코딩 방식을 따른다.
+2. 기존 일정, 사용자, DB, 프론트엔드는 수정하지 않는다.
+3. 인증사진 관련 파일만 최소 수정한다.
+4. 커밋과 push는 하지 않는다.
+5. 실제 OpenAI API는 호출하지 않는다.
+6. 기존 water 규칙은 변경하지 않는다.
+
+[공부 인증 규칙]
+
+공부 인증은 실제 공부 행동이 아니라 사진에서 확인 가능한 학습 환경·학습 자료·학습 콘텐츠를 검증한다.
+
+허용 객체 후보:
+- book
+- textbook
+- workbook
+- notebook
+- printed_document
+- laptop
+- tablet
+- monitor
+- pen
+- highlighter
+- keyboard
+- desk
+- study_timer
+
+study 시각 증거는 자유 문자열이 아니라 제한된 enum으로 관리한다.
+
+긍정 증거:
+- open_textbook
+- open_workbook
+- handwritten_notes
+- highlighted_text
+- problem_solving_material
+- study_content_on_screen
+- lecture_video
+- educational_document
+- code_editor
+- study_timer
+
+부정 증거:
+- gaming_content
+- entertainment_video
+- social_media
+- shopping_content
+- non_study_screen
+- closed_study_materials
+- uncertain_screen_content
+
+다음 우선 판정을 적용한다.
+- gaming_content -> rejected
+- entertainment_video -> rejected
+- social_media -> rejected
+- shopping_content -> rejected
+- uncertain_screen_content가 있고 강한 긍정 증거가 없으면 retake_required
+
+다음 패턴 중 하나를 만족해야 mandatory 조건을 통과한다.
+
+A. 종이 학습:
+open_textbook 또는 open_workbook 또는 educational_document
+AND handwritten_notes 또는 highlighted_text 또는 problem_solving_material
+
+B. 디지털 학습:
+laptop 또는 tablet 또는 monitor
+AND study_content_on_screen 또는 lecture_video 또는 educational_document 또는 code_editor
+
+C. 혼합 학습:
+종이 학습 증거 1개 이상
+AND 디지털 학습 증거 1개 이상
+
+다음은 단독으로 인증 근거가 될 수 없다.
+- desk
+- laptop
+- monitor
+- keyboard
+- pen
+- closed_study_materials
+
+점수는 초기값으로 다음처럼 구성한다.
+- open_textbook: 25
+- open_workbook: 25
+- handwritten_notes: 20
+- highlighted_text: 15
+- problem_solving_material: 20
+- study_content_on_screen: 30
+- lecture_video: 30
+- educational_document: 25
+- code_editor: 25
+- study_timer: 10
+- desk/laptop/monitor/keyboard/pen 객체 자체는 합산해도 최대 10점
+- threshold: 50
+
+동일 객체와 동일 증거는 한 번만 점수에 반영한다.
+부정 증거는 점수보다 우선한다.
+
+[Schema 및 VLM]
+
+1. StudyVisualEvidence enum 또는 Literal을 추가한다.
+2. VisionAnalysis에 study_visual_evidence 필드를 추가한다.
+3. study 유형에서만 해당 enum을 출력하도록 VLM 프롬프트를 수정한다.
+4. VLM은 최종 verified/rejected/retake_required를 출력하지 않는다.
+5. 최종 판정은 Rule Engine만 수행한다.
+
+[Fixture 검증]
+
+이 패키지의 images/와 fixtures/를 로컬 평가 폴더로 사용한다.
+각 fixture JSON은 사람이 검수한 VisionAnalysis 대체 출력이다.
+
+다음 테스트를 추가한다.
+- study_01~study_07 -> verified
+- study_08~study_10 -> rejected
+- gaming_content가 있으면 책상·모니터가 있어도 rejected
+- laptop 또는 monitor 단독은 verified 금지
+- 동일 study evidence 중복 점수 방지
+- uncertain_screen_content 단독 -> retake_required
+- fixture JSON이 Pydantic Schema에 맞는지 검증
+
+실제 OpenAI API는 호출하지 말고 Mock/Fixture 테스트만 실행한다.
+작업 후 변경 파일, 테스트 명령어, 테스트 결과를 보고한다.

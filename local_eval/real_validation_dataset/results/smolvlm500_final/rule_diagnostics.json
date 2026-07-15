@@ -1,0 +1,59 @@
+{
+  "result_distribution": {
+    "rejected": 122,
+    "verified": 29,
+    "retake_required": 20
+  },
+  "verified_count": 29,
+  "rejected_count": 122,
+  "retake_required_count": 20,
+  "mandatory_passed_rate": 0.2573,
+  "score_distribution": {
+    "0-9": 127,
+    "30-39": 15,
+    "50-59": 17,
+    "60-69": 11,
+    "70-79": 1
+  },
+  "rule_evidence_frequency": {
+    "exercise_pattern_missing": 57,
+    "water_pattern_missing": 46,
+    "similar_group_cap": 30,
+    "object:pen": 29,
+    "object:desk": 29,
+    "exercise_priority:insufficient_exercise_evidence": 26,
+    "study_pattern_missing": 24,
+    "study_evidence:open_textbook": 23,
+    "object:glass": 11,
+    "water_evidence:visible_liquid": 11,
+    "water_evidence:filled_container": 11,
+    "study_evidence:highlighted_text": 11,
+    "study_evidence:handwritten_notes": 8,
+    "study_priority:gaming_content": 5,
+    "study_priority:uncertain_screen_content": 5,
+    "exercise_core_equipment:gym": 3,
+    "exercise_mandatory_match:gym": 3,
+    "object:laptop": 2,
+    "object:monitor": 2,
+    "study_evidence:code_editor": 2,
+    "water_priority:non_water_beverage": 1,
+    "study_priority:entertainment_video": 1,
+    "study_priority:shopping_content": 1
+  },
+  "rejection_reason_distribution": {
+    "exercise_pattern_missing": 57,
+    "water_pattern_missing": 46,
+    "exercise_priority:insufficient_exercise_evidence": 26,
+    "study_pattern_missing": 24,
+    "object:pen": 15,
+    "object:desk": 15,
+    "similar_group_cap": 15,
+    "study_evidence:open_textbook": 9,
+    "study_evidence:handwritten_notes": 6,
+    "study_priority:gaming_content": 5,
+    "study_priority:uncertain_screen_content": 5,
+    "water_priority:non_water_beverage": 1,
+    "study_priority:entertainment_video": 1,
+    "study_priority:shopping_content": 1
+  }
+}

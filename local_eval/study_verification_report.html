@@ -1,0 +1,1241 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>공부 인증 Fixture 검증 리포트</title>
+<style>
+    body {
+        margin: 0;
+        padding: 30px;
+        background: #f3f4f6;
+        font-family: Arial, sans-serif;
+        color: #111827;
+    }
+
+    h1 {
+        margin-bottom: 8px;
+    }
+
+    .description {
+        margin-bottom: 30px;
+        color: #4b5563;
+    }
+
+    .card {
+        background: white;
+        border: 3px solid #d1d5db;
+        border-radius: 14px;
+        padding: 22px;
+        margin-bottom: 28px;
+    }
+
+    .matched {
+        border-color: #16a34a;
+    }
+
+    .mismatch {
+        border-color: #dc2626;
+    }
+
+    .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .badge {
+        font-weight: bold;
+    }
+
+    .columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    img {
+        width: 100%;
+        max-height: 520px;
+        object-fit: contain;
+        background: #e5e7eb;
+        border-radius: 8px;
+    }
+
+    pre {
+        max-height: 520px;
+        overflow: auto;
+        padding: 14px;
+        background: #111827;
+        color: #e5e7eb;
+        border-radius: 8px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    li {
+        margin-bottom: 8px;
+    }
+
+    @media (max-width: 1100px) {
+        .columns {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+    <h1>공부 인증 Fixture 검증 리포트</h1>
+
+    <p class="description">
+        이미지, 사람이 작성한 VLM 대체 출력, Rule Engine 판정 결과를
+        함께 보여줍니다.
+    </p>
+
+    
+        <section class="card matched">
+            <h2>study_01</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>70</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_01.png" alt="study_01">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;study_desk&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;book&quot;,
+      &quot;confidence&quot;: 0.98,
+      &quot;evidence&quot;: &quot;펼쳐진 교재가 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;notebook&quot;,
+      &quot;confidence&quot;: 0.95,
+      &quot;evidence&quot;: &quot;오른쪽에 플래너·노트가 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;pen&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;여러 필기구가 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;학습 자료가 놓인 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;open_textbook&quot;,
+    &quot;handwritten_notes&quot;,
+    &quot;highlighted_text&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 70,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 70
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>object:pen</b>
+            — pen 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-10점)
+        </li>
+        
+        <li>
+            <b>study_evidence:handwritten_notes</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:open_textbook</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:highlighted_text</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+15점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_02</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>95</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_02.png" alt="study_02">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;study_desk&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;book&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;여러 권의 펼쳐진 교재&quot;
+    },
+    {
+      &quot;label&quot;: &quot;workbook&quot;,
+      &quot;confidence&quot;: 0.98,
+      &quot;evidence&quot;: &quot;형광펜 표시가 있는 문제집&quot;
+    },
+    {
+      &quot;label&quot;: &quot;notebook&quot;,
+      &quot;confidence&quot;: 0.96,
+      &quot;evidence&quot;: &quot;필기가 많은 노트&quot;
+    },
+    {
+      &quot;label&quot;: &quot;pen&quot;,
+      &quot;confidence&quot;: 0.98,
+      &quot;evidence&quot;: &quot;필기구가 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;학습 자료가 놓인 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;open_textbook&quot;,
+    &quot;open_workbook&quot;,
+    &quot;handwritten_notes&quot;,
+    &quot;highlighted_text&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 95,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 95
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>object:pen</b>
+            — pen 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-10점)
+        </li>
+        
+        <li>
+            <b>study_evidence:handwritten_notes</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:open_textbook</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:highlighted_text</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+15점)
+        </li>
+        
+        <li>
+            <b>study_evidence:open_workbook</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_03</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>85</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_03.png" alt="study_03">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;study_desk&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;workbook&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;문제집이 펼쳐져 있음&quot;
+    },
+    {
+      &quot;label&quot;: &quot;laptop&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;노트북 화면이 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;pen&quot;,
+      &quot;confidence&quot;: 0.97,
+      &quot;evidence&quot;: &quot;사용자가 필기구를 들고 있음&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;학습 자료가 놓인 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;open_workbook&quot;,
+    &quot;study_content_on_screen&quot;,
+    &quot;problem_solving_material&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 85,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 85
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>object:pen</b>
+            — pen 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:laptop</b>
+            — laptop 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:problem_solving_material</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:open_workbook</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:study_content_on_screen</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+30점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_04</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>100</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_04.png" alt="study_04">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;study_materials&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;book&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;전공 교재가 펼쳐져 있음&quot;
+    },
+    {
+      &quot;label&quot;: &quot;tablet&quot;,
+      &quot;confidence&quot;: 0.98,
+      &quot;evidence&quot;: &quot;태블릿에 학습 도식이 표시됨&quot;
+    },
+    {
+      &quot;label&quot;: &quot;printed_document&quot;,
+      &quot;confidence&quot;: 0.96,
+      &quot;evidence&quot;: &quot;필기된 출력물이 보임&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;open_textbook&quot;,
+    &quot;educational_document&quot;,
+    &quot;study_content_on_screen&quot;,
+    &quot;handwritten_notes&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 100,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 100
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>study_evidence:handwritten_notes</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:open_textbook</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:educational_document</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:study_content_on_screen</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+30점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_05</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>85</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_05.png" alt="study_05">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;study_desk&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;laptop&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;노트북 화면에 강의 영상&quot;
+    },
+    {
+      &quot;label&quot;: &quot;printed_document&quot;,
+      &quot;confidence&quot;: 0.97,
+      &quot;evidence&quot;: &quot;학습 문서가 펼쳐져 있음&quot;
+    },
+    {
+      &quot;label&quot;: &quot;notebook&quot;,
+      &quot;confidence&quot;: 0.95,
+      &quot;evidence&quot;: &quot;손글씨 필기 노트&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;학습용 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;lecture_video&quot;,
+    &quot;educational_document&quot;,
+    &quot;handwritten_notes&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 85,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 85
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:laptop</b>
+            — laptop 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-10점)
+        </li>
+        
+        <li>
+            <b>study_evidence:handwritten_notes</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:educational_document</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:lecture_video</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+30점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_06</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>70</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_06.png" alt="study_06">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;digital_study&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;monitor&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;모니터에 강의 영상&quot;
+    },
+    {
+      &quot;label&quot;: &quot;tablet&quot;,
+      &quot;confidence&quot;: 0.92,
+      &quot;evidence&quot;: &quot;책상 위 태블릿&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;학습용 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;lecture_video&quot;,
+    &quot;study_content_on_screen&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 70,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 70
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:monitor</b>
+            — monitor 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-10점)
+        </li>
+        
+        <li>
+            <b>study_evidence:study_content_on_screen</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+30점)
+        </li>
+        
+        <li>
+            <b>study_evidence:lecture_video</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+30점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_07</h2>
+
+            <div class="summary">
+                <span>기대값: <b>verified</b></span>
+                <span>실제값: <b>verified</b></span>
+                <span>점수: <b>95</b></span>
+                <span>필수 조건: <b>True</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_07.png" alt="study_07">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;study_desk&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;workbook&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;문제집이 펼쳐져 있음&quot;
+    },
+    {
+      &quot;label&quot;: &quot;monitor&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;모니터에 학습 영상&quot;
+    },
+    {
+      &quot;label&quot;: &quot;pen&quot;,
+      &quot;confidence&quot;: 0.96,
+      &quot;evidence&quot;: &quot;필기구가 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;학습 자료가 놓인 책상&quot;
+    },
+    {
+      &quot;label&quot;: &quot;study_timer&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;타이머가 56:43을 표시&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [
+    &quot;56:43&quot;
+  ],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;open_workbook&quot;,
+    &quot;study_content_on_screen&quot;,
+    &quot;study_timer&quot;,
+    &quot;problem_solving_material&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 95,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 95
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>object:monitor</b>
+            — monitor 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:pen</b>
+            — pen 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:problem_solving_material</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+20점)
+        </li>
+        
+        <li>
+            <b>study_evidence:open_workbook</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+25점)
+        </li>
+        
+        <li>
+            <b>study_evidence:study_timer</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>study_evidence:study_content_on_screen</b>
+            — 공부 관련 시각 근거가 확인되었습니다.
+             (+30점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_08</h2>
+
+            <div class="summary">
+                <span>기대값: <b>rejected</b></span>
+                <span>실제값: <b>rejected</b></span>
+                <span>점수: <b>10</b></span>
+                <span>필수 조건: <b>False</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_08.png" alt="study_08">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;gaming_station&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;monitor&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;자동차 게임 화면&quot;
+    },
+    {
+      &quot;label&quot;: &quot;keyboard&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;키보드가 보임&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;컴퓨터 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;gaming_content&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 10,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 10
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>study_priority:gaming_content</b>
+            — 게임 화면이 확인되어 공부 인증을 거절합니다.
+            
+        </li>
+        
+        <li>
+            <b>study_pattern_missing</b>
+            — 공부 인증에 필요한 학습 자료 또는 학습 콘텐츠 근거가 부족합니다.
+            
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:monitor</b>
+            — monitor 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:keyboard</b>
+            — keyboard 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-20점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_09</h2>
+
+            <div class="summary">
+                <span>기대값: <b>rejected</b></span>
+                <span>실제값: <b>rejected</b></span>
+                <span>점수: <b>10</b></span>
+                <span>필수 조건: <b>False</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_09.png" alt="study_09">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;gaming_cafe&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;monitor&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;게임 화면&quot;
+    },
+    {
+      &quot;label&quot;: &quot;keyboard&quot;,
+      &quot;confidence&quot;: 0.98,
+      &quot;evidence&quot;: &quot;키보드&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.98,
+      &quot;evidence&quot;: &quot;PC방 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;gaming_content&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 10,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 10
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>study_priority:gaming_content</b>
+            — 게임 화면이 확인되어 공부 인증을 거절합니다.
+            
+        </li>
+        
+        <li>
+            <b>study_pattern_missing</b>
+            — 공부 인증에 필요한 학습 자료 또는 학습 콘텐츠 근거가 부족합니다.
+            
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:monitor</b>
+            — monitor 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:keyboard</b>
+            — keyboard 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-20점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section class="card matched">
+            <h2>study_10</h2>
+
+            <div class="summary">
+                <span>기대값: <b>rejected</b></span>
+                <span>실제값: <b>rejected</b></span>
+                <span>점수: <b>10</b></span>
+                <span>필수 조건: <b>False</b></span>
+                <span class="badge">
+                    일치
+                </span>
+            </div>
+
+            <div class="columns">
+                <div>
+                    <h3>원본 이미지</h3>
+                    <img src="study_verification_fixture_pack/images/study_10.png" alt="study_10">
+                </div>
+
+                <div>
+                    <h3>VLM 대체 출력</h3>
+                    <pre>{
+  &quot;quality&quot;: {
+    &quot;brightness&quot;: &quot;normal&quot;,
+    &quot;blur&quot;: &quot;low&quot;,
+    &quot;usable&quot;: true,
+    &quot;issues&quot;: []
+  },
+  &quot;scene&quot;: &quot;gaming_station&quot;,
+  &quot;objects&quot;: [
+    {
+      &quot;label&quot;: &quot;monitor&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;게임 화면&quot;
+    },
+    {
+      &quot;label&quot;: &quot;keyboard&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;게이밍 키보드&quot;
+    },
+    {
+      &quot;label&quot;: &quot;desk&quot;,
+      &quot;confidence&quot;: 0.99,
+      &quot;evidence&quot;: &quot;게이밍 책상&quot;
+    }
+  ],
+  &quot;visible_text&quot;: [],
+  &quot;visual_evidence&quot;: [],
+  &quot;study_visual_evidence&quot;: [
+    &quot;gaming_content&quot;
+  ],
+  &quot;water_visual_evidence&quot;: []
+}</pre>
+                </div>
+
+                <div>
+                    <h3>Rule 점수</h3>
+                    <pre>{
+  &quot;base_score&quot;: 0,
+  &quot;object_score&quot;: 10,
+  &quot;text_score&quot;: 0,
+  &quot;scene_score&quot;: 0,
+  &quot;gps_score&quot;: 0,
+  &quot;total_score&quot;: 10
+}</pre>
+
+                    <h3>판정 근거</h3>
+                    <ul>
+        <li>
+            <b>study_priority:gaming_content</b>
+            — 게임 화면이 확인되어 공부 인증을 거절합니다.
+            
+        </li>
+        
+        <li>
+            <b>study_pattern_missing</b>
+            — 공부 인증에 필요한 학습 자료 또는 학습 콘텐츠 근거가 부족합니다.
+            
+        </li>
+        
+        <li>
+            <b>object:desk</b>
+            — desk 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:monitor</b>
+            — monitor 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>object:keyboard</b>
+            — keyboard 객체가 확인되었습니다.
+             (+10점)
+        </li>
+        
+        <li>
+            <b>similar_group_cap</b>
+            — 유사 객체 그룹 최대 점수를 적용했습니다.
+             (-20점)
+        </li>
+        </ul>
+                </div>
+            </div>
+        </section>
+        
+</body>
+</html>

@@ -1,0 +1,40 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "home_workout",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "resistance band"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A home workout setting with a resistance band."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "description": "An orange resistance band is visible in the center of the image."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "description": "There are no gym equipment, running tracks, swimming pools, yoga mats, pilates equipment, or related activities visible."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "description": "The presence of a resistance band suggests a home workout scenario, but the lack of other exercise equipment or poses makes it uncertain."
+    }
+  ],
+  "text_observed": [
+    "home workout: resistance band"
+  ],
+  "confidence": 0.8
+}
+```

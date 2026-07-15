@@ -1,0 +1,2 @@
+model_name,verification_type,tp,tn,fp,fn
+MobileVLM-V2-1.7B,study,2,3,0,5

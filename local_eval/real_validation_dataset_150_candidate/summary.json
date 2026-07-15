@@ -1,0 +1,168 @@
+{
+  "manifest": "local_eval/real_validation_dataset_150_candidate/labeled_candidate_final_reviewed.csv",
+  "total_rows": 237,
+  "included": 171,
+  "excluded": 66,
+  "target_per_task": 50,
+  "target_mix": {
+    "PASS": 25,
+    "FAIL": 20,
+    "BORDERLINE": 5
+  },
+  "included_by_task": {
+    "water": 57,
+    "exercise": 60,
+    "study": 54
+  },
+  "ground_truth_by_task": {
+    "water": {
+      "PASS": 20,
+      "FAIL": 31,
+      "BORDERLINE": 6
+    },
+    "exercise": {
+      "PASS": 32,
+      "FAIL": 22,
+      "BORDERLINE": 6
+    },
+    "study": {
+      "PASS": 29,
+      "FAIL": 23,
+      "BORDERLINE": 2
+    },
+    "UNLABELED": {}
+  },
+  "exclude_reasons": {
+    "low_quality": 14,
+    "other": 21,
+    "illustration_render": 12,
+    "historical_document": 5,
+    "irrelevant": 14
+  },
+  "intake_unlabeled_needing_task": 0,
+  "by_batch_all": {
+    "initial": 146,
+    "gap_fill_02": 56,
+    "final_user_collect": 35
+  },
+  "by_batch_included": {
+    "initial": 106,
+    "gap_fill_02": 30,
+    "final_user_collect": 35
+  },
+  "gap_fill_02_included_by_task_suggested": {
+    "exercise/BORDERLINE": 3,
+    "exercise/FAIL": 8,
+    "exercise/PASS": 1,
+    "study/BORDERLINE": 1,
+    "study/FAIL": 1,
+    "water/BORDERLINE": 2,
+    "water/FAIL": 10,
+    "water/PASS": 4
+  },
+  "gap_plan": {
+    "water": {
+      "current_included": 57,
+      "labeled": {
+        "PASS": 20,
+        "FAIL": 31,
+        "BORDERLINE": 6
+      },
+      "unlabeled_in_task": 0,
+      "need_total_to_target": 0,
+      "need_by_type": {
+        "PASS": 5,
+        "FAIL": 0,
+        "BORDERLINE": 0
+      },
+      "suggested_commons_queries": {
+        "PASS": [
+          "glass of water",
+          "pouring water into glass",
+          "person drinking water",
+          "water bottle transparent",
+          "pitcher of water"
+        ],
+        "FAIL": [
+          "cup of coffee",
+          "glass of juice",
+          "cola glass",
+          "cup of tea",
+          "empty glass",
+          "empty bottle",
+          "milk glass",
+          "smoothie glass"
+        ]
+      }
+    },
+    "exercise": {
+      "current_included": 60,
+      "labeled": {
+        "PASS": 32,
+        "FAIL": 22,
+        "BORDERLINE": 6
+      },
+      "unlabeled_in_task": 0,
+      "need_total_to_target": 0,
+      "need_by_type": {
+        "PASS": 0,
+        "FAIL": 0,
+        "BORDERLINE": 0
+      },
+      "suggested_commons_queries": {
+        "PASS": [
+          "dumbbell",
+          "barbell",
+          "kettlebell",
+          "treadmill",
+          "person doing squat",
+          "yoga mat exercise",
+          "gym interior",
+          "weight machine"
+        ],
+        "FAIL": [
+          "office desk laptop",
+          "running shoes",
+          "empty room",
+          "person sitting chair",
+          "bedroom interior",
+          "water bottle only"
+        ]
+      }
+    },
+    "study": {
+      "current_included": 54,
+      "labeled": {
+        "PASS": 29,
+        "FAIL": 23,
+        "BORDERLINE": 2
+      },
+      "unlabeled_in_task": 0,
+      "need_total_to_target": 0,
+      "need_by_type": {
+        "PASS": 0,
+        "FAIL": 0,
+        "BORDERLINE": 3
+      },
+      "suggested_commons_queries": {
+        "PASS": [
+          "open textbook",
+          "handwriting notebook",
+          "student writing",
+          "worksheet math",
+          "coding screen",
+          "lecture slides",
+          "highlighted notes"
+        ],
+        "FAIL": [
+          "video game screen",
+          "social media feed",
+          "youtube screen",
+          "movie screen",
+          "online shopping website",
+          "empty desk"
+        ]
+      }
+    }
+  }
+}

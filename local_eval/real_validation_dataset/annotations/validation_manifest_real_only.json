@@ -1,0 +1,2022 @@
+{
+  "dataset": "real_validation_dataset",
+  "note": "물/운동/공부 인증 검증셋. real=기존 검증 이미지, synthetic=placeholder(실촬영 교체 권장).",
+  "positive_label": "PASS (=Rule Engine verified). FP 최소화가 최우선.",
+  "count": 84,
+  "images": [
+    {
+      "image": "water/pass/water_real_01.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "손에 든 투명 컵에 물이 들어 있음",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "hand_holding_glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "손에 든 투명 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_02.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "투명 컵에 물이 들어 있음",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass_on_table",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "투명 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_03.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "empty_container"
+      ],
+      "description": "컵은 있으나 물이 거의 없거나 빈 컵처럼 보임",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass_on_book",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "책 위의 빈 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_04.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "empty_container"
+      ],
+      "description": "빈 컵 2개로 보이며 물 인증 근거 부족",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "empty_glasses_on_tray",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "트레이 위 빈 유리컵 2개"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_05.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "손에 든 컵에 물이 들어 있음",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "hand_holding_glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "손에 든 물컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_06.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "water_stream",
+        "receiving_water",
+        "visible_water"
+      ],
+      "description": "정수기에서 컵에 물을 받는 장면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "coway 정수기"
+          },
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "받는 유리컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water",
+          "visible_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_07.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "water_stream",
+        "receiving_water"
+      ],
+      "description": "정수기에서 물을 받는 장면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "정수기"
+          },
+          {
+            "label": "water_container",
+            "confidence": 0.95,
+            "evidence": "물을 받는 피처"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_08.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "water_stream",
+        "receiving_water",
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "정수기에서 컵에 물이 담기는 장면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "정수기"
+          },
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "물이 담기는 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water",
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_09.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "투명 컵에 물이 많이 담긴 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "물이 가득 찬 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_10.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "투명 컵에 물이 절반 정도 담긴 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "물이 절반 담긴 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_11.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "사람이 물컵을 들고 있는 상황을 단순 도형으로 표현",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "hand_holding_glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "손이 감싼 물컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_12.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "water_stream",
+        "receiving_water"
+      ],
+      "description": "정수기에서 컵에 물이 나오는 장면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dispenser",
+        "objects": [
+          {
+            "label": "water_dispenser",
+            "confidence": 0.95,
+            "evidence": "정수기"
+          },
+          {
+            "label": "cup",
+            "confidence": 0.95,
+            "evidence": "물을 받는 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "water_stream",
+          "receiving_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/pass/water_real_13.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "description": "투명 물병에 물이 들어 있는 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "bottle",
+        "objects": [
+          {
+            "label": "water_bottle",
+            "confidence": 0.95,
+            "evidence": "물이 든 투명 물병"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water",
+          "filled_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_14.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "empty_container"
+      ],
+      "description": "빈 컵 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "빈 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_15.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "visible_water"
+      ],
+      "description": "바닥에 물이 아주 조금만 있는 컵 이미지 (물 인증 근거 부족)",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "hard",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "glass",
+        "objects": [
+          {
+            "label": "glass",
+            "confidence": 0.95,
+            "evidence": "바닥에 물 흔적만 있는 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "visible_water"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_16.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "non_water_beverage"
+      ],
+      "description": "커피나 색 있는 음료가 담긴 컵 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "cup",
+        "objects": [
+          {
+            "label": "cup",
+            "confidence": 0.95,
+            "evidence": "색 있는 음료가 담긴 컵"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "non_water_beverage"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_17.png",
+      "verification_type": "water",
+      "ground_truth": "BORDERLINE",
+      "expected_evidence": [
+        "opaque_closed_container"
+      ],
+      "description": "닫힌 병만 있고 물 섭취 인증 근거가 약한 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "hard",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "bottle",
+        "objects": [
+          {
+            "label": "water_bottle",
+            "confidence": 0.95,
+            "evidence": "닫힌 불투명 병"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "opaque_closed_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "water/fail/water_real_18.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "empty_container"
+      ],
+      "description": "빈 컵 여러 개가 있는 이미지",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "cups",
+        "objects": [
+          {
+            "label": "cup",
+            "confidence": 0.95,
+            "evidence": "빈 컵 여러 개"
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [
+          "empty_container"
+        ],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "exercise/pass/exercise_real_01.png",
+      "verification_type": "exercise",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "gym_environment",
+        "dumbbell_present"
+      ],
+      "description": "덤벨이 보이는 헬스장/운동 환경",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "gym",
+        "objects": [
+          {
+            "label": "dumbbell",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "gym_environment",
+          "dumbbell_present"
+        ]
+      }
+    },
+    {
+      "image": "exercise/pass/exercise_real_02.png",
+      "verification_type": "exercise",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "gym_environment",
+        "treadmill_present"
+      ],
+      "description": "러닝머신이 있는 헬스장",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "gym",
+        "objects": [
+          {
+            "label": "treadmill",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "gym_environment",
+          "treadmill_present"
+        ]
+      }
+    },
+    {
+      "image": "exercise/pass/exercise_real_03.png",
+      "verification_type": "exercise",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "gym_environment",
+        "gym_bench_present",
+        "barbell_present"
+      ],
+      "description": "벤치프레스/운동 벤치가 보이는 장면",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "gym",
+        "objects": [
+          {
+            "label": "gym_bench",
+            "confidence": 0.95,
+            "evidence": null
+          },
+          {
+            "label": "barbell",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "gym_environment",
+          "gym_bench_present",
+          "barbell_present"
+        ]
+      }
+    },
+    {
+      "image": "exercise/pass/exercise_real_04.png",
+      "verification_type": "exercise",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "home_workout_environment",
+        "exercise_mat_present"
+      ],
+      "description": "집 바닥에 운동 매트",
+      "exercise_activity_type": "home_workout",
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "home_interior",
+        "objects": [
+          {
+            "label": "exercise_mat",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "home_workout_environment",
+          "exercise_mat_present"
+        ]
+      }
+    },
+    {
+      "image": "exercise/pass/exercise_real_05.png",
+      "verification_type": "exercise",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "home_workout_environment",
+        "resistance_band_present"
+      ],
+      "description": "저항 밴드 또는 홈트 기구",
+      "exercise_activity_type": "home_workout",
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "home_interior",
+        "objects": [
+          {
+            "label": "resistance_band",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "home_workout_environment",
+          "resistance_band_present"
+        ]
+      }
+    },
+    {
+      "image": "exercise/pass/exercise_real_06.png",
+      "verification_type": "exercise",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "home_workout_environment",
+        "home_exercise_pose_visible",
+        "exercise_pose_visible"
+      ],
+      "description": "사람이 운동 자세를 취하는 장면",
+      "exercise_activity_type": "home_workout",
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "home_interior",
+        "objects": [
+          {
+            "label": "exercise_mat",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "home_workout_environment",
+          "home_exercise_pose_visible",
+          "exercise_pose_visible"
+        ]
+      }
+    },
+    {
+      "image": "exercise/fail/exercise_real_07.png",
+      "verification_type": "exercise",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "unrelated_environment"
+      ],
+      "description": "책상/노트북/사무 환경 — 운동 아님",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "office",
+        "objects": [],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "unrelated_environment"
+        ]
+      }
+    },
+    {
+      "image": "exercise/fail/exercise_real_08.png",
+      "verification_type": "exercise",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "unrelated_environment"
+      ],
+      "description": "침대/방만 보이고 운동 근거 없음",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "bedroom",
+        "objects": [],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "unrelated_environment"
+        ]
+      }
+    },
+    {
+      "image": "exercise/fail/exercise_real_09.png",
+      "verification_type": "exercise",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "unrelated_environment"
+      ],
+      "description": "음식/식탁 장면 — 운동 아님",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "easy",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "dining",
+        "objects": [],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "unrelated_environment"
+        ]
+      }
+    },
+    {
+      "image": "exercise/fail/exercise_real_10.png",
+      "verification_type": "exercise",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "insufficient_exercise_evidence"
+      ],
+      "description": "빈 방, 운동 기구 없음",
+      "exercise_activity_type": "home_workout",
+      "source": "real",
+      "difficulty": "medium",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "empty_room",
+        "objects": [],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "insufficient_exercise_evidence"
+        ]
+      }
+    },
+    {
+      "image": "exercise/fail/exercise_real_11.png",
+      "verification_type": "exercise",
+      "ground_truth": "BORDERLINE",
+      "expected_evidence": [
+        "uncertain_exercise_environment"
+      ],
+      "description": "운동화만 보임 — 운동 의도는 가능하나 인증 근거 부족",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "hard",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "shoes",
+        "objects": [
+          {
+            "label": "running_shoes",
+            "confidence": 0.95,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "uncertain_exercise_environment"
+        ]
+      }
+    },
+    {
+      "image": "exercise/fail/exercise_real_12.png",
+      "verification_type": "exercise",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "insufficient_exercise_evidence"
+      ],
+      "description": "물병만 보임 — 운동 인증 근거 아님",
+      "exercise_activity_type": "gym",
+      "source": "real",
+      "difficulty": "hard",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": "bottle",
+        "objects": [],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": [
+          "insufficient_exercise_evidence"
+        ]
+      }
+    },
+    {
+      "image": "study/pass/study_real_01.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "open_textbook",
+        "handwritten_notes",
+        "highlighted_text"
+      ],
+      "description": "펼쳐진 교재·플래너·필기구가 있는 학습 책상",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "book",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "notebook",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "pen",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "open_textbook",
+          "handwritten_notes",
+          "highlighted_text"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/pass/study_real_02.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "open_textbook",
+        "open_workbook",
+        "handwritten_notes",
+        "highlighted_text"
+      ],
+      "description": "여러 권의 펼쳐진 교재와 필기 노트",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "book",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "workbook",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "notebook",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "pen",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "open_textbook",
+          "open_workbook",
+          "handwritten_notes",
+          "highlighted_text"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/pass/study_real_03.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "open_workbook",
+        "study_content_on_screen",
+        "problem_solving_material"
+      ],
+      "description": "문제집과 학습 화면이 함께 보이는 혼합 학습 환경",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "workbook",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "laptop",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "pen",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "open_workbook",
+          "study_content_on_screen",
+          "problem_solving_material"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/pass/study_real_04.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "open_textbook",
+        "educational_document",
+        "study_content_on_screen",
+        "handwritten_notes"
+      ],
+      "description": "전공 교재·필기 자료·태블릿 학습 콘텐츠",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "book",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "tablet",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "printed_document",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "open_textbook",
+          "educational_document",
+          "study_content_on_screen",
+          "handwritten_notes"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/pass/study_real_05.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "lecture_video",
+        "educational_document",
+        "handwritten_notes"
+      ],
+      "description": "온라인 강의와 필기 자료",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "laptop",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "printed_document",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "notebook",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "lecture_video",
+          "educational_document",
+          "handwritten_notes"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/pass/study_real_06.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "lecture_video",
+        "study_content_on_screen"
+      ],
+      "description": "강의 영상과 태블릿이 보이는 디지털 학습",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "monitor",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "tablet",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "lecture_video",
+          "study_content_on_screen"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/pass/study_real_07.png",
+      "verification_type": "study",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "open_workbook",
+        "study_content_on_screen",
+        "study_timer",
+        "problem_solving_material"
+      ],
+      "description": "교재·학습 화면·타이머가 함께 보임",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "workbook",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "monitor",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "pen",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "study_timer",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "open_workbook",
+          "study_content_on_screen",
+          "study_timer",
+          "problem_solving_material"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/fail/study_real_08.png",
+      "verification_type": "study",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "gaming_content"
+      ],
+      "description": "자동차 게임 화면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "monitor",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "keyboard",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "gaming_content"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/fail/study_real_09.png",
+      "verification_type": "study",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "gaming_content"
+      ],
+      "description": "PC방 게임 화면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "monitor",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "keyboard",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "gaming_content"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "study/fail/study_real_10.png",
+      "verification_type": "study",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "gaming_content"
+      ],
+      "description": "게이밍 환경과 게임 화면",
+      "exercise_activity_type": null,
+      "source": "real",
+      "difficulty": "unknown",
+      "reference_vision_analysis": {
+        "quality": {
+          "brightness": "normal",
+          "blur": "low",
+          "usable": true,
+          "issues": []
+        },
+        "scene": null,
+        "objects": [
+          {
+            "label": "monitor",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "keyboard",
+            "confidence": 0.9,
+            "evidence": null
+          },
+          {
+            "label": "desk",
+            "confidence": 0.9,
+            "evidence": null
+          }
+        ],
+        "visible_text": [],
+        "visual_evidence": [],
+        "study_visual_evidence": [
+          "gaming_content"
+        ],
+        "water_visual_evidence": [],
+        "exercise_visual_evidence": []
+      }
+    },
+    {
+      "image": "real_zflip/20260707_212538.jpg",
+      "image_path": "real_zflip/20260707_212538.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212541.jpg",
+      "image_path": "real_zflip/20260707_212541.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212546.jpg",
+      "image_path": "real_zflip/20260707_212546.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212550.jpg",
+      "image_path": "real_zflip/20260707_212550.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212555.jpg",
+      "image_path": "real_zflip/20260707_212555.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212601.jpg",
+      "image_path": "real_zflip/20260707_212601.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212608.jpg",
+      "image_path": "real_zflip/20260707_212608.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212610.jpg",
+      "image_path": "real_zflip/20260707_212610.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212625.jpg",
+      "image_path": "real_zflip/20260707_212625.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212631.jpg",
+      "image_path": "real_zflip/20260707_212631.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212636.jpg",
+      "image_path": "real_zflip/20260707_212636.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212803.jpg",
+      "image_path": "real_zflip/20260707_212803.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212828.jpg",
+      "image_path": "real_zflip/20260707_212828.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212846.jpg",
+      "image_path": "real_zflip/20260707_212846.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212857.jpg",
+      "image_path": "real_zflip/20260707_212857.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212902.jpg",
+      "image_path": "real_zflip/20260707_212902.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212911.jpg",
+      "image_path": "real_zflip/20260707_212911.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212915.jpg",
+      "image_path": "real_zflip/20260707_212915.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212939.jpg",
+      "image_path": "real_zflip/20260707_212939.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_212944.jpg",
+      "image_path": "real_zflip/20260707_212944.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213017.jpg",
+      "image_path": "real_zflip/20260707_213017.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213030.jpg",
+      "image_path": "real_zflip/20260707_213030.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213051.jpg",
+      "image_path": "real_zflip/20260707_213051.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213056.jpg",
+      "image_path": "real_zflip/20260707_213056.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213059.jpg",
+      "image_path": "real_zflip/20260707_213059.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213102.jpg",
+      "image_path": "real_zflip/20260707_213102.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213114.jpg",
+      "image_path": "real_zflip/20260707_213114.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213123.jpg",
+      "image_path": "real_zflip/20260707_213123.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213149.jpg",
+      "image_path": "real_zflip/20260707_213149.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213243.jpg",
+      "image_path": "real_zflip/20260707_213243.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213257.jpg",
+      "image_path": "real_zflip/20260707_213257.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213321.jpg",
+      "image_path": "real_zflip/20260707_213321.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213354.jpg",
+      "image_path": "real_zflip/20260707_213354.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    },
+    {
+      "image": "real_zflip/20260707_213456.jpg",
+      "image_path": "real_zflip/20260707_213456.jpg",
+      "verification_type": "TODO",
+      "ground_truth": "TODO",
+      "expected_evidence": [],
+      "description": "",
+      "exercise_activity_type": null,
+      "source": "real_zflip",
+      "difficulty": "real_zflip",
+      "annotated": false
+    }
+  ]
+}

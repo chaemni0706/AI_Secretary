@@ -1,0 +1,25 @@
+{
+  "manifest_total_rows": 171,
+  "evaluated_rows": 171,
+  "excluded_rows": {},
+  "source_count": {
+    "user_upload": 42,
+    "internet_real": 94,
+    "user_collect": 35
+  },
+  "task_count_evaluated": {
+    "water": 57,
+    "exercise": 60,
+    "study": 54
+  },
+  "ground_truth_count_evaluated": {
+    "PASS": 81,
+    "FAIL": 76,
+    "BORDERLINE": 14
+  },
+  "synthetic_generated_contamination_count": 0,
+  "contamination_ids": [],
+  "missing_image_count": 0,
+  "duplicate_filename_hash_count": 0,
+  "missing_prediction_ids": []
+}

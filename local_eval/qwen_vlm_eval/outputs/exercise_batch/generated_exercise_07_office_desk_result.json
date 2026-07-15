@@ -1,0 +1,31 @@
+{
+  "filename": "generated_exercise_07_office_desk.png",
+  "source": "generated",
+  "exercise_activity_type": "gym",
+  "expected_label": "FAIL",
+  "predicted_label": "FAIL",
+  "engine_result": "rejected",
+  "score": 0,
+  "mandatory_passed": false,
+  "ok": true,
+  "exercise_visual_evidence": [
+    "unrelated_environment"
+  ],
+  "objects": [],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/exercise_batch/generated_exercise_07_office_desk_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/exercise_batch/generated_exercise_07_office_desk_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "exercise_priority:unrelated_environment",
+      "message": "운동과 무관한 환경입니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "exercise_pattern_missing",
+      "message": "선택한 운동과 관련된 장소, 기구 또는 환경 근거가 부족합니다.",
+      "score_delta": 0
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/exercise_batch/generated_exercise_07_office_desk_result.json",
+  "error": ""
+}

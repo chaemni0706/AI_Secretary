@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "message": "감정 분석이 완료되었습니다.",
+  "data": {
+    "sentiment": "negative",
+    "emotion": "fatigue",
+    "emotion_score": 0.88,
+    "risk_level": "low",
+    "coaching": "피로감이 높은 상태로 보입니다. 오늘은 저녁 일정 줄이고 수면 시간 확보하는 것을 추천합니다.",
+    "recommended_actions": [
+      "저녁 일정 줄이기",
+      "수면 시간 확보하기",
+      "가벼운 휴식하기"
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+run_id,timestamp,model_name,model_path,verification_type,filename,expected_label,predicted_label,engine_result,ok,false_positive,false_negative,latency_ms,model_load_time_ms,peak_gpu_memory_mb,model_size_mb,runtime_target,visual_evidence,objects,raw_output_path,normalized_output_path,error

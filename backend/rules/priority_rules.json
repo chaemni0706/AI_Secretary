@@ -1,0 +1,52 @@
+{
+  "default": "medium",
+  "high_keywords": [
+    "마감",
+    "시험",
+    "발표",
+    "제출",
+    "긴급",
+    "중요",
+    "데드라인",
+    "면접"
+  ],
+  "low_keywords": [
+    "휴식",
+    "산책",
+    "여유",
+    "취미",
+    "낮잠"
+  ],
+  "high_categories": [
+    "hospital",
+    "meeting",
+    "exam",
+    "deadline"
+  ],
+  "briefing_high_keywords": [
+    "예약",
+    "병원",
+    "회의",
+    "시험",
+    "마감"
+  ],
+  "category_priority": {
+    "hospital": "high",
+    "meeting": "high",
+    "study": "medium",
+    "school": "medium",
+    "exercise": "medium",
+    "personal": "medium",
+    "beauty": "medium",
+    "restaurant": "medium",
+    "etc": "medium"
+  },
+  "category_reasons": {
+    "hospital": "시간 고정 일정이며 준비물이 필요합니다.",
+    "meeting": "협업 일정으로 지각하면 영향이 큽니다.",
+    "exam": "시험 일정으로 매우 중요합니다.",
+    "deadline": "마감이 임박한 일정입니다.",
+    "school": "정해진 시간에 진행되는 수업 일정입니다."
+  },
+  "default_high_reason": "오늘 우선적으로 챙겨야 할 일정입니다."
+}

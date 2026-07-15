@@ -1,0 +1,56 @@
+// Server stores masked/minimized AI operation data only.
+
+Table model_versions {
+  model_version_id text [pk]
+  component text [not null]
+  model_name text [not null]
+  version text [not null]
+  configuration_json text
+  created_at text [not null]
+}
+
+Table masked_ai_requests {
+  request_id text [pk]
+  device_pseudonym text
+  input_mode text [not null]
+  input_text_masked text
+  intent text
+  processing_route text [not null]
+  rule_version text
+  model_version_id text
+  status text [not null]
+  latency_ms integer
+  created_at text [not null]
+}
+
+Table masked_ai_responses {
+  response_id text [pk]
+  request_id text [not null]
+  output_json text [not null]
+  confidence real
+  created_at text [not null]
+}
+
+Table evaluation_results {
+  evaluation_id text [pk]
+  model_version_id text
+  dataset_name text [not null]
+  metric_name text [not null]
+  metric_value real [not null]
+  details_json text
+  evaluated_at text [not null]
+}
+
+Table error_logs {
+  error_id text [pk]
+  request_id text
+  error_type text [not null]
+  message_masked text
+  stack_hash text
+  created_at text [not null]
+}
+
+Ref: masked_ai_requests.model_version_id > model_versions.model_version_id
+Ref: masked_ai_responses.request_id > masked_ai_requests.request_id
+Ref: evaluation_results.model_version_id > model_versions.model_version_id
+Ref: error_logs.request_id > masked_ai_requests.request_id

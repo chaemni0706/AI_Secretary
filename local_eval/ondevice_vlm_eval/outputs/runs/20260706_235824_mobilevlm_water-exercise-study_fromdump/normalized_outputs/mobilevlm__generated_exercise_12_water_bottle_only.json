@@ -1,0 +1,18 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "The image presents a simple yet effective workout pose. Dominating the center of the image is a blue water bottle, standing upright on a white background. The bottle's position and the absence of any other objects in",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "exercise_pose_visible"
+  ],
+  "_raw_text": "The image presents a simple yet effective workout pose. Dominating the center of the image is a blue water bottle, standing upright on a white background. The bottle's position and the absence of any other objects in"
+}

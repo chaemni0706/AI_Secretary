@@ -1,0 +1,55 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "hand holding glass",
+      "position": [
+        1,
+        78,
+        146,
+        139
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "name": "hand holding glass with lemon slice",
+      "position": [
+        1,
+        52,
+        188,
+        139
+      ]
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "hand holding glass",
+      "description": "A hand holding a glass with a lemon slice inside."
+    },
+    {
+      "name": "glass with lemon slice",
+      "description": "A glass containing a clear liquid with a lemon slice floating in it."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "empty container",
+      "description": "The glass appears to be empty."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "uncertain liquid",
+      "description": "The liquid inside the glass is not clearly visible."
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.8
+}

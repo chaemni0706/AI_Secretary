@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "daypart_rules": [
+    { "label": "오전", "start_hour": 5,  "end_hour": 11 },
+    { "label": "오후", "start_hour": 12, "end_hour": 17 },
+    { "label": "저녁", "start_hour": 18, "end_hour": 20 }
+  ],
+  "daypart_default": "밤",
+  "important_tip_categories": ["hospital", "meeting", "exam", "deadline"],
+  "todo_stem_suffixes": ["챙기기", "준비하기", "하기"],
+  "default_prep_word": "준비물",
+  "summary_templates": {
+    "has_schedules": "오늘은 {listing}{subject_particle} 있어요.",
+    "no_schedules": "오늘은 등록된 일정이 없어요.",
+    "prep_tip": " {top_title} 전에 {prep}{object_particle} 챙기고 일찍 나서세요."
+  },
+  "key_point_templates": {
+    "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요한 일정입니다.",
+    "todo_checklist": "{stem}{object_particle} 챙기세요.",
+    "todo_reminder": "'{title}'{object_particle} 잊지 마세요.",
+    "other_schedule": "{daypart_prefix}{title}{subject_particle} 있어요."
+  },
+  "todo_checklist_suffix": "챙기기",
+  "other_schedule_daypart_suffix": "에는 ",
+  "limits": { "max_key_points": 5 },
+
+  "_weather_comment": "브리핑 날씨 안내/준비 문구와 임계값. 우선순위: 강수 > 추위/더위 > 일반 안내. rain_pop=우산 안내 강수확률(%), cold/hot_max_temp=방한/수분 안내 최고기온(℃).",
+  "weather_templates": {
+    "info": "오늘 날씨는 {info}예요.",
+    "rain": "오늘은 {precip} 소식이 있어요{pop_suffix}. 우산을 챙기세요.",
+    "cold": "오늘은 쌀쌀해요(최고 {temp_max}℃). 따뜻하게 입으세요.",
+    "hot": "오늘은 더워요(최고 {temp_max}℃). 수분을 챙기세요.",
+    "pop_suffix": "(강수확률 {pop}%)"
+  },
+  "weather_thresholds": { "rain_pop": 60, "cold_max_temp": 5, "hot_max_temp": 30 }
+}

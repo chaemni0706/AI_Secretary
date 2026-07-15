@@ -1,0 +1,31 @@
+{
+  "verification_type": "exercise",
+  "activity_type": "home_workout",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    "exercise_mat"
+  ],
+  "scenes": [
+    "home_workout_pose"
+  ],
+  "visual_evidence": [
+    "exercise_mat"
+  ],
+  "negative_evidence": [
+    "unrelated_room",
+    "desk_environment",
+    "office_environment",
+    "clearly_wrong_activity_environment"
+  ],
+  "uncertain_evidence": [
+    "uncertain_screen_content"
+  ],
+  "text_observed": [
+    ""
+  ],
+  "confidence": 0.0
+}

@@ -1,0 +1,29 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "A home workout setting with a resistance band.",
+  "objects": [
+    {
+      "label": "resistance_band",
+      "confidence": 0.8,
+      "evidence": null
+    }
+  ],
+  "visible_text": [
+    "home workout: resistance band"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "gym_environment",
+    "home_workout_environment",
+    "exercise_mat_present",
+    "resistance_band_present",
+    "exercise_equipment_present"
+  ]
+}

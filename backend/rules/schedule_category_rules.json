@@ -1,0 +1,12 @@
+{
+  "default": "other",
+  "allowed": ["health", "beauty", "study", "work", "meal", "personal", "other"],
+  "rules": [
+    { "category": "health",   "keywords": ["병원", "치과", "약국", "진료", "검진", "내과", "치료", "건강"] },
+    { "category": "beauty",   "keywords": ["미용실", "네일", "피부과", "헤어", "커트", "파마", "염색", "왁싱"] },
+    { "category": "study",    "keywords": ["공부", "스터디", "과제", "시험", "레포트", "보고서", "강의", "수업"] },
+    { "category": "work",     "keywords": ["회의", "미팅", "출근", "업무", "팀플", "발표", "면접", "보고"] },
+    { "category": "meal",     "keywords": ["점심", "저녁", "식사", "밥", "카페", "외식", "맛집", "회식", "런치", "디너", "브런치"] },
+    { "category": "personal", "keywords": ["약속", "만남", "외출", "친구", "데이트", "모임"] }
+  ]
+}

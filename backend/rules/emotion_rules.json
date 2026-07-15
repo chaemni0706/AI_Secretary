@@ -1,0 +1,130 @@
+{
+  "intensifiers": [
+    "너무",
+    "정말",
+    "진짜",
+    "매우",
+    "엄청",
+    "완전",
+    "계속"
+  ],
+  "crisis_keywords": [
+    "죽고 싶",
+    "자해",
+    "살기 싫",
+    "사라지고 싶",
+    "끝내고 싶"
+  ],
+  "emotions": {
+    "fatigue": {
+      "keywords": [
+        "피곤",
+        "지침",
+        "지쳐",
+        "무기력",
+        "졸림",
+        "힘들어"
+      ],
+      "label": "피로감",
+      "sentiment": "negative",
+      "opening": "피로감이 높은 상태로 보입니다."
+    },
+    "anxiety": {
+      "keywords": [
+        "불안",
+        "걱정",
+        "초조",
+        "긴장"
+      ],
+      "label": "불안",
+      "sentiment": "negative",
+      "opening": "불안한 마음이 느껴지는 상태로 보입니다."
+    },
+    "sadness": {
+      "keywords": [
+        "슬픔",
+        "슬퍼",
+        "우울",
+        "눈물",
+        "외로움",
+        "외로워"
+      ],
+      "label": "우울감",
+      "sentiment": "negative",
+      "opening": "마음이 가라앉아 있는 상태로 보입니다."
+    },
+    "anger": {
+      "keywords": [
+        "화남",
+        "화가",
+        "짜증",
+        "분노",
+        "열받아"
+      ],
+      "label": "분노",
+      "sentiment": "negative",
+      "opening": "화가 나거나 짜증이 쌓인 상태로 보입니다."
+    },
+    "stress": {
+      "keywords": [
+        "스트레스",
+        "압박",
+        "부담"
+      ],
+      "label": "스트레스",
+      "sentiment": "negative",
+      "opening": "스트레스가 높은 상태로 보입니다."
+    },
+    "positive": {
+      "keywords": [
+        "좋아",
+        "행복",
+        "기뻐",
+        "뿌듯",
+        "괜찮아",
+        "즐거",
+        "신나"
+      ],
+      "label": "긍정",
+      "sentiment": "positive",
+      "opening": "기분이 좋은 상태로 보입니다."
+    }
+  },
+  "neutral": {
+    "label": "중립",
+    "sentiment": "neutral",
+    "opening": "특별한 감정 신호는 크지 않아 보입니다."
+  },
+  "coaching_actions": {
+    "fatigue": [
+      "가벼운 휴식하기"
+    ],
+    "anxiety": [
+      "할 일 잘게 쪼개기",
+      "짧은 휴식하기"
+    ],
+    "sadness": [
+      "가벼운 산책하기",
+      "주변 사람과 대화하기"
+    ],
+    "anger": [
+      "잠시 멈추기",
+      "천천히 호흡하기",
+      "자극 줄이기"
+    ],
+    "stress": [
+      "우선순위 정리하기",
+      "일정 재조정하기"
+    ],
+    "positive": [
+      "현재 루틴 유지하기"
+    ],
+    "neutral": [
+      "하루 기록 유지하기"
+    ]
+  },
+  "context_actions": {
+    "sleep_low": "수면 시간 확보하기",
+    "busy_evening": "저녁 일정 줄이기"
+  }
+}

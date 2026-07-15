@@ -1,0 +1,64 @@
+{
+  "_comment": "Rule-based config for /api/v1/places/recommend. Category aliases drive both query parsing and category-match scoring; weights only score/rank candidates that Naver returned. Scores are 0..100.",
+  "category_aliases": {
+    "restaurant": ["식당", "밥집", "맛집", "저녁", "점심", "한식", "양식", "일식", "중식", "분식", "고기", "회"],
+    "cafe": ["카페", "디저트", "커피", "브런치", "베이커리"],
+    "activity": ["놀거리", "놀만한 곳", "놀 곳", "놀만한곳", "데이트", "전시", "영화", "보드게임", "볼링", "방탈출", "노래방"],
+    "beauty": ["미용실", "네일", "헤어", "왁싱", "피부관리", "속눈썹"],
+    "hospital": ["병원", "치과", "피부과", "내과", "약국", "정형외과", "이비인후과"]
+  },
+  "category_query_suffix": {
+    "restaurant": "맛집",
+    "cafe": "카페",
+    "activity": "놀거리",
+    "beauty": "",
+    "hospital": ""
+  },
+  "stopwords": [
+    "추천", "추천해줘", "추천해", "추천해 줘", "추천해주세요", "알려줘", "알려줄래",
+    "찾아줘", "찾아", "근처", "근처에서", "이근처", "이 근처",
+    "에서", "먹을", "먹고", "먹고싶은데", "만한", "곳", "좀", "해줘", "가고",
+    "싶어", "싶은데", "싶은", "가고싶은데", "가볼", "가볼래",
+    "만한 곳", "어디", "있을까", "있어", "없을까", "주변", "주변에",
+    "좋은", "괜찮은", "가까운", "여기", "여기서",
+    "예약", "예약해줘", "예약해", "예약하고", "예약하려고", "예약할래", "예약하고 싶은데",
+    "잡아줘", "잡아", "가야", "하는데", "가야하는데", "부탁", "부탁해"
+  ],
+  "scoring": {
+    "base_score": 50,
+    "category_match_bonus": 20,
+    "keyword_match_bonus": 10,
+    "has_road_address_bonus": 5,
+    "has_phone_bonus": 5,
+    "has_map_url_bonus": 5,
+    "mood_match_bonus": 5,
+    "unknown_penalty": -5,
+    "min_score": 0,
+    "max_score": 100
+  },
+  "travel_scoring": {
+    "short_max_minutes": 15,
+    "short_bonus": 10,
+    "medium_max_minutes": 30,
+    "medium_bonus": 5,
+    "long_min_minutes": 45,
+    "long_penalty": -10,
+    "top_n_with_travel": 3,
+    "walk_show_max_minutes": 15
+  },
+  "schedule_scoring": {
+    "_comment": "일정 실현 가능성 점수. needed = 편도 이동시간 + 체류시간(duration_minutes). window = available_end - available_start(분). window 대비 needed 비율로 판정.",
+    "comfortable_ratio": 0.8,
+    "fits_bonus": 10,
+    "tight_bonus": 0,
+    "overflow_penalty": -15,
+    "top_n_with_schedule": 5
+  },
+  "mood_aliases": {
+    "casual": ["가성비", "편한", "캐주얼", "혼밥", "간단", "분위기"],
+    "date": ["데이트", "분위기", "감성", "예쁜", "뷰"],
+    "quiet": ["조용한", "한적한", "혼자", "작업", "공부"]
+  },
+  "default_display_count": 5,
+  "max_display_count": 10
+}

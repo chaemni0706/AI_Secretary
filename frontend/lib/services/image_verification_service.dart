@@ -4,6 +4,11 @@ import '../models/image_verification_result.dart';
 import 'smol_ondevice_verifier.dart';
 import 'verification_api.dart';
 
+/// [ImageVerificationService.verify]의 진행 단계 — UI가 "로컬 분석 중" vs
+/// "서버 검증 중"을 구분해 보여줄 수 있도록 콜백으로 알린다. 최종 판정과는
+/// 무관하며, 순수 진행상태 표시용이다.
+enum VerificationStage { localAnalysis, serverVerification }
+
 /// 이미지 인증 오케스트레이터: **Smol 온디바이스 1차 → Qwen2.5-VL-7B 서버 fallback**.
 ///
 ///   image + task
@@ -13,9 +18,12 @@ import 'verification_api.dart';
 ///
 /// 원칙:
 /// - 최종 판정은 항상 Rule Engine(서버) 또는 fail-safe. Smol/7B 는 evidence extractor.
-/// - Smol `verified`(특히 water)는 로컬 단독 확정 금지 → 서버 fallback 으로 재확인.
-/// - water 의 `verified` 는 비시각 맥락 리스크로 `reviewRequired` → 앱은 자동 성공이 아니라 **재촬영 안내**.
-/// - Smol 온디바이스 추론은 아직 미구현(네이티브는 세션 로드까지) → 현재는 항상 서버 fallback. 준비 시 자동 활성.
+/// - Smol `verified`(모든 task)는 로컬/서버 1차 단독 확정 금지 → 항상 Qwen7B 로 재확인(서버 orchestrator,
+///   backend/services/image_verification_service.py 라우팅 참고).
+/// - water 의 `verified` 는 **더 이상 무조건 review 가 아니다** -- 서버가 evidence/uncertainty 기반으로
+///   판단한 `reviewRequired` 값을 그대로 신뢰한다(명확한 clear water 는 review 없이 verified 가능).
+/// - Smol 온디바이스 추론은 아직 미구현(네이티브는 세션 로드까지) → 현재는 항상 서버로 요청이 가고,
+///   서버 쪽에서 Smol(서버사이드)→Qwen7B 라우팅이 수행된다. 온디바이스 준비 시 자동 활성.
 class ImageVerificationService {
   final SmolOndeviceVerifier smol;
   final VerificationApi api;
@@ -49,9 +57,11 @@ class ImageVerificationService {
     required File imageFile,
     required String task,
     String? activityType,
+    void Function(VerificationStage stage)? onStage,
   }) async {
     // 0) Smol **blocker-only** local-first: 명백한 blocker(주스/커피/소파 등)면 서버 없이 로컬 재촬영 안내.
     //    positive/약함/모호/모델없음/오류는 모두 null → 아래 서버 fallback. **local accept 는 절대 없음.**
+    onStage?.call(VerificationStage.localAnalysis);
     final blocker = await smol.inferBlocker(imageFile: imageFile, task: task);
     if (blocker != null) {
       return ImageVerificationResult.fromMap({
@@ -83,21 +93,22 @@ class ImageVerificationService {
     }
 
     // 2) 서버 fallback (Qwen2.5-VL-7B + guard + Rule Engine)
+    onStage?.call(VerificationStage.serverVerification);
     final server = await api.submitImageVerification(
       verificationType: task, imageFile: imageFile, activityType: activityType);
     final data = server.raw;
     final finalResult = (data['result'] ?? server.result).toString();
-    // 서버가 review_required 를 주지 않으면 클라이언트 정책으로 보강(water verified → review).
-    final reviewRequired = data['review_required'] == true ||
-        (finalResult == 'verified' && task == 'water');
+    // 오늘 production patch: water 블랭킷 review 정책이 백엔드에서 제거되었다. 서버가 evidence/
+    // uncertainty 기반으로 판단한 review_required 값을 그대로 신뢰한다(클라이언트 강제 오버라이드 없음).
+    final reviewRequired = data['review_required'] == true;
     return ImageVerificationResult.fromMap({
-      ...data, // 서버 원본(score/rule_evidence 등) 먼저 — 아래 계산값이 우선하도록 덮어씀
+      ...data, // 서버 원본(score/rule_evidence/engine_used/fallback_reason/guard_reason 등) 먼저
       'task': task,
       'final_result': finalResult,
-      'engine_used': 'server_fallback',
+      'engine_used': (data['engine_used'] ?? 'server_fallback').toString(),
       'fallback_used': true,
       'review_required': reviewRequired,
-      'review_reason': reviewRequired ? 'water_non_visual_context_risk' : '',
+      'review_reason': (data['review_reason'] ?? '').toString(),
       'local_result': local == null ? 'unknown' : (local['final_result'] ?? 'unknown'),
       'fallback_result': finalResult,
       'rule_reason': server.reasons.isNotEmpty ? server.reasons.first : '',

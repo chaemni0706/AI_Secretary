@@ -206,6 +206,11 @@ async def test_api_image_water_endpoint(monkeypatch):
         "backend.services.image_verification_service.get_default_vision_analyzer",
         lambda: MockVisionAnalyzer(WATER_PASS),
     )
+    # 오늘 production patch: Smol 단독 verified 없음 -- Qwen7B 자리에도 동등 evidence mock 주입.
+    monkeypatch.setattr(
+        "backend.services.image_verification_service.get_qwen7b_analyzer",
+        lambda: MockVisionAnalyzer(WATER_PASS.model_copy(update={"model_name": "qwen7b-mock"})),
+    )
     resp = await _post("/api/v1/verification/image/water",
                        files={"file": ("w.jpg", _img(), "image/jpeg")})
     assert resp.status_code == 200

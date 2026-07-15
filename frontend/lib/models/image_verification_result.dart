@@ -1,13 +1,15 @@
 /// VLM 기반 이미지 인증 통합 결과 모델 (local-first + server fallback).
 ///
-/// Python 파이프라인 `local_eval/vlm_baseline/vlm_fallback_verifier.py`
-/// (`verify_image_with_vlm_fallback`) 의 반환 schema 를 앱 측에서 mirror 한 것.
+/// 실제 backend 엔드포인트(`POST /api/v1/verification/image/{type}`,
+/// `backend/services/image_verification_service.py::verify_image_upload`)의 응답 schema를
+/// 앱 측에서 mirror 한 것.
 ///
-/// 최종 판정(`finalResult`)은 항상 **기존 Rule Engine 또는 fail-safe/guard** 에서 나온다.
-/// Smol 온디바이스와 Qwen2.5-VL-7B 서버 fallback 은 evidence extractor 일 뿐이다.
+/// 최종 판정(`finalResult`)은 항상 **Rule Engine + backend FP guard 또는 fail-safe** 에서 나온다.
+/// Smol(서버사이드 1차)과 Qwen2.5-VL-7B(서버 fallback)는 evidence extractor 일 뿐이며, 어느 쪽도
+/// 단독으로 verified 를 만들지 않는다.
 ///
-/// water 의 `verified` 는 비시각 맥락(수질/장소/음료 종류)을 외관만으로 확정할 수 없어
-/// `reviewRequired == true` 로 표시된다 → 앱은 secondary_review(사람/맥락 rule) 로 라우팅한다.
+/// water 의 `verified` 는 서버가 evidence/uncertainty 기반으로 판단해 `reviewRequired` 를 결정한다
+/// (모델이 낮은 uncertainty 로 명확한 positive evidence 를 보고하면 review 없이 그대로 확정 가능).
 class ImageVerificationResult {
   final String task; // water | study | exercise
 
@@ -55,10 +57,13 @@ class ImageVerificationResult {
   }
 
   /// secondary_review(자동 확정 불가 → 재촬영) 필요 여부.
-  /// **water verified 는 항상 review**(비시각 맥락 리스크) — `raw` 의 값이 무엇이든 방어적으로 강제.
-  /// 이는 화면이 서비스 결과의 `...data` 로 review_required 가 덮여도 water 자동 성공을 막는 안전장치.
-  bool get reviewRequired =>
-      raw['review_required'] == true || (finalResult == 'verified' && task == 'water');
+  ///
+  /// 오늘 production patch: "water verified 는 항상 review" 블랭킷 정책은 백엔드에서
+  /// 제거되었다(backend/services/image_verification_service.py::apply_secondary_review_policy).
+  /// 이제 서버가 evidence/uncertainty 기반으로 review_required 를 판단해 응답에 담아 보낸다 --
+  /// 명확한 positive water evidence(모델이 uncertainty="low" 로 보고)는 review 없이 그대로
+  /// verified 로 확정될 수 있다(클라이언트에서 강제로 덮어쓰지 않는다). 서버 값을 그대로 신뢰한다.
+  bool get reviewRequired => raw['review_required'] == true;
 
   bool get isVerified => finalResult == 'verified' && !reviewRequired;
   bool get isRejected => finalResult == 'rejected';

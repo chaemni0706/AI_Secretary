@@ -176,6 +176,9 @@ def _score(
             breakdown.object_score += delta
             evidence.append(RuleEvidence(code=f"study_evidence:{item}", message="공부 관련 시각 근거가 확인되었습니다.", score_delta=delta))
 
+    if rule.get("mandatory", {}).get("study_patterns", False):
+        _score_study_strong_combo(rule, analysis, breakdown, evidence)
+
     if rule.get("mandatory", {}).get("exercise_patterns", False):
         _score_exercise(rule, analysis, context, breakdown, evidence)
 
@@ -299,6 +302,65 @@ def _study_mandatory_passed(analysis: VisionAnalysis) -> bool:
         return True
 
     return False
+
+
+def _study_strong_combo_code(analysis: VisionAnalysis) -> str | None:
+    """Phase 11.F: explicit strong-positive evidence CO-OCCURRENCES the task
+    brief asked to support -- NOT a blanket threshold change. A single weak
+    signal (e.g. open_textbook alone, ~25pts) legitimately should not verify;
+    but two independent real study signals together are strong enough that
+    they should reach `verified` even if their raw point sum falls a little
+    short of the configured threshold. Single-evidence images (like the
+    known study_002 case: open_textbook + one low-value object = 35pts) are
+    deliberately NOT covered here -- that is a genuine single-evidence case,
+    not a rule-weight bug (see qwen_recovery/study_reevaluation_notes.md for
+    the re-question test that confirmed this)."""
+    study_evidence = _study_evidence(analysis)
+    combos = [
+        ({"open_textbook", "handwritten_notes"}, "textbook_plus_handwritten_notes"),
+        ({"open_workbook", "handwritten_notes"}, "workbook_plus_handwritten_notes"),
+        ({"open_textbook", "problem_solving_material"}, "textbook_plus_problem_solving"),
+        ({"open_workbook", "problem_solving_material"}, "workbook_plus_problem_solving"),
+        ({"open_textbook", "educational_document"}, "textbook_plus_educational_document"),
+        ({"open_workbook", "educational_document"}, "workbook_plus_educational_document"),
+    ]
+    for required, code in combos:
+        if required.issubset(study_evidence):
+            return code
+    return None
+
+
+def _score_study_strong_combo(
+    rule: dict[str, Any],
+    analysis: VisionAnalysis,
+    breakdown: RuleScoreBreakdown,
+    evidence: list[RuleEvidence],
+) -> None:
+    """Mirrors `_score_exercise`'s existing `exercise_mandatory_match` bonus
+    pattern (already established in this codebase, not a new mechanism):
+    when a named strong-positive combo is present, top up the score to the
+    verified threshold -- never below what individual items already scored,
+    never above the threshold itself, and never overriding a priority
+    rejection (entertainment/social/shopping/non_study_screen are checked
+    separately in `_priority_result` and still win regardless)."""
+    combo_code = _study_strong_combo_code(analysis)
+    if combo_code is None:
+        return
+    current_study_score = sum(
+        item.score_delta for item in evidence
+        if (item.code.startswith("study_evidence:") or item.code.startswith("object:")) and item.score_delta > 0
+    )
+    minimum_score = int(rule.get("thresholds", {}).get("verified", 0) or 0)
+    if minimum_score > 0 and current_study_score < minimum_score:
+        delta = minimum_score - current_study_score
+        breakdown.object_score += delta
+        evidence.append(
+            RuleEvidence(
+                code=f"study_strong_combo:{combo_code}",
+                message="복수의 강한 학습 근거 조합이 확인되어 최소 인증 점수를 적용했습니다.",
+                score_delta=delta,
+            )
+        )
 
 
 def _append_study_priority_evidence(analysis: VisionAnalysis, evidence: list[RuleEvidence]) -> None:

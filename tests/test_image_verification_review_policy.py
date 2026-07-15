@@ -1,7 +1,12 @@
 """secondary_review 라우팅 정책 smoke 테스트.
 
-verified(water) → review_required=true(자동 확정 아님), exercise/study 는 기존 흐름 유지.
-Rule Engine core 는 미수정; 정책은 orchestrator(service) layer 의 apply_secondary_review_policy.
+정책 변경(오늘 production patch): "water verified 는 무조건 review_required=true"
+블랭킷 정책을 제거했다. 이제는 evidence/uncertainty 기반이다 -- 모델이
+uncertainty="low" 로 명확한 positive evidence 를 보고하면 그대로 verified 로
+확정되고(clear water 인증 가능), 모델 스스로 uncertainty!="low" 를 보고한
+경우에만 review 로 보낸다. exercise/study 는 여전히 review 대상이 아니다.
+Rule Engine core 는 미수정; 정책은 orchestrator(service) layer 의
+apply_secondary_review_policy 뿐이다.
 """
 
 from backend.database.schema.image_verification_schema import (
@@ -15,27 +20,31 @@ from backend.services.image_verification_rule_engine import evaluate_image_verif
 from backend.services.image_verification_service import apply_secondary_review_policy
 
 
-def _verified_water():
+def _verified_water(uncertainty="low"):
     analysis = VisionAnalysis(
         objects=[ImageObjectObservation(label="cup", confidence=0.9)],
         water_visual_evidence=["visible_water", "filled_container"],
+        uncertainty=uncertainty,
     )
     data = evaluate_image_verification("water", analysis, ImageVerificationContext())
     assert data.result == "verified"  # 전제: 룰 엔진이 verified
     return data
 
 
-def test_verified_water_is_flagged_for_secondary_review():
-    data = apply_secondary_review_policy(_verified_water())
+def test_clear_water_verified_is_not_blocked_by_review():
+    """명확한 positive evidence + uncertainty=low(모델 기본값) -> review 없이 그대로 verified."""
+    data = apply_secondary_review_policy(_verified_water(uncertainty="low"))
+    assert data.result == "verified"
+    assert data.review_required is False
+    assert data.review_reason == ""
+
+
+def test_uncertain_water_verified_is_flagged_for_review():
+    """모델 스스로 uncertainty!=low 를 보고한 verified water 만 review 로 보낸다."""
+    data = apply_secondary_review_policy(_verified_water(uncertainty="medium"))
     assert data.result == "verified"  # final_result enum 은 변경하지 않음
     assert data.review_required is True
-    assert data.review_reason == "water_non_visual_context_risk"
-
-
-def test_verified_water_response_contains_review_fields():
-    dumped = apply_secondary_review_policy(_verified_water()).model_dump()
-    assert dumped["review_required"] is True
-    assert dumped["review_reason"] == "water_non_visual_context_risk"
+    assert "water_model_uncertainty" in data.review_reason
 
 
 def test_rejected_water_is_not_flagged():

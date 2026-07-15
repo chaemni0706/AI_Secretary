@@ -69,7 +69,7 @@ SessionLocal = sessionmaker(
 )
 
 
-def _ensure_sqlite_dir(url: str) -> None:
+def ensure_sqlite_dir(url: str) -> None:
     """Create the parent directory of a sqlite file lazily (only when the DB is
     actually used), so merely importing this module never creates ``runtime/``."""
     if not url.startswith(_SQLITE_PREFIX):
@@ -81,7 +81,7 @@ def _ensure_sqlite_dir(url: str) -> None:
 
 def get_db():
     """FastAPI dependency yielding a session, always closed afterwards."""
-    _ensure_sqlite_dir(DATABASE_URL)
+    ensure_sqlite_dir(DATABASE_URL)
     db: Session = SessionLocal()
     try:
         yield db

@@ -170,7 +170,7 @@ def list_todos_by_due_date(db: Session, *, user_id: str, due_date: str) -> List[
             PlannerItem.user_id == user_id,
             PlannerItem.item_type == "TODO",
             PlannerItem.deleted_at.is_(None),
-            TodoDetail.planned_date.like(f"{due_date}%"),
+            TodoDetail.due_at.like(f"{due_date}%"),
         )
         .order_by(PlannerItem.created_at)
     )

@@ -36,5 +36,8 @@ CASES = load_regression_cases()
 )
 def test_schedule_parser_dataset(case: dict) -> None:
     request = ScheduleParseRequest(**case["request"])
-    actual = parse_schedule(request).model_dump()
+    # Compare the locked legacy payload in JSON form. ``tts_text`` is an
+    # additive response field introduced after this dataset was frozen, so it
+    # is validated by dedicated TTS tests rather than treated as a regression.
+    actual = parse_schedule(request).model_dump(mode="json", exclude={"tts_text"})
     assert actual == case["expected_data"]

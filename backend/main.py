@@ -28,7 +28,7 @@ from backend.api import (
 from backend.core.config import settings
 from backend.core.response import register_exception_handlers
 from backend.database.init_db import init_db_from_engine
-from backend.database.session import engine
+from backend.database.session import DATABASE_URL, engine, ensure_sqlite_dir
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -49,6 +49,7 @@ register_exception_handlers(app)
 @app.on_event("startup")
 def initialize_local_database() -> None:
     """Apply the existing idempotent SQLite schema to the configured DB."""
+    ensure_sqlite_dir(DATABASE_URL)
     init_db_from_engine(engine)
 
 

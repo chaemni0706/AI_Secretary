@@ -15,7 +15,7 @@
     "prep_tip": " {top_title} 전에 {prep}{object_particle} 챙기고 일찍 나서세요."
   },
   "key_point_templates": {
-    "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요해요.",
+    "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요한 일정입니다.",
     "todo_checklist": "{stem}{object_particle} 챙기세요.",
     "todo_reminder": "'{title}'{object_particle} 잊지 마세요.",
     "other_schedule": "{daypart_prefix}{title}{subject_particle} 있어요."

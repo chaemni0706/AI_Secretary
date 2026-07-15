@@ -1,0 +1,4 @@
+image,verification_type,ground_truth,pred_label,pred_result,score,mandatory_passed,got_evidence,rule_evidence,is_false_positive,is_false_negative,correct,latency_ms,source,error
+water/pass/water_real_01.png,water,PASS,FAIL,rejected,50,False,visible_water;filled_container,water_pattern_missing;water_evidence:visible_liquid;water_evidence:filled_container,False,True,False,3404.7,real,
+water/pass/water_real_02.png,water,PASS,PASS,verified,65,True,visible_water;filled_container,object:tumbler;water_evidence:visible_liquid;water_evidence:filled_container,False,False,True,3139.5,real,
+water/fail/water_real_03.png,water,FAIL,PASS,verified,65,True,visible_water;filled_container,object:tumbler;water_evidence:visible_liquid;water_evidence:filled_container,True,False,False,3027.5,real,

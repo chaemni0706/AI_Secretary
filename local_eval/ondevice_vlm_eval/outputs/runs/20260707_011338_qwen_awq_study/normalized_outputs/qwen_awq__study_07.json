@@ -1,0 +1,30 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "laptop",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "monitor",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [],
+  "study_visual_evidence": [
+    "lecture_video",
+    "uncertain_screen_content"
+  ],
+  "exercise_visual_evidence": [],
+  "_raw_text": "a lecture video on a laptop"
+}

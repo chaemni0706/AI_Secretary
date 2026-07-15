@@ -1,0 +1,35 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study_materials",
+  "objects": [
+    {
+      "label": "book",
+      "confidence": 0.99,
+      "evidence": "전공 교재가 펼쳐져 있음"
+    },
+    {
+      "label": "tablet",
+      "confidence": 0.98,
+      "evidence": "태블릿에 학습 도식이 표시됨"
+    },
+    {
+      "label": "printed_document",
+      "confidence": 0.96,
+      "evidence": "필기된 출력물이 보임"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "open_textbook",
+    "educational_document",
+    "study_content_on_screen",
+    "handwritten_notes"
+  ],
+  "water_visual_evidence": []
+}

@@ -1,0 +1,98 @@
+{
+  "_comment": "Solution policy. Six fixed categories, each with concrete solution_types (title/reason/action_buttons). The selection ORDER is enforced in code (safety > immediate_recovery > schedule_support > task_structuring > environment_shift > schedule_adjustment > ambiguous combo). All solutions require user confirmation.",
+  "risk_keywords": ["죽고 싶", "자해", "살기 싫", "사라지고 싶", "끝내고 싶", "죽어버리", "없어지고 싶"],
+  "overwhelm_keywords": ["막막", "뭐부터", "너무 많아", "감당", "정신 없", "벅차", "어떻게 해야 할지"],
+  "reschedule_wish_keywords": ["미루고 싶", "옮기고 싶", "미룰까", "뒤로 미", "다른 시간", "조정하고 싶", "미뤄"],
+  "categories": {
+    "immediate_recovery": {
+      "description": "지금 바로 할 수 있는 짧은 회복 행동.",
+      "solution_types": [
+        {
+          "solution_type": "breathing",
+          "title": "5분 호흡으로 잠시 숨 고르기",
+          "reason": "짧은 호흡 정리는 지금 느끼는 부담을 빠르게 낮추는 데 도움이 됩니다.",
+          "action_buttons": ["5분 호흡 안내 보기", "괜찮아요"]
+        },
+        {
+          "solution_type": "stretching",
+          "title": "가벼운 스트레칭으로 몸 풀기",
+          "reason": "몸의 긴장을 풀면 마음의 피로도 함께 가라앉는 경우가 많습니다.",
+          "action_buttons": ["스트레칭 동작 보기", "괜찮아요"]
+        }
+      ]
+    },
+    "schedule_support": {
+      "description": "기존 일정을 미루지 않고 잘 수행하도록 돕는 방식.",
+      "solution_types": [
+        {
+          "solution_type": "transition_buffer",
+          "title": "다음 일정 전 전환 시간 확보하기",
+          "reason": "곧 중요한 일정이 있어, 미루기보다 준비 시간을 확보하는 편이 부담을 줄여줍니다.",
+          "action_buttons": ["전환 시간 잡기", "괜찮아요"]
+        },
+        {
+          "solution_type": "prep_checklist",
+          "title": "출발 전 준비물 체크리스트 만들기",
+          "reason": "미리 준비를 정리해두면 일정 직전의 급한 마음을 줄일 수 있습니다.",
+          "action_buttons": ["체크리스트 만들기", "괜찮아요"]
+        }
+      ]
+    },
+    "task_structuring": {
+      "description": "할 일이 많아 막막할 때 일을 작게 나누는 방식.",
+      "solution_types": [
+        {
+          "solution_type": "task_breakdown",
+          "title": "할 일을 3단계로 나누기",
+          "reason": "일정이 많고 막막한 상태에서는 큰 일을 작은 단위로 나누는 것이 부담을 줄이는 데 적합합니다.",
+          "action_buttons": ["할 일 쪼개기", "괜찮아요"]
+        },
+        {
+          "solution_type": "priority_sorting",
+          "title": "오늘 할 일과 나중 할 일 나누기",
+          "reason": "지금 꼭 해야 하는 일과 미뤄도 되는 일을 나누면 시작점이 분명해집니다.",
+          "action_buttons": ["우선순위 정리하기", "괜찮아요"]
+        }
+      ]
+    },
+    "environment_shift": {
+      "description": "장소나 활동을 바꿔 기분 전환을 돕는 방식.",
+      "solution_types": [
+        {
+          "solution_type": "quiet_place",
+          "title": "잠깐 조용한 곳에서 기분 전환하기",
+          "reason": "여유 시간이 있어, 장소를 잠깐 바꾸는 것만으로도 기분이 환기될 수 있습니다.",
+          "action_buttons": ["장소 추천 받기", "괜찮아요"]
+        },
+        {
+          "solution_type": "short_walk",
+          "title": "짧은 산책으로 환기하기",
+          "reason": "가벼운 움직임과 바깥 공기는 답답한 마음을 푸는 데 도움이 됩니다.",
+          "action_buttons": ["산책 코스 보기", "괜찮아요"]
+        }
+      ]
+    },
+    "schedule_adjustment": {
+      "description": "낮은 우선순위 일정을 미루거나 조정하는 방식. 사용자가 직접 원할 때만 사용.",
+      "solution_types": [
+        {
+          "solution_type": "reschedule_low_priority",
+          "title": "우선순위가 낮은 일정 옮겨보기",
+          "reason": "직접 조정을 원하셔서, 조정 가능한 일정의 후보 시간을 함께 살펴볼 수 있습니다.",
+          "action_buttons": ["후보 시간 보기", "다른 시간 보기", "그대로 둘게요"]
+        }
+      ]
+    },
+    "safety": {
+      "description": "위험 표현이 감지될 때 적용하는 안전 대응.",
+      "solution_types": [
+        {
+          "solution_type": "safety_support",
+          "title": "혼자 두지 않기 — 도움 연결",
+          "reason": "많이 힘든 마음이 느껴집니다. 혼자 감당하기보다 신뢰할 수 있는 사람이나 전문가와 이야기 나누는 것을 권합니다.",
+          "action_buttons": ["도움받을 수 있는 곳 보기", "신뢰하는 사람에게 연락하기"]
+        }
+      ]
+    }
+  }
+}

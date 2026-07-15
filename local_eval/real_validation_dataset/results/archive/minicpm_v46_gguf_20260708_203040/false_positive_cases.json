@@ -1,0 +1,233 @@
+[
+  {
+    "image": "water/fail/water_real_03.png",
+    "verification_type": "water",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3076.0,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "rule_evidence": [
+      "object:tumbler",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "water/fail/water_real_04.png",
+    "verification_type": "water",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3522.3,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "water/fail/water_real_16.png",
+    "verification_type": "water",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3537.6,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "rule_evidence": [
+      "object:cup",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "water/fail/water_real_17.png",
+    "verification_type": "water",
+    "ground_truth": "BORDERLINE",
+    "source": "real",
+    "latency_ms": 3669.5,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "rule_evidence": [
+      "object:water_bottle",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "exercise/fail/exercise_real_07.png",
+    "verification_type": "exercise",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3506.8,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "barbell_present",
+      "weight_machine_present",
+      "exercise_bike_present",
+      "exercise_mat_present",
+      "gym_environment",
+      "home_workout_environment"
+    ],
+    "rule_evidence": [
+      "exercise_environment:gym",
+      "exercise_core_equipment:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "exercise/fail/exercise_real_08.png",
+    "verification_type": "exercise",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3615.8,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "barbell_present",
+      "weight_machine_present",
+      "exercise_mat_present",
+      "gym_environment",
+      "home_workout_environment"
+    ],
+    "rule_evidence": [
+      "exercise_environment:gym",
+      "exercise_core_equipment:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "exercise/fail/exercise_real_09.png",
+    "verification_type": "exercise",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3797.5,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "barbell_present",
+      "weight_machine_present",
+      "exercise_bike_present",
+      "exercise_mat_present",
+      "gym_environment"
+    ],
+    "rule_evidence": [
+      "exercise_environment:gym",
+      "exercise_core_equipment:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "exercise/fail/exercise_real_11.png",
+    "verification_type": "exercise",
+    "ground_truth": "BORDERLINE",
+    "source": "real",
+    "latency_ms": 3671.2,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "gym_environment"
+    ],
+    "rule_evidence": [
+      "exercise_environment:gym",
+      "exercise_core_equipment:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  },
+  {
+    "image": "exercise/fail/exercise_real_12.png",
+    "verification_type": "exercise",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3586.8,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "treadmill_present",
+      "dumbbell_present",
+      "barbell_present",
+      "gym_environment",
+      "home_workout_environment"
+    ],
+    "rule_evidence": [
+      "exercise_environment:gym",
+      "exercise_core_equipment:gym"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  }
+]

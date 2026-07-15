@@ -1,0 +1,52 @@
+{
+  "verification_type": "study",
+  "result": "rejected",
+  "score": 0,
+  "mandatory_passed": false,
+  "score_breakdown": {
+    "base_score": 0,
+    "object_score": 0,
+    "text_score": 0,
+    "scene_score": 0,
+    "gps_score": 0,
+    "total_score": 0
+  },
+  "vlm_analysis": {
+    "quality": {
+      "brightness": "normal",
+      "blur": "low",
+      "usable": true,
+      "issues": []
+    },
+    "scene": "person playing a game",
+    "objects": [
+      {
+        "label": "headphones",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "monitor with person's hand",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "monitor showing a game",
+        "confidence": 0.8,
+        "evidence": null
+      }
+    ],
+    "visible_text": [],
+    "visual_evidence": [],
+    "study_visual_evidence": [],
+    "water_visual_evidence": [],
+    "exercise_visual_evidence": []
+  },
+  "rule_evidence": [
+    {
+      "code": "study_pattern_missing",
+      "message": "공부 인증에 필요한 학습 자료 또는 학습 콘텐츠 근거가 부족합니다.",
+      "score_delta": 0
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "filled",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "transparent bottle with water"
+    }
+  ],
+  "scenes": [
+    {
+      "description": "A transparent bottle with a blue cap and a filled with water."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "type": "container",
+      "name": "transparent bottle with water"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "type": "non_water_beverage",
+      "reason": "The bottle appears to contain water based on its appearance and context."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "type": "opaque_closed_container",
+      "reason": "The bottle is transparent, so it is not opaque."
+    }
+  ],
+  "text_observed": [
+    "transparent bottle with water"
+  ],
+  "confidence": 1.0
+}
+```

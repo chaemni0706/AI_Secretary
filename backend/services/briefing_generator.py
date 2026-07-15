@@ -1,0 +1,461 @@
+"""Rule-based daily briefing generator (with optional LLM summary).
+
+priority_order and key_points are always rule-based for reliability.
+The summary sentence is produced by the LLM when a key is configured,
+otherwise by a template. Never raises.
+
+Importance judgement (which schedules/to-dos are "high") stays in
+``priority_rules.json``. Briefing *phrasing* — dayparts, summary / key-point
+templates and to-do stem suffixes — lives in ``briefing_rules.json`` so wording
+can be tuned without code changes. If ``briefing_rules.json`` is missing or
+corrupt, a built-in default (identical to the previous hard-coded behaviour)
+is used so the endpoint never breaks.
+"""
+from __future__ import annotations
+
+import json
+import re
+from functools import lru_cache
+from pathlib import Path
+from typing import List, Optional, Tuple
+
+from backend.database.schema.briefing_schema import (
+    BriefingSchedule,
+    DailyBriefingData,
+    DailyBriefingRequest,
+    PriorityOrderItem,
+)
+from backend.services import llm_service
+from backend.services import tts_response_builder, user_preference_service
+
+_RULES_DIR = Path(__file__).resolve().parents[1] / "rules"
+_PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "briefing_prompt.txt"
+
+_RANK = {"high": 0, "medium": 1, "low": 2}
+
+# Built-in fallback — mirrors the original hard-coded policy exactly, so a
+# missing/corrupt briefing_rules.json produces identical output.
+DEFAULT_BRIEFING_RULES: dict = {
+    "schema_version": 1,
+    "daypart_rules": [
+        {"label": "오전", "start_hour": 5, "end_hour": 11},
+        {"label": "오후", "start_hour": 12, "end_hour": 17},
+        {"label": "저녁", "start_hour": 18, "end_hour": 20},
+    ],
+    "daypart_default": "밤",
+    "important_tip_categories": ["hospital", "meeting", "exam", "deadline"],
+    "todo_stem_suffixes": ["챙기기", "준비하기", "하기"],
+    "default_prep_word": "준비물",
+    "summary_templates": {
+        "has_schedules": "오늘은 {listing}{subject_particle} 있어요.",
+        "no_schedules": "오늘은 등록된 일정이 없어요.",
+        "prep_tip": " {top_title} 전에 {prep}{object_particle} 챙기고 일찍 나서세요.",
+    },
+    "key_point_templates": {
+        "top_schedule": "{time_prefix}{title}{subject_particle} 가장 중요해요.",
+        "todo_checklist": "{stem}{object_particle} 챙기세요.",
+        "todo_reminder": "'{title}'{object_particle} 잊지 마세요.",
+        "other_schedule": "{daypart_prefix}{title}{subject_particle} 있어요.",
+    },
+    "todo_checklist_suffix": "챙기기",
+    "other_schedule_daypart_suffix": "에는 ",
+    "limits": {"max_key_points": 5},
+    # 날씨 안내/준비 팁 문구(있을 때만 사용). 임계값은 weather_thresholds 로 조정.
+    "weather_templates": {
+        "info": "오늘 날씨는 {info}예요.",
+        "rain": "오늘은 {precip} 소식이 있어요{pop_suffix}. 우산을 챙기세요.",
+        "cold": "오늘은 쌀쌀해요(최고 {temp_max}℃). 따뜻하게 입으세요.",
+        "hot": "오늘은 더워요(최고 {temp_max}℃). 수분을 챙기세요.",
+        "pop_suffix": "(강수확률 {pop}%)",
+    },
+    "weather_thresholds": {"rain_pop": 60, "cold_max_temp": 5, "hot_max_temp": 30},
+}
+
+
+@lru_cache(maxsize=1)
+def _priority_rules() -> dict:
+    # Unchanged: importance judgement source of truth.
+    with open(_RULES_DIR / "priority_rules.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@lru_cache(maxsize=1)
+def _briefing_rules() -> dict:
+    """Load briefing phrasing rules; fall back to the built-in default so the
+    generator never raises on a missing/corrupt file."""
+    try:
+        with open(_RULES_DIR / "briefing_rules.json", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return DEFAULT_BRIEFING_RULES
+    # Shallow-merge over defaults so a partial file still works.
+    merged = dict(DEFAULT_BRIEFING_RULES)
+    merged.update(data)
+    return merged
+
+
+def _i_ga(word: str) -> str:
+    if not word:
+        return "가"
+    last = word[-1]
+    if "가" <= last <= "힣":
+        return "이" if (ord(last) - 0xAC00) % 28 else "가"
+    return "가"
+
+
+def _eul_reul(word: str) -> str:
+    if not word:
+        return "를"
+    last = word[-1]
+    if "가" <= last <= "힣":
+        return "을" if (ord(last) - 0xAC00) % 28 else "를"
+    return "를"
+
+
+# 모델이 요약 외 구조(key_points/priority_order 등)를 덧붙였을 때 잘라낼 표지들.
+_SUMMARY_CUT_MARKERS = (
+    "**key", "key_points", "keypoints", "**핵심", "핵심 포인트", "핵심포인트",
+    "**priority", "priority_order", "우선순위",
+)
+
+
+def _clean_summary(text: Optional[str]) -> Optional[str]:
+    """LLM 요약 출력에서 요약 문장만 안전하게 추출한다.
+
+    모델이 마크다운/라벨/불릿/번호 목록이나 key_points·priority_order 섹션까지
+    덧붙여도 요약 첫 부분만 남기고 정리한다(프롬프트로 1차 방지 + 여기서 2차 방어).
+    """
+    if not text:
+        return None
+    t = text.strip()
+
+    # 1) 요약 외 구조 섹션이 붙었으면 그 앞까지만 사용(대소문자 무시).
+    low = t.lower()
+    cut = len(t)
+    for marker in _SUMMARY_CUT_MARKERS:
+        idx = low.find(marker.lower())
+        if idx != -1:
+            cut = min(cut, idx)
+    t = t[:cut]
+
+    # 2) 마크다운/라벨/목록 기호 제거.
+    t = t.replace("**", "").replace("`", "")
+    t = re.sub(r"(?im)^\s*(summary|요약)\s*[:：]\s*", "", t)  # 'summary:' 라벨
+    t = re.sub(r"(?m)^\s*[-*•]\s+", "", t)                    # 불릿
+    t = re.sub(r"(?m)^\s*\d+[.)]\s+", "", t)                  # 번호목록
+    t = re.sub(r"\s+", " ", t).strip()
+    return t or None
+
+
+def _to_min(hhmm: Optional[str]) -> int:
+    if not hhmm:
+        return 24 * 60
+    try:
+        h, m = (int(x) for x in hhmm.split(":"))
+        return h * 60 + m
+    except ValueError:
+        return 24 * 60
+
+
+def _time_phrase(hhmm: Optional[str]) -> str:
+    if not hhmm:
+        return ""
+    try:
+        h, m = (int(x) for x in hhmm.split(":"))
+    except ValueError:
+        return ""
+    ampm = "오전" if h < 12 else "오후"
+    h12 = h % 12 or 12
+    s = f"{ampm} {h12}시"
+    return s + (f" {m}분" if m else "")
+
+
+def _daypart(hhmm: Optional[str]) -> str:
+    """Time-of-day label driven by briefing_rules.daypart_rules.
+
+    Ranges may wrap past midnight (end_hour < start_hour). Anything not covered
+    by a rule gets daypart_default.
+    """
+    if not hhmm:
+        return ""
+    try:
+        h = int(hhmm.split(":")[0])
+    except ValueError:
+        return ""
+    rules = _briefing_rules()
+    for r in rules.get("daypart_rules", []):
+        start, end = r["start_hour"], r["end_hour"]
+        if start <= end:
+            if start <= h <= end:
+                return r["label"]
+        else:  # wraps midnight, e.g. 21..4
+            if h >= start or h <= end:
+                return r["label"]
+    return rules.get("daypart_default", "밤")
+
+
+def _effective_priority(title: str, category: str, given: str) -> str:
+    rules = _priority_rules()
+    cat = (category or "etc").lower()
+    if cat in rules.get("high_categories", []):
+        return "high"
+    keywords = list(rules.get("high_keywords", [])) + list(
+        rules.get("briefing_high_keywords", [])
+    )
+    if any(kw in title for kw in keywords):
+        return "high"
+    return given or "medium"
+
+
+def _schedule_reason(category: str) -> str:
+    rules = _priority_rules()
+    cat = (category or "etc").lower()
+    return rules.get("category_reasons", {}).get(
+        cat, rules.get("default_high_reason", "오늘 우선적으로 챙겨야 할 일정입니다.")
+    )
+
+
+def _todo_stem(title: str) -> str:
+    for tail in _briefing_rules().get("todo_stem_suffixes", []):
+        if title.endswith(tail):
+            return title[: -len(tail)].strip()
+    return title.strip()
+
+
+def _fmt_temp(v) -> str:
+    """숫자 온도를 정수 문자열로. 값이 없거나 변환 실패 시 빈 문자열."""
+    try:
+        return str(int(round(float(v))))
+    except (TypeError, ValueError):
+        return ""
+
+
+def _weather_key_point(weather, brules: dict) -> Optional[str]:
+    """오늘 날씨 요약을 한 문장으로. 우선순위: 강수 > 추위/더위 > 일반 안내.
+
+    weather 가 없거나 표시할 정보가 없으면 None(브리핑에 날씨 줄을 넣지 않음).
+    """
+    if weather is None:
+        return None
+    wt = brules.get("weather_templates", {})
+    th = brules.get("weather_thresholds", {})
+
+    precip = (getattr(weather, "precipitation", None) or "").strip()
+    is_precip = precip not in ("", "없음")
+    pop = getattr(weather, "max_pop", None)
+    pop_high = isinstance(pop, int) and pop >= th.get("rain_pop", 60)
+
+    # 1) 비/눈 예보 또는 높은 강수확률 → 우산 팁.
+    if is_precip or pop_high:
+        precip_word = precip if is_precip else "비"
+        pop_suffix = wt["pop_suffix"].format(pop=pop) if isinstance(pop, int) else ""
+        return wt["rain"].format(precip=precip_word, pop_suffix=pop_suffix)
+
+    # 2) 최고기온 기준 추위/더위 팁.
+    tmax = getattr(weather, "temp_max", None)
+    if isinstance(tmax, (int, float)):
+        if tmax <= th.get("cold_max_temp", 5):
+            return wt["cold"].format(temp_max=_fmt_temp(tmax))
+        if tmax >= th.get("hot_max_temp", 30):
+            return wt["hot"].format(temp_max=_fmt_temp(tmax))
+
+    # 3) 그 외 일반 안내(하늘/기온이 있을 때만).
+    sky = getattr(weather, "sky", None)
+    temp_c = getattr(weather, "temp_c", None)
+    parts: List[str] = []
+    if sky:
+        parts.append(sky)
+    if temp_c is not None and _fmt_temp(temp_c):
+        parts.append(f"{_fmt_temp(temp_c)}℃")
+    if parts:
+        return wt["info"].format(info=", ".join(parts))
+    return None
+
+
+def _summary_schedule_phrase(s: BriefingSchedule) -> str:
+    dp = _daypart(s.start_time)
+    if not dp or s.title.startswith(dp):
+        return s.title
+    return f"{dp} {s.title}"
+
+
+def _build_prompt(req: DailyBriefingRequest,
+                  priority_order: List[PriorityOrderItem]) -> str:
+    try:
+        template = _PROMPT_PATH.read_text(encoding="utf-8")
+    except OSError:
+        template = "오늘 일정을 2~3문장으로 요약하세요.\n일정:{schedules}\n할일:{todos}\n우선순위:{priority_order}"
+    sched_txt = "\n".join(
+        f"- {s.start_time or '시간미정'} {s.title} ({s.category}, {s.priority})"
+        for s in req.schedules
+    ) or "- 없음"
+    todo_txt = "\n".join(
+        f"- {t.title} ({t.priority}, {'완료' if t.is_done else '미완료'})"
+        for t in req.todos
+    ) or "- 없음"
+    prio_txt = "\n".join(f"- {p.title}: {p.reason}" for p in priority_order) or "- 없음"
+    return template.format(
+        date=req.date, schedules=sched_txt, todos=todo_txt, priority_order=prio_txt
+    )
+
+
+def _compose_briefing_tts(
+    base: str,
+    weather_kp: Optional[str],
+    high_todos: list,
+    brules: dict,
+) -> str:
+    """읽어줄 브리핑 문장: 일정(base) + 날씨 + 준비물을 순서대로 이어 붙인다.
+
+    - 날씨 문장(weather_kp)에는 우산/방한/수분 등 날씨발 준비 안내가 이미 포함됨.
+    - 준비물 문장은 체크리스트형("...챙기기") 고우선 할 일에서 물품만 뽑아 안내.
+    날씨·준비물이 모두 없으면 기존과 동일하게 base(일정 문장)만 반환한다.
+    """
+    checklist_suffix = brules.get("todo_checklist_suffix", "챙기기")
+
+    def _end_dot(s: str) -> str:
+        s = (s or "").strip()
+        if s and s[-1] not in ".!?…":
+            s += "."
+        return s
+
+    parts: List[str] = []
+    if base and base.strip():
+        parts.append(_end_dot(base))
+    if weather_kp:
+        parts.append(_end_dot(weather_kp))
+
+    prep_items = [
+        _todo_stem(t.title)
+        for t in high_todos
+        if t.title.endswith(checklist_suffix) and _todo_stem(t.title)
+    ]
+    if prep_items:
+        joined = ", ".join(prep_items)
+        parts.append(_end_dot(f"준비물로 {joined}{_eul_reul(prep_items[-1])} 챙기세요"))
+
+    return " ".join(parts).strip() or (base or "")
+
+
+def generate_briefing(req: DailyBriefingRequest, preferences: Optional[dict] = None) -> DailyBriefingData:
+    brules = _briefing_rules()
+    s_tpl = brules["summary_templates"]
+    k_tpl = brules["key_point_templates"]
+    tip_cats = tuple(brules.get("important_tip_categories", []))
+    checklist_suffix = brules.get("todo_checklist_suffix", "챙기기")
+    daypart_suffix = brules.get("other_schedule_daypart_suffix", "에는 ")
+    max_kp = brules.get("limits", {}).get("max_key_points")
+
+    schedules = sorted(req.schedules, key=lambda s: _to_min(s.start_time))
+    enriched: List[Tuple[BriefingSchedule, str]] = [
+        (s, _effective_priority(s.title, s.category, s.priority)) for s in schedules
+    ]
+    ordered_pairs = sorted(
+        enriched, key=lambda x: (_RANK.get(x[1], 1), _to_min(x[0].start_time))
+    )
+    ordered = [s for s, _ in ordered_pairs]
+    priority_order = [
+        PriorityOrderItem(
+            title=s.title,
+            priority=eff,
+            reason=_schedule_reason(s.category),
+        )
+        for s, eff in ordered_pairs
+    ]
+
+    high_todos = [t for t in req.todos if not t.is_done and (
+        t.priority == "high" or any(
+            kw in t.title for kw in _priority_rules().get("high_keywords", []))
+    )]
+
+    # ----- summary (template) -----
+    if schedules:
+        listing = ", ".join(_summary_schedule_phrase(s) for s in schedules)
+        last_phrase = _summary_schedule_phrase(schedules[-1])
+        template_summary = s_tpl["has_schedules"].format(
+            listing=listing, subject_particle=_i_ga(last_phrase)
+        )
+        top = ordered[0] if ordered else None
+        if top is not None and (top.category or "").lower() in tip_cats:
+            prep = (_todo_stem(high_todos[0].title) if high_todos
+                    else brules.get("default_prep_word", "준비물"))
+            template_summary += s_tpl["prep_tip"].format(
+                top_title=top.title, prep=prep, object_particle=_eul_reul(prep)
+            )
+    else:
+        template_summary = s_tpl["no_schedules"]
+
+    # ----- summary (LLM, optional) -----
+    llm_summary = None
+    try:
+        base_system = (
+            "너는 사용자의 하루 일정을 담백하고 간결하게 정리하는 한국어 비서야. "
+            "응원·격려·일반적인 조언은 넣지 말고 일정 사실 위주로 1~2문장으로만 요약해. "
+            "'~하는 것이 좋습니다' 같은 상투적 표현을 피하고 해요체로 자연스럽게 써."
+        )
+        if preferences:
+            from backend.services import assistant_style_service as style
+            base_system = style.styled_system(base_system, preferences)
+        llm_summary = _clean_summary(llm_service.generate(
+            _build_prompt(req, priority_order),
+            system=base_system,
+        ))
+    except Exception:
+        llm_summary = None
+
+    summary = llm_summary if llm_summary else template_summary
+
+    # ----- key_points (rule-based) -----
+    key_points: List[str] = []
+    if ordered:
+        top = ordered[0]
+        tp = _time_phrase(top.start_time)
+        prefix = f"{tp} " if tp else ""
+        key_points.append(k_tpl["top_schedule"].format(
+            time_prefix=prefix, title=top.title, subject_particle=_i_ga(top.title)
+        ))
+    for t in high_todos:
+        stem = _todo_stem(t.title)
+        if t.title.endswith(checklist_suffix):
+            key_points.append(k_tpl["todo_checklist"].format(
+                stem=stem, object_particle=_eul_reul(stem)
+            ))
+        else:
+            key_points.append(k_tpl["todo_reminder"].format(
+                title=t.title, object_particle=_eul_reul(t.title)
+            ))
+    for s in ordered[1:]:
+        dp = _daypart(s.start_time)
+        prefix = f"{dp}{daypart_suffix}" if dp else ""
+        key_points.append(k_tpl["other_schedule"].format(
+            daypart_prefix=prefix, title=s.title, subject_particle=_i_ga(s.title)
+        ))
+
+    # 날씨 안내는 맨 앞에 배치(있을 때만). max_key_points 트림보다 먼저 넣어 보장.
+    weather_kp = _weather_key_point(getattr(req, "weather", None), brules)
+    if weather_kp:
+        key_points.insert(0, weather_kp)
+
+    if isinstance(max_kp, int) and max_kp > 0:
+        key_points = key_points[:max_kp]
+
+    preferences = user_preference_service.get_user_preferences(None)
+    if schedules:
+        base_tts = tts_response_builder.build_tts_response(
+            intent="briefing_today",
+            slots={"count": len(schedules), "main_event": ordered[0].title if ordered else schedules[0].title},
+            preferences=preferences,
+        )
+    else:
+        base_tts = tts_response_builder.build_tts_response(
+            intent="briefing_empty", slots={}, preferences=preferences,
+        )
+    # 읽어줄 때 일정에 더해 날씨·준비물도 함께 안내(weather_kp / high_todos 활용).
+    tts_text = _compose_briefing_tts(base_tts, weather_kp, high_todos, brules)
+
+    return DailyBriefingData(
+        summary=summary,
+        key_points=key_points,
+        priority_order=priority_order,
+        tts_text=tts_text,
+    )

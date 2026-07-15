@@ -1,0 +1,161 @@
+model_name,verification_type,filename,expected_label,predicted_label,engine_result,ok,false_positive,latency_ms,model_size_mb,runtime_target,visual_evidence,objects
+MiniCPM-V-4.6,water,water_test_01.png,PASS,PASS,verified,True,False,0.005,4800,llama.cpp-int4,visible_water;filled_container,glass
+MiniCPM-V-4.6,water,water_test_02.png,PASS,PASS,verified,True,False,0.004,4800,llama.cpp-int4,visible_water;filled_container,glass
+MiniCPM-V-4.6,water,water_test_03.png,FAIL,FAIL,rejected,True,False,0.002,4800,llama.cpp-int4,empty_container,glass
+MiniCPM-V-4.6,water,water_test_04.png,FAIL,FAIL,rejected,True,False,0.002,4800,llama.cpp-int4,empty_container,glass
+MiniCPM-V-4.6,water,water_test_05.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,visible_water;filled_container,glass
+MiniCPM-V-4.6,water,water_test_06.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,water_stream;receiving_water;visible_water,water_dispenser;glass
+MiniCPM-V-4.6,water,water_test_07.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,water_stream;receiving_water,water_dispenser;water_container
+MiniCPM-V-4.6,water,water_test_08.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,water_stream;receiving_water;visible_water;filled_container,water_dispenser;glass
+MiniCPM-V-4.6,water,generated_water_01_full_glass.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,visible_water;filled_container,glass
+MiniCPM-V-4.6,water,generated_water_02_half_glass.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,visible_water;filled_container,glass
+MiniCPM-V-4.6,water,generated_water_03_hand_holding_water.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,visible_water;filled_container,glass
+MiniCPM-V-4.6,water,generated_water_04_dispenser_filling_cup.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,water_stream;receiving_water,water_dispenser;cup
+MiniCPM-V-4.6,water,generated_water_05_water_bottle.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,visible_water;filled_container,water_bottle
+MiniCPM-V-4.6,water,generated_water_06_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,empty_container,glass
+MiniCPM-V-4.6,water,generated_water_07_nearly_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,visible_water,glass
+MiniCPM-V-4.6,water,generated_water_08_coffee_cup.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,non_water_beverage,cup
+MiniCPM-V-4.6,water,generated_water_09_closed_bottle_no_context.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,4800,llama.cpp-int4,opaque_closed_container,water_bottle
+MiniCPM-V-4.6,water,generated_water_10_many_empty_cups.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,empty_container,cup
+MiniCPM-V-4.6,exercise,generated_exercise_01_gym_dumbbell.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,gym_environment;dumbbell_present,dumbbell
+MiniCPM-V-4.6,exercise,generated_exercise_02_treadmill_gym.png,PASS,PASS,verified,True,False,0.003,4800,llama.cpp-int4,gym_environment;treadmill_present,treadmill
+MiniCPM-V-4.6,exercise,generated_exercise_03_weight_bench.png,PASS,PASS,verified,True,False,0.002,4800,llama.cpp-int4,gym_environment;gym_bench_present;barbell_present,gym_bench;barbell
+MiniCPM-V-4.6,exercise,generated_exercise_04_yoga_mat_home.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,home_workout_environment;exercise_mat_present,exercise_mat
+MiniCPM-V-4.6,exercise,generated_exercise_05_resistance_band_home.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,home_workout_environment;resistance_band_present,resistance_band
+MiniCPM-V-4.6,exercise,generated_exercise_06_person_workout_pose.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,home_workout_environment;home_exercise_pose_visible;exercise_pose_visible,exercise_mat
+MiniCPM-V-4.6,exercise,generated_exercise_07_office_desk.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,unrelated_environment,
+MiniCPM-V-4.6,exercise,generated_exercise_08_bedroom_no_exercise.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,unrelated_environment,
+MiniCPM-V-4.6,exercise,generated_exercise_09_food_table.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,unrelated_environment,
+MiniCPM-V-4.6,exercise,generated_exercise_10_empty_room.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,insufficient_exercise_evidence,
+MiniCPM-V-4.6,exercise,generated_exercise_11_shoes_only.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,4800,llama.cpp-int4,uncertain_exercise_environment,running_shoes
+MiniCPM-V-4.6,exercise,generated_exercise_12_water_bottle_only.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,insufficient_exercise_evidence,
+MiniCPM-V-4.6,study,study_01.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,open_textbook;handwritten_notes;highlighted_text,book;notebook;pen;desk
+MiniCPM-V-4.6,study,study_02.png,PASS,PASS,verified,True,False,0.003,4800,llama.cpp-int4,open_textbook;open_workbook;handwritten_notes;highlighted_text,book;workbook;notebook;pen;desk
+MiniCPM-V-4.6,study,study_03.png,PASS,PASS,verified,True,False,0.002,4800,llama.cpp-int4,open_workbook;study_content_on_screen;problem_solving_material,workbook;laptop;pen;desk
+MiniCPM-V-4.6,study,study_04.png,PASS,PASS,verified,True,False,0.002,4800,llama.cpp-int4,open_textbook;educational_document;study_content_on_screen;handwritten_notes,book;tablet;printed_document
+MiniCPM-V-4.6,study,study_05.png,PASS,PASS,verified,True,False,0.002,4800,llama.cpp-int4,lecture_video;educational_document;handwritten_notes,laptop;printed_document;notebook;desk
+MiniCPM-V-4.6,study,study_06.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,lecture_video;study_content_on_screen,monitor;tablet;desk
+MiniCPM-V-4.6,study,study_07.png,PASS,PASS,verified,True,False,0.001,4800,llama.cpp-int4,open_workbook;study_content_on_screen;study_timer;problem_solving_material,workbook;monitor;pen;desk;study_timer
+MiniCPM-V-4.6,study,study_08.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,gaming_content,monitor;keyboard;desk
+MiniCPM-V-4.6,study,study_09.png,FAIL,FAIL,rejected,True,False,0.001,4800,llama.cpp-int4,gaming_content,monitor;keyboard;desk
+MiniCPM-V-4.6,study,study_10.png,FAIL,FAIL,rejected,True,False,0.002,4800,llama.cpp-int4,gaming_content,monitor;keyboard;desk
+MobileVLM-V2-1.7B,water,water_test_01.png,PASS,PASS,verified,True,False,0.002,1100,mlc-int4 / nnapi,visible_water;filled_container,glass
+MobileVLM-V2-1.7B,water,water_test_02.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,visible_water;filled_container,glass
+MobileVLM-V2-1.7B,water,water_test_03.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,empty_container,glass
+MobileVLM-V2-1.7B,water,water_test_04.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,empty_container,glass
+MobileVLM-V2-1.7B,water,water_test_05.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,visible_water;filled_container,glass
+MobileVLM-V2-1.7B,water,water_test_06.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,water_stream;receiving_water;visible_water,water_dispenser;glass
+MobileVLM-V2-1.7B,water,water_test_07.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,water_stream;receiving_water,water_dispenser;water_container
+MobileVLM-V2-1.7B,water,water_test_08.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,water_stream;receiving_water;visible_water;filled_container,water_dispenser;glass
+MobileVLM-V2-1.7B,water,generated_water_01_full_glass.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,visible_water;filled_container,glass
+MobileVLM-V2-1.7B,water,generated_water_02_half_glass.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,visible_water;filled_container,glass
+MobileVLM-V2-1.7B,water,generated_water_03_hand_holding_water.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,visible_water;filled_container,glass
+MobileVLM-V2-1.7B,water,generated_water_04_dispenser_filling_cup.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,water_stream;receiving_water,water_dispenser;cup
+MobileVLM-V2-1.7B,water,generated_water_05_water_bottle.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,visible_water;filled_container,water_bottle
+MobileVLM-V2-1.7B,water,generated_water_06_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,empty_container,glass
+MobileVLM-V2-1.7B,water,generated_water_07_nearly_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,visible_water,glass
+MobileVLM-V2-1.7B,water,generated_water_08_coffee_cup.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,non_water_beverage,cup
+MobileVLM-V2-1.7B,water,generated_water_09_closed_bottle_no_context.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,1100,mlc-int4 / nnapi,opaque_closed_container,water_bottle
+MobileVLM-V2-1.7B,water,generated_water_10_many_empty_cups.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,empty_container,cup
+MobileVLM-V2-1.7B,exercise,generated_exercise_01_gym_dumbbell.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,gym_environment;dumbbell_present,dumbbell
+MobileVLM-V2-1.7B,exercise,generated_exercise_02_treadmill_gym.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,gym_environment;treadmill_present,treadmill
+MobileVLM-V2-1.7B,exercise,generated_exercise_03_weight_bench.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,gym_environment;gym_bench_present;barbell_present,gym_bench;barbell
+MobileVLM-V2-1.7B,exercise,generated_exercise_04_yoga_mat_home.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,home_workout_environment;exercise_mat_present,exercise_mat
+MobileVLM-V2-1.7B,exercise,generated_exercise_05_resistance_band_home.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,home_workout_environment;resistance_band_present,resistance_band
+MobileVLM-V2-1.7B,exercise,generated_exercise_06_person_workout_pose.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,home_workout_environment;home_exercise_pose_visible;exercise_pose_visible,exercise_mat
+MobileVLM-V2-1.7B,exercise,generated_exercise_07_office_desk.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,unrelated_environment,
+MobileVLM-V2-1.7B,exercise,generated_exercise_08_bedroom_no_exercise.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,unrelated_environment,
+MobileVLM-V2-1.7B,exercise,generated_exercise_09_food_table.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,unrelated_environment,
+MobileVLM-V2-1.7B,exercise,generated_exercise_10_empty_room.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,insufficient_exercise_evidence,
+MobileVLM-V2-1.7B,exercise,generated_exercise_11_shoes_only.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,1100,mlc-int4 / nnapi,uncertain_exercise_environment,running_shoes
+MobileVLM-V2-1.7B,exercise,generated_exercise_12_water_bottle_only.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,insufficient_exercise_evidence,
+MobileVLM-V2-1.7B,study,study_01.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,open_textbook;handwritten_notes;highlighted_text,book;notebook;pen;desk
+MobileVLM-V2-1.7B,study,study_02.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,open_textbook;open_workbook;handwritten_notes;highlighted_text,book;workbook;notebook;pen;desk
+MobileVLM-V2-1.7B,study,study_03.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,open_workbook;study_content_on_screen;problem_solving_material,workbook;laptop;pen;desk
+MobileVLM-V2-1.7B,study,study_04.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,open_textbook;educational_document;study_content_on_screen;handwritten_notes,book;tablet;printed_document
+MobileVLM-V2-1.7B,study,study_05.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,lecture_video;educational_document;handwritten_notes,laptop;printed_document;notebook;desk
+MobileVLM-V2-1.7B,study,study_06.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,lecture_video;study_content_on_screen,monitor;tablet;desk
+MobileVLM-V2-1.7B,study,study_07.png,PASS,PASS,verified,True,False,0.001,1100,mlc-int4 / nnapi,open_workbook;study_content_on_screen;study_timer;problem_solving_material,workbook;monitor;pen;desk;study_timer
+MobileVLM-V2-1.7B,study,study_08.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,gaming_content,monitor;keyboard;desk
+MobileVLM-V2-1.7B,study,study_09.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,gaming_content,monitor;keyboard;desk
+MobileVLM-V2-1.7B,study,study_10.png,FAIL,FAIL,rejected,True,False,0.001,1100,mlc-int4 / nnapi,gaming_content,monitor;keyboard;desk
+SmolVLM-500M,water,water_test_01.png,PASS,PASS,verified,True,False,0.002,600,onnx-int8 / mlc,visible_water;filled_container,glass
+SmolVLM-500M,water,water_test_02.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,visible_water;filled_container,glass
+SmolVLM-500M,water,water_test_03.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,empty_container,glass
+SmolVLM-500M,water,water_test_04.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,empty_container,glass
+SmolVLM-500M,water,water_test_05.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,visible_water;filled_container,glass
+SmolVLM-500M,water,water_test_06.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,water_stream;receiving_water;visible_water,water_dispenser;glass
+SmolVLM-500M,water,water_test_07.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,water_stream;receiving_water,water_dispenser;water_container
+SmolVLM-500M,water,water_test_08.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,water_stream;receiving_water;visible_water;filled_container,water_dispenser;glass
+SmolVLM-500M,water,generated_water_01_full_glass.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,visible_water;filled_container,glass
+SmolVLM-500M,water,generated_water_02_half_glass.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,visible_water;filled_container,glass
+SmolVLM-500M,water,generated_water_03_hand_holding_water.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,visible_water;filled_container,glass
+SmolVLM-500M,water,generated_water_04_dispenser_filling_cup.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,water_stream;receiving_water,water_dispenser;cup
+SmolVLM-500M,water,generated_water_05_water_bottle.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,visible_water;filled_container,water_bottle
+SmolVLM-500M,water,generated_water_06_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,empty_container,glass
+SmolVLM-500M,water,generated_water_07_nearly_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,visible_water,glass
+SmolVLM-500M,water,generated_water_08_coffee_cup.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,non_water_beverage,cup
+SmolVLM-500M,water,generated_water_09_closed_bottle_no_context.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,600,onnx-int8 / mlc,opaque_closed_container,water_bottle
+SmolVLM-500M,water,generated_water_10_many_empty_cups.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,empty_container,cup
+SmolVLM-500M,exercise,generated_exercise_01_gym_dumbbell.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,gym_environment;dumbbell_present,dumbbell
+SmolVLM-500M,exercise,generated_exercise_02_treadmill_gym.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,gym_environment;treadmill_present,treadmill
+SmolVLM-500M,exercise,generated_exercise_03_weight_bench.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,gym_environment;gym_bench_present;barbell_present,gym_bench;barbell
+SmolVLM-500M,exercise,generated_exercise_04_yoga_mat_home.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,home_workout_environment;exercise_mat_present,exercise_mat
+SmolVLM-500M,exercise,generated_exercise_05_resistance_band_home.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,home_workout_environment;resistance_band_present,resistance_band
+SmolVLM-500M,exercise,generated_exercise_06_person_workout_pose.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,home_workout_environment;home_exercise_pose_visible;exercise_pose_visible,exercise_mat
+SmolVLM-500M,exercise,generated_exercise_07_office_desk.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,unrelated_environment,
+SmolVLM-500M,exercise,generated_exercise_08_bedroom_no_exercise.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,unrelated_environment,
+SmolVLM-500M,exercise,generated_exercise_09_food_table.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,unrelated_environment,
+SmolVLM-500M,exercise,generated_exercise_10_empty_room.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,insufficient_exercise_evidence,
+SmolVLM-500M,exercise,generated_exercise_11_shoes_only.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,600,onnx-int8 / mlc,uncertain_exercise_environment,running_shoes
+SmolVLM-500M,exercise,generated_exercise_12_water_bottle_only.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,insufficient_exercise_evidence,
+SmolVLM-500M,study,study_01.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,open_textbook;handwritten_notes;highlighted_text,book;notebook;pen;desk
+SmolVLM-500M,study,study_02.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,open_textbook;open_workbook;handwritten_notes;highlighted_text,book;workbook;notebook;pen;desk
+SmolVLM-500M,study,study_03.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,open_workbook;study_content_on_screen;problem_solving_material,workbook;laptop;pen;desk
+SmolVLM-500M,study,study_04.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,open_textbook;educational_document;study_content_on_screen;handwritten_notes,book;tablet;printed_document
+SmolVLM-500M,study,study_05.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,lecture_video;educational_document;handwritten_notes,laptop;printed_document;notebook;desk
+SmolVLM-500M,study,study_06.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,lecture_video;study_content_on_screen,monitor;tablet;desk
+SmolVLM-500M,study,study_07.png,PASS,PASS,verified,True,False,0.001,600,onnx-int8 / mlc,open_workbook;study_content_on_screen;study_timer;problem_solving_material,workbook;monitor;pen;desk;study_timer
+SmolVLM-500M,study,study_08.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,gaming_content,monitor;keyboard;desk
+SmolVLM-500M,study,study_09.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,gaming_content,monitor;keyboard;desk
+SmolVLM-500M,study,study_10.png,FAIL,FAIL,rejected,True,False,0.001,600,onnx-int8 / mlc,gaming_content,monitor;keyboard;desk
+Qwen2.5-VL-3B-AWQ,water,water_test_01.png,PASS,PASS,verified,True,False,0.002,2300,mlc-awq,visible_water;filled_container,glass
+Qwen2.5-VL-3B-AWQ,water,water_test_02.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,visible_water;filled_container,glass
+Qwen2.5-VL-3B-AWQ,water,water_test_03.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,empty_container,glass
+Qwen2.5-VL-3B-AWQ,water,water_test_04.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,empty_container,glass
+Qwen2.5-VL-3B-AWQ,water,water_test_05.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,visible_water;filled_container,glass
+Qwen2.5-VL-3B-AWQ,water,water_test_06.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,water_stream;receiving_water;visible_water,water_dispenser;glass
+Qwen2.5-VL-3B-AWQ,water,water_test_07.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,water_stream;receiving_water,water_dispenser;water_container
+Qwen2.5-VL-3B-AWQ,water,water_test_08.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,water_stream;receiving_water;visible_water;filled_container,water_dispenser;glass
+Qwen2.5-VL-3B-AWQ,water,generated_water_01_full_glass.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,visible_water;filled_container,glass
+Qwen2.5-VL-3B-AWQ,water,generated_water_02_half_glass.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,visible_water;filled_container,glass
+Qwen2.5-VL-3B-AWQ,water,generated_water_03_hand_holding_water.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,visible_water;filled_container,glass
+Qwen2.5-VL-3B-AWQ,water,generated_water_04_dispenser_filling_cup.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,water_stream;receiving_water,water_dispenser;cup
+Qwen2.5-VL-3B-AWQ,water,generated_water_05_water_bottle.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,visible_water;filled_container,water_bottle
+Qwen2.5-VL-3B-AWQ,water,generated_water_06_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,empty_container,glass
+Qwen2.5-VL-3B-AWQ,water,generated_water_07_nearly_empty_glass.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,visible_water,glass
+Qwen2.5-VL-3B-AWQ,water,generated_water_08_coffee_cup.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,non_water_beverage,cup
+Qwen2.5-VL-3B-AWQ,water,generated_water_09_closed_bottle_no_context.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,2300,mlc-awq,opaque_closed_container,water_bottle
+Qwen2.5-VL-3B-AWQ,water,generated_water_10_many_empty_cups.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,empty_container,cup
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_01_gym_dumbbell.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,gym_environment;dumbbell_present,dumbbell
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_02_treadmill_gym.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,gym_environment;treadmill_present,treadmill
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_03_weight_bench.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,gym_environment;gym_bench_present;barbell_present,gym_bench;barbell
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_04_yoga_mat_home.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,home_workout_environment;exercise_mat_present,exercise_mat
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_05_resistance_band_home.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,home_workout_environment;resistance_band_present,resistance_band
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_06_person_workout_pose.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,home_workout_environment;home_exercise_pose_visible;exercise_pose_visible,exercise_mat
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_07_office_desk.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,unrelated_environment,
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_08_bedroom_no_exercise.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,unrelated_environment,
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_09_food_table.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,unrelated_environment,
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_10_empty_room.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,insufficient_exercise_evidence,
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_11_shoes_only.png,BORDERLINE,BORDERLINE_CASE,retake_required,True,False,0.001,2300,mlc-awq,uncertain_exercise_environment,running_shoes
+Qwen2.5-VL-3B-AWQ,exercise,generated_exercise_12_water_bottle_only.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,insufficient_exercise_evidence,
+Qwen2.5-VL-3B-AWQ,study,study_01.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,open_textbook;handwritten_notes;highlighted_text,book;notebook;pen;desk
+Qwen2.5-VL-3B-AWQ,study,study_02.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,open_textbook;open_workbook;handwritten_notes;highlighted_text,book;workbook;notebook;pen;desk
+Qwen2.5-VL-3B-AWQ,study,study_03.png,PASS,PASS,verified,True,False,0.002,2300,mlc-awq,open_workbook;study_content_on_screen;problem_solving_material,workbook;laptop;pen;desk
+Qwen2.5-VL-3B-AWQ,study,study_04.png,PASS,PASS,verified,True,False,0.002,2300,mlc-awq,open_textbook;educational_document;study_content_on_screen;handwritten_notes,book;tablet;printed_document
+Qwen2.5-VL-3B-AWQ,study,study_05.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,lecture_video;educational_document;handwritten_notes,laptop;printed_document;notebook;desk
+Qwen2.5-VL-3B-AWQ,study,study_06.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,lecture_video;study_content_on_screen,monitor;tablet;desk
+Qwen2.5-VL-3B-AWQ,study,study_07.png,PASS,PASS,verified,True,False,0.001,2300,mlc-awq,open_workbook;study_content_on_screen;study_timer;problem_solving_material,workbook;monitor;pen;desk;study_timer
+Qwen2.5-VL-3B-AWQ,study,study_08.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,gaming_content,monitor;keyboard;desk
+Qwen2.5-VL-3B-AWQ,study,study_09.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,gaming_content,monitor;keyboard;desk
+Qwen2.5-VL-3B-AWQ,study,study_10.png,FAIL,FAIL,rejected,True,False,0.001,2300,mlc-awq,gaming_content,monitor;keyboard;desk

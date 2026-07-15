@@ -1,0 +1,50 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "notebook",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "pen",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "desk",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "laptop",
+      "confidence": 0.6,
+      "evidence": null
+    },
+    {
+      "label": "monitor",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [],
+  "study_visual_evidence": [
+    "code_editor",
+    "handwritten_notes",
+    "highlighted_text",
+    "open_textbook",
+    "open_workbook",
+    "problem_solving_material",
+    "uncertain_screen_content"
+  ],
+  "exercise_visual_evidence": [],
+  "_raw_text": "Study materials or the screen content (examples: 'an open textbook with handwritten notes', 'a workbook with math problems', 'a highlighted textbook', 'a coding"
+}

@@ -1,0 +1,36 @@
+{
+  "_comment": "AI 비서 말투(assistant_tone) 5종 메타데이터. display_name/description은 Flutter 설정 화면에서 그대로 노출 가능하도록 한국어로 작성.",
+  "default": "friendly",
+  "tones": {
+    "polite": {
+      "display_name": "정중한 비서",
+      "description": "격식 있는 존댓말로 또박또박 안내하는 말투입니다.",
+      "recommended_context": "격식이 필요한 업무용 일정, 첫 사용자 온보딩",
+      "example": "내일 오후 2시에 병원 예약 일정을 등록했습니다."
+    },
+    "friendly": {
+      "display_name": "친근한 비서",
+      "description": "편안하고 다정한 존댓말로 말을 건네는 기본 말투입니다.",
+      "recommended_context": "일상적인 사용, 특별한 취향이 없는 사용자의 기본값",
+      "example": "좋아요. 내일 오후 2시에 병원 예약 일정 넣어둘게요."
+    },
+    "concise": {
+      "display_name": "짧고 간결한 비서",
+      "description": "군더더기 표현 없이 핵심만 짧게 전달하는 말투입니다.",
+      "recommended_context": "바쁠 때, 빠르게 확인만 하고 싶을 때",
+      "example": "등록 완료. 내일 오후 2시, 병원 예약입니다."
+    },
+    "caring": {
+      "display_name": "공감형 비서",
+      "description": "사용자의 상태를 살피며 부드럽게 챙겨주는 말투입니다.",
+      "recommended_context": "피로/스트레스가 많거나 감정 코칭이 필요한 상황",
+      "example": "알겠어요. 무리 없도록 내일 오후 2시에 병원 예약 챙겨둘게요."
+    },
+    "professional": {
+      "display_name": "업무형 비서",
+      "description": "감탄사나 사적인 표현 없이 사무적이고 공식적으로 전달하는 말투입니다.",
+      "recommended_context": "업무 일정, 격식 있는 보고가 필요한 상황",
+      "example": "요청하신 병원 예약 일정을 내일 오후 2시로 캘린더에 반영했습니다."
+    }
+  }
+}

@@ -1,0 +1,28 @@
+```json
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "bbox_2d": [38, 1, 270, 204], // Headphones
+      "label": "headphones"
+    },
+    {
+      "bbox_2d": [295, 0, 356, 118], // Monitor displaying a person's hand
+      "label": "monitor with person's hand"
+    },
+    {
+      "bbox_2d": [419, 47, 727, 265], // Monitor displaying a game
+      "label": "monitor showing a game"
+    }
+  ],
+  "scenes": [
+    {
+      "bbox_2d": [0, 0, 727, 420], // Entire scene of the person playing a game
+      "label": "person playing a game"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "bbox_2d": [38, 1, 270, 204], // Headphones
+      "label

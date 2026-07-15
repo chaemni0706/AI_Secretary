@@ -1,0 +1,4 @@
+model_name,verification_type,num_samples,tp,tn,fp,fn,accuracy,precision,recall,f1,false_positive_rate,false_negative_rate,avg_latency_ms,p50_latency_ms,p95_latency_ms,max_latency_ms,model_size_mb,runtime_target,android_feasibility
+Qwen2.5-VL-3B-AWQ,water,18,10,7,0,1,0.9444,1.0,0.9091,0.9524,0.0,0.0909,607.116,553.803,2321.977,2321.977,2300,transformers-awq / vllm / autoawq (MLC later),low-medium
+Qwen2.5-VL-3B-AWQ,exercise,12,6,6,0,0,1.0,1.0,1.0,1.0,0.0,0.0,817.545,780.276,1056.75,1056.75,2300,transformers-awq / vllm / autoawq (MLC later),low-medium
+Qwen2.5-VL-3B-AWQ,ALL,30,16,13,0,1,0.9667,1.0,0.9412,0.9697,0.0,0.0588,691.288,557.331,1056.75,2321.977,2300,transformers-awq / vllm / autoawq (MLC later),low-medium

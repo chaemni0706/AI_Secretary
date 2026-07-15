@@ -1,0 +1,50 @@
+{
+  "model": "SmolVLM2-2.2B-GGUF",
+  "generated_at": "2026-07-08T11:39:58.537060+00:00",
+  "metrics": {
+    "ALL": {
+      "n": 16,
+      "tp": 0,
+      "tn": 14,
+      "fp": 2,
+      "fn": 0,
+      "accuracy": 0.875,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "exercise": {
+      "n": 6,
+      "tp": 0,
+      "tn": 4,
+      "fp": 2,
+      "fn": 0,
+      "accuracy": 0.667,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "study": {
+      "n": 3,
+      "tp": 0,
+      "tn": 3,
+      "fp": 0,
+      "fn": 0,
+      "accuracy": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "water": {
+      "n": 7,
+      "tp": 0,
+      "tn": 7,
+      "fp": 0,
+      "fn": 0,
+      "accuracy": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  }
+}

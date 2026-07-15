@@ -1,0 +1,55 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "empty_container",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "cup",
+      "position": [73, 186, 139, 378]
+    },
+    {
+      "name": "cup",
+      "position": [205, 186, 271, 378]
+    },
+    {
+      "name": "cup",
+      "position": [340, 186, 406, 378]
+    }
+  ],
+  "scenes": [
+    "several empty cups"
+  ],
+  "visual_evidence": [
+    {
+      "name": "cup",
+      "position": [73, 186, 139, 378],
+      "evidence": "empty_container"
+    },
+    {
+      "name": "cup",
+      "position": [205, 186, 271, 378],
+      "evidence": "empty_container"
+    },
+    {
+      "name": "cup",
+      "position": [340, 186, 406, 378],
+      "evidence": "empty_container"
+    }
+  ],
+  "negative_evidence": [
+    "non_water_beverage"
+  ],
+  "uncertain_evidence": [
+    "opaque_closed_container"
+  ],
+  "text_observed": [
+    "several empty cups"
+  ],
+  "confidence": 0.9
+}
+```

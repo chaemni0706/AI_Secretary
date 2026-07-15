@@ -1,0 +1,4 @@
+model_name,verification_type,num_samples,tp,tn,fp,fn,accuracy,precision,recall,f1,false_positive_rate,false_negative_rate,avg_latency_ms,p50_latency_ms,p95_latency_ms,max_latency_ms,model_size_mb,runtime_target,android_feasibility
+SmolVLM2-2.2B-Instruct,water,18,11,7,0,0,1.0,1.0,1.0,1.0,0.0,0.0,662.929,649.026,1019.337,1019.337,4400,transformers-fp16 / onnx-int8 / mlc,medium
+SmolVLM2-2.2B-Instruct,exercise,12,5,5,1,1,0.8333,0.8333,0.8333,0.8333,0.1667,0.1667,668.35,664.452,725.09,725.09,4400,transformers-fp16 / onnx-int8 / mlc,medium
+SmolVLM2-2.2B-Instruct,ALL,30,16,12,1,1,0.9333,0.9412,0.9412,0.9412,0.0769,0.0588,665.097,656.732,737.391,1019.337,4400,transformers-fp16 / onnx-int8 / mlc,medium

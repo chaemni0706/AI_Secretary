@@ -1,0 +1,26 @@
+[
+  {
+    "image": "water/fail/water_real_03.png",
+    "verification_type": "water",
+    "ground_truth": "FAIL",
+    "source": "real",
+    "latency_ms": 3027.5,
+    "error": "",
+    "pred_result": "verified",
+    "pred_label": "PASS",
+    "score": 65,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "rule_evidence": [
+      "object:tumbler",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "is_false_positive": true,
+    "is_false_negative": false,
+    "correct": false
+  }
+]

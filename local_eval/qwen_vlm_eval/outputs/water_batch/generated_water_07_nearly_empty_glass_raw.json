@@ -1,0 +1,36 @@
+{
+  "verification_type": "water",
+  "activity_type": null,
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "glass"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "nearly empty glass"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "type": "glass",
+      "position": [
+        204,
+        147,
+        396,
+        400
+      ],
+      "color": "gray",
+      "liquid": "blue"
+    }
+  ],
+  "negative_evidence": [],
+  "uncertain_evidence": [],
+  "text_observed": [],
+  "confidence": 0.8
+}

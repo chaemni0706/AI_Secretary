@@ -1,0 +1,37 @@
+{
+  "filename": "generated_water_02_half_glass.png",
+  "source": "generated",
+  "expected_label": "PASS",
+  "predicted_label": "BORDERLINE_CASE",
+  "engine_result": "retake_required",
+  "score": 15,
+  "mandatory_passed": false,
+  "ok": false,
+  "water_visual_evidence": [
+    "opaque_closed_container"
+  ],
+  "objects": [
+    "glass"
+  ],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_02_half_glass_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_02_half_glass_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "water_priority:opaque_closed_container",
+      "message": "닫힌 불투명 용기는 물 여부를 확인할 수 없습니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "water_pattern_missing",
+      "message": "물 인증에 필요한 물/용기 근거가 부족합니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "object:glass",
+      "message": "glass 객체가 확인되었습니다.",
+      "score_delta": 15
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/generated_water_02_half_glass_result.json",
+  "error": ""
+}

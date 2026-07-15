@@ -1,0 +1,61 @@
+{
+  "_comment": "Regex rule-base for sentence-pattern title/location/participant extraction. Each pattern names its capture group (?P<title>/(?P<location>/(?P<person>). Titles from these patterns are preferred when they are more specific (longer) than the plain keyword title.",
+  "create_schedule_patterns": [
+    {
+      "name": "title_before_schedule_command",
+      "regex": "(?P<title>.+?)\\s*(?:일정|스케줄)\\s*(?:잡아줘|잡아|등록해줘|등록해|추가해줘|추가해|넣어줘|저장해줘|저장해)",
+      "confidence": 0.78
+    },
+    {
+      "name": "title_before_reservation_command",
+      "regex": "(?P<title>.+?)\\s*예약\\s*(?:잡아줘|잡아|해줘|등록해줘|추가해줘)",
+      "confidence": 0.75
+    },
+    {
+      "name": "title_before_going",
+      "regex": "(?P<title>.+?)\\s*가는\\s*거\\s*(?:추가해줘|등록해줘|넣어줘)",
+      "confidence": 0.76
+    },
+    {
+      "name": "title_before_meeting_someone",
+      "regex": "(?P<title>.+?)\\s*만나는\\s*거\\s*(?:등록해줘|추가해줘|넣어줘)",
+      "confidence": 0.76
+    },
+    {
+      "name": "title_before_calendar_command",
+      "regex": "(?P<title>.+?)\\s*캘린더에\\s*(?:추가해줘|넣어줘|저장해줘)",
+      "confidence": 0.76
+    },
+    {
+      "name": "title_before_obligation",
+      "regex": "(?P<title>.+?)\\s*(?:해야\\s*해|해야해|해야\\s*돼|해야돼)",
+      "confidence": 0.7
+    }
+  ],
+  "date_patterns": [
+    {"name": "iso_date", "regex": "\\d{4}-\\d{1,2}-\\d{1,2}"},
+    {"name": "month_day", "regex": "\\d{1,2}\\s*월\\s*\\d{1,2}\\s*일"},
+    {"name": "week_weekday", "regex": "(?:다음\\s*주|이번\\s*주|담주|금주)\\s*[월화수목금토일]요일"},
+    {"name": "weekday", "regex": "[월화수목금토일]요일"},
+    {"name": "relative_day", "regex": "오늘|내일|모레|글피"}
+  ],
+  "time_patterns": [
+    {"name": "hh_mm", "regex": "(?<!\\d)(?:[01]?\\d|2[0-3]):[0-5]\\d(?!\\d)"},
+    {"name": "korean_hour", "regex": "(?:오전|오후|아침|저녁|밤|점심|낮|새벽)?\\s*\\d{1,2}\\s*시(?!간)(?:\\s*\\d{1,2}\\s*분|\\s*반)?"}
+  ],
+  "location_patterns": [
+    {"name": "location_at_meeting", "regex": "(?P<location>[가-힣A-Za-z0-9]+)\\s*에서", "confidence": 0.7},
+    {"name": "location_to_go", "regex": "(?P<location>[가-힣A-Za-z0-9]+)\\s*으?로\\s*가", "confidence": 0.68},
+    {"name": "location_visit", "regex": "(?P<location>[가-힣A-Za-z0-9]+)\\s*에\\s*방문", "confidence": 0.7},
+    {"name": "location_reservation", "regex": "(?P<location>[가-힣A-Za-z0-9]+)\\s*예약", "confidence": 0.6},
+    {"name": "location_going_intent", "regex": "(?P<location>[가-힣A-Za-z0-9]+)\\s*가려고", "confidence": 0.7}
+  ],
+  "participant_patterns": [
+    {"name": "person_with_irang", "regex": "(?P<person>[가-힣A-Za-z]+?)이랑", "confidence": 0.7},
+    {"name": "person_with_rang", "regex": "(?P<person>[가-힣A-Za-z]+?)랑", "confidence": 0.7},
+    {"name": "person_with_hago", "regex": "(?P<person>[가-힣A-Za-z]+?)하고", "confidence": 0.65},
+    {"name": "person_with_wa", "regex": "(?P<person>[가-힣A-Za-z]+?)와", "confidence": 0.6},
+    {"name": "person_with_gwa", "regex": "(?P<person>[가-힣A-Za-z]+?)과", "confidence": 0.6}
+  ],
+  "participant_nouns": ["교수님", "팀장님", "선생님", "부장님", "친구", "가족", "부모님", "동료", "선배", "후배"]
+}

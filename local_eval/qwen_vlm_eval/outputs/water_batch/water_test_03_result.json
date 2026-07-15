@@ -1,0 +1,37 @@
+{
+  "filename": "water_test_03.png",
+  "source": "uploaded",
+  "expected_label": "FAIL",
+  "predicted_label": "FAIL",
+  "engine_result": "rejected",
+  "score": 45,
+  "mandatory_passed": false,
+  "ok": true,
+  "water_visual_evidence": [
+    "visible_clear_liquid"
+  ],
+  "objects": [
+    "glass"
+  ],
+  "raw_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/water_test_03_raw.json",
+  "normalized_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/water_test_03_normalized.json",
+  "rule_evidence": [
+    {
+      "code": "water_pattern_missing",
+      "message": "물 인증에 필요한 물/용기 근거가 부족합니다.",
+      "score_delta": 0
+    },
+    {
+      "code": "object:glass",
+      "message": "glass 객체가 확인되었습니다.",
+      "score_delta": 15
+    },
+    {
+      "code": "water_evidence:visible_liquid",
+      "message": "물 또는 투명 액체가 확인되었습니다.",
+      "score_delta": 30
+    }
+  ],
+  "result_output_path": "local_eval/qwen_vlm_eval/outputs/water_batch/water_test_03_result.json",
+  "error": ""
+}

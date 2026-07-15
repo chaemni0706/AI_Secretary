@@ -1,0 +1,2 @@
+model_name,verification_type,tp,tn,fp,fn
+SmolVLM2-2.2B-Instruct,study,2,3,0,5

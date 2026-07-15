@@ -1,0 +1,3 @@
+model_name,verification_type,avg_latency_ms,p50_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms
+SmolVLM2-2.2B-Instruct,water,662.929,649.026,1019.337,548.291,1019.337
+SmolVLM2-2.2B-Instruct,exercise,668.35,664.452,725.09,592.636,725.09

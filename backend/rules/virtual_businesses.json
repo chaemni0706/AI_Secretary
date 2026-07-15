@@ -1,0 +1,104 @@
+{
+  "businesses": [
+    {
+      "business_id": "hair_001",
+      "name": "챔니 헤어살롱",
+      "category": "hair",
+      "address": "서울시 강남구",
+      "open_time": "10:00",
+      "close_time": "20:00",
+      "slot_interval_minutes": 30,
+      "default_service_duration_minutes": 60,
+      "closed_days": ["MON"],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "14:00", "end_time": "15:00"},
+        {"date": "2026-07-03", "start_time": "18:00", "end_time": "19:00"}
+      ]
+    },
+    {
+      "business_id": "hair_002",
+      "name": "온뜰 헤어",
+      "category": "hair",
+      "address": "서울시 마포구",
+      "open_time": "11:00",
+      "close_time": "21:00",
+      "slot_interval_minutes": 30,
+      "default_service_duration_minutes": 60,
+      "closed_days": ["TUE"],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "19:00", "end_time": "20:00"}
+      ]
+    },
+    {
+      "business_id": "hospital_001",
+      "name": "강남 튼튼내과",
+      "category": "hospital",
+      "address": "서울시 강남구",
+      "open_time": "09:00",
+      "close_time": "18:00",
+      "slot_interval_minutes": 30,
+      "default_service_duration_minutes": 30,
+      "closed_days": ["SUN"],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "10:00", "end_time": "10:30"},
+        {"date": "2026-07-04", "start_time": "13:00", "end_time": "13:30"}
+      ]
+    },
+    {
+      "business_id": "nail_001",
+      "name": "무드 네일샵",
+      "category": "nail",
+      "address": "서울시 서초구",
+      "open_time": "11:00",
+      "close_time": "20:00",
+      "slot_interval_minutes": 30,
+      "default_service_duration_minutes": 90,
+      "closed_days": ["MON"],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "15:00", "end_time": "16:30"}
+      ]
+    },
+    {
+      "business_id": "restaurant_001",
+      "name": "한상 다이닝",
+      "category": "restaurant",
+      "address": "서울시 용산구",
+      "open_time": "11:30",
+      "close_time": "22:00",
+      "slot_interval_minutes": 30,
+      "default_service_duration_minutes": 90,
+      "closed_days": [],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "18:00", "end_time": "19:30"}
+      ]
+    },
+    {
+      "business_id": "studyroom_001",
+      "name": "포커스 스터디룸",
+      "category": "studyroom",
+      "address": "서울시 동작구",
+      "open_time": "08:00",
+      "close_time": "23:00",
+      "slot_interval_minutes": 60,
+      "default_service_duration_minutes": 120,
+      "closed_days": [],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "13:00", "end_time": "15:00"}
+      ]
+    },
+    {
+      "business_id": "pt_001",
+      "name": "코어 PT 센터",
+      "category": "pt",
+      "address": "서울시 송파구",
+      "open_time": "06:00",
+      "close_time": "23:00",
+      "slot_interval_minutes": 30,
+      "default_service_duration_minutes": 60,
+      "closed_days": ["SUN"],
+      "reserved_slots": [
+        {"date": "2026-07-03", "start_time": "19:00", "end_time": "20:00"}
+      ]
+    }
+  ]
+}

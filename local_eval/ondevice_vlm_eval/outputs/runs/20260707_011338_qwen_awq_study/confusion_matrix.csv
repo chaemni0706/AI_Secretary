@@ -1,0 +1,2 @@
+model_name,verification_type,tp,tn,fp,fn
+Qwen2.5-VL-3B-AWQ,study,7,3,0,0

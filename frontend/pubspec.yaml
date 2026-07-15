@@ -11,6 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
 
@@ -33,19 +35,35 @@ dependencies:
   # 권한
   permission_handler: ^12.0.1
 
-  # 음성
+  # 음성 (STT / TTS)
   speech_to_text: ^7.3.0
   flutter_tts: ^4.2.3
+
+  # 웨이크워드("포비") + 명령 — 온디바이스 오픈소스 STT(Vosk, 한국어 모델)
+  # pub 버전은 AGP 9 와 안 맞아(namespace/compileSdk 낡음) 로컬로 vendor 후 gradle 수정함.
+  vosk_flutter_2:
+    path: plugins/vosk_flutter_2
+  # 화면 꺼진 상태 상시 대기용 포그라운드 서비스
+  flutter_foreground_task: ^9.2.2
 
   # 알림
   firebase_core: ^4.0.0
   firebase_messaging: ^16.0.0
+
+  # 로컬 알림 (자동 브리핑 — 설정 시각에 전화형 알림 화면을 띄운다)
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
 
   # 로컬 저장
   shared_preferences: ^2.5.3
 
   # 이미지
   image_picker: ^1.2.0
+
+# vosk_flutter_2 가 permission_handler ^11 을 요구하지만, 이 앱은 ^12 를 쓰므로
+# 12로 강제한다(권한 Dart API 는 11↔12 동일하여 실사용 문제 없음).
+dependency_overrides:
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
@@ -55,3 +73,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # (Vosk 모델은 assets 번들 대신 첫 실행 시 네트워크로 내려받아 캐시함)
+
+  assets:
+    - assets/illustrations/
+
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/fonts/Pretendard-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.otf
+          weight: 700

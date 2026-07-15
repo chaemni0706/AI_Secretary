@@ -1,0 +1,21 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "The image presents a simple yet effective exercise setup. At the center of the image, a person is captured in a dynamic pose, standing on a blue yoga mat. The individual is in the middle of a squat, with their hands",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "exercise_mat_present",
+    "exercise_pose_visible",
+    "home_workout_environment",
+    "home_exercise_pose_visible"
+  ],
+  "_raw_text": "The image presents a simple yet effective exercise setup. At the center of the image, a person is captured in a dynamic pose, standing on a blue yoga mat. The individual is in the middle of a squat, with their hands"
+}

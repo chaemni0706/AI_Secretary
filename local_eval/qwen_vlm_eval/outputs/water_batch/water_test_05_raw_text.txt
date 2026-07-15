@@ -1,0 +1,43 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "glass",
+      "description": "A transparent glass containing clear liquid."
+    }
+  ],
+  "scenes": [
+    {
+      "name": "hand holding glass",
+      "description": "A hand holding a transparent glass with a clear liquid inside."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "clear liquid in glass",
+      "description": "Visible clear liquid in a transparent glass."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "non-water beverage",
+      "description": "The liquid appears to be clear and transparent, suggesting it could be water."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "opaque_closed_container",
+      "description": "The glass is transparent, so it cannot be considered an opaque closed container."
+    }
+  ],
+  "text_observed": [],
+  "confidence": 0.85
+}
+```

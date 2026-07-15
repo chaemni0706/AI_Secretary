@@ -1,0 +1,41 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study_area",
+  "objects": [
+    {
+      "label": "textbook",
+      "confidence": 0.95,
+      "evidence": "Open textbook with handwritten notes and highlighted text."
+    },
+    {
+      "label": "workbook",
+      "confidence": 0.95,
+      "evidence": "Open workbook with handwritten notes and highlighted text."
+    },
+    {
+      "label": "notebook",
+      "confidence": 0.95,
+      "evidence": "Handwritten notes on a notebook."
+    }
+  ],
+  "visible_text": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "highlighted_text"
+  ],
+  "visual_evidence": [],
+  "study_visual_evidence": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "highlighted_text"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

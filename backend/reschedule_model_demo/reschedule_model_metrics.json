@@ -1,0 +1,12 @@
+{
+  "dataset_type": "synthetic/mock selection log for presentation/demo only",
+  "model": "LogisticRegression",
+  "auc": 0.7785,
+  "log_loss": 0.6105,
+  "top1_accuracy": 0.58,
+  "mrr": 0.7592,
+  "train_requests": 300,
+  "test_requests": 100,
+  "train_rows": 1200,
+  "test_rows": 400
+}

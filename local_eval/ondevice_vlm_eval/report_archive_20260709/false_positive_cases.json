@@ -1,0 +1,254 @@
+[
+  {
+    "image_id": "water_004",
+    "task": "water",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 65.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 645.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.14,
+      "total_time": 645.5,
+      "latency_ms": 645.5
+    }
+  },
+  {
+    "image_id": "intake_009",
+    "task": "water",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 65.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1026.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 1026.8,
+      "latency_ms": 1026.8
+    }
+  },
+  {
+    "image_id": "intake_010",
+    "task": "water",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 65.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1026.7,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 1026.8,
+      "latency_ms": 1026.8
+    }
+  },
+  {
+    "image_id": "intake_032",
+    "task": "study",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 55.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "handwritten_notes",
+      "open_textbook"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:handwritten_notes",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 1081.0,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 1081.1,
+      "latency_ms": 1081.1
+    }
+  },
+  {
+    "image_id": "water_009",
+    "task": "water",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 65.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 788.2,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 788.3,
+      "latency_ms": 788.3
+    }
+  },
+  {
+    "image_id": "study_011",
+    "task": "study",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 75.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "code_editor",
+      "open_textbook",
+      "uncertain_screen_content"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:monitor",
+      "object:pen",
+      "object:laptop",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:code_editor",
+      "study_evidence:open_textbook"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 789.4,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.11,
+      "total_time": 789.5,
+      "latency_ms": 789.5
+    }
+  },
+  {
+    "image_id": "water_020",
+    "task": "water",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 65.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 820.6,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.09,
+      "total_time": 820.7,
+      "latency_ms": 820.7
+    }
+  },
+  {
+    "image_id": "exercise_012",
+    "task": "study",
+    "ground_truth": "BORDERLINE",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 50.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "highlighted_text",
+      "open_textbook"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:pen",
+      "object:desk",
+      "similar_group_cap",
+      "study_evidence:open_textbook",
+      "study_evidence:highlighted_text"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 705.5,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 705.6,
+      "latency_ms": 705.6
+    }
+  },
+  {
+    "image_id": "water_035",
+    "task": "water",
+    "ground_truth": "FAIL",
+    "pred_result": "verified",
+    "verified": true,
+    "score": 65.0,
+    "mandatory_passed": true,
+    "got_evidence": [
+      "visible_water",
+      "filled_container"
+    ],
+    "expected_evidence": [],
+    "rule_evidence": [
+      "object:glass",
+      "water_evidence:visible_liquid",
+      "water_evidence:filled_container"
+    ],
+    "lat": {
+      "model_load_time": 6276.9,
+      "inference_time": 697.3,
+      "parse_time": 0.0,
+      "rule_engine_time": 0.1,
+      "total_time": 697.4,
+      "latency_ms": 697.4
+    }
+  }
+]

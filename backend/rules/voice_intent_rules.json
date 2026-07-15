@@ -1,0 +1,75 @@
+{
+  "_comment": "Voice-input intent routing rules for the unified voice entry point (POST /api/v1/voice/route). Independent from chat_intent_rules.json (used only by /chat/respond) so tuning one never affects the other. priority_order is fixed by design and enforced as a cascade in voice_intent_router.py, not a max-score comparison.",
+  "priority_order": [
+    "reservation_recommendation",
+    "emotion_schedule_coaching",
+    "daily_briefing",
+    "weather_query",
+    "schedule_query",
+    "reminder_setting",
+    "schedule_create",
+    "fallback_chat"
+  ],
+  "reservation_recommendation": {
+    "strong": [
+      "가게 추천", "카페 추천", "식당 추천", "밥집 추천", "맛집 추천", "근처 추천",
+      "예약할 곳", "갈 만한 곳", "저녁 먹을 곳", "점심 먹을 곳", "장소 추천",
+      "추천해줘", "추천해 줘", "추천해주세요"
+    ],
+    "weak": ["추천", "맛집", "놀거리"],
+    "_reservation_comment": "업종만 말하고 특정 업체명 없이 예약을 원할 때(예: '미용실 예약해줘')도 추천으로 라우팅. 아래 동사 중 하나 + 장소 카테고리(place_recommendation_rules의 category_aliases) 감지 시 발동.",
+    "reservation_verbs": ["예약해줘", "예약 해줘", "예약해", "예약하고 싶", "예약 잡아", "예약 좀", "예약 부탁", "가야 하는데", "가야하는데", "예약하려고"]
+  },
+  "emotion_schedule_coaching": {
+    "_comment": "Fires only when BOTH an emotion word AND a schedule-reference word are present (spec 4-2) — a bare schedule query without emotion stays schedule_query.",
+    "emotion_keywords": [
+      "피곤", "힘들", "지쳤", "지쳐", "우울", "스트레스", "부담",
+      "하기 싫", "너무 많", "정신없", "지침", "번아웃", "막막"
+    ],
+    "schedule_ref_keywords": [
+      "오늘 일정", "오늘 뭐", "뭐 해야", "일정 뭐야", "해야 할 일",
+      "할 일", "오늘 할 거", "오늘 스케줄"
+    ]
+  },
+  "daily_briefing": {
+    "strong": [
+      "오늘 브리핑", "오늘의 브리핑", "하루 브리핑", "오늘 하루 알려줘",
+      "오늘 일정이랑 날씨", "브리핑 해줘", "브리핑 들려줘"
+    ],
+    "weak": ["브리핑", "하루 요약"]
+  },
+  "weather_query": {
+    "_comment": "현재 날씨 안내 전용. daily_briefing 다음(브리핑 문구가 우선)에 검사되며, '날씨'가 포함되되 일정/브리핑 표지가 없는 발화를 잡는다.",
+    "strong": [
+      "날씨 알려줘", "날씨 어때", "날씨 어떄", "날씨 어떤지", "날씨 좀",
+      "오늘 날씨", "지금 날씨", "현재 날씨", "밖에 날씨", "날씨는 어때", "날씨 확인"
+    ],
+    "weak": ["날씨", "기온", "비 와", "비 온", "우산 필요", "더워", "추워"]
+  },
+  "schedule_query": {
+    "_comment": "strong-only trigger — bare 'weak' hits (e.g. lone '일정') must never steal a schedule_create utterance like '병원 일정 추가해줘'. In addition to 'strong', a query SIGNAL fires when the utterance is interrogative about existing schedules and has NO create verb (voice_intent_router._schedule_query_signal): (ref_terms AND query_markers) OR ((ref_terms OR date_terms) AND whatson_markers). This stops queries like '내일 뭐 있어?', '모레 회의 언제야' from leaking into schedule_create via the date/time signal.",
+    "strong": [
+      "오늘 일정 뭐야", "오늘 뭐 있어", "내 일정 알려줘", "일정 보여줘",
+      "오후 일정", "내일 일정", "일정 확인"
+    ],
+    "weak": ["일정", "스케줄"],
+    "ref_terms": ["일정", "스케줄", "스케쥴", "약속", "할 일", "할일", "회의", "미팅"],
+    "query_markers": ["뭐야", "있어", "있었", "있나", "없어", "없나", "언제", "알려줘", "보여줘", "확인", "몇 시", "몇시", "뭐 였", "뭐였"],
+    "whatson_markers": ["뭐 있", "뭐있", "뭐 해야", "뭐 해", "뭐하", "무슨 일정", "무슨 약속"],
+    "date_terms": ["오늘", "내일", "모레", "글피", "이번 주", "이번주", "다음 주", "다음주", "오전", "오후", "아침", "점심", "저녁", "주말", "이번 달", "다음 달", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+  },
+  "reminder_setting": {
+    "_comment": "Context-gated: requires_context_type must match the client-echoed last_action_context.type, otherwise this intent never fires (spec: bare '알려줘' alone must not be misclassified).",
+    "requires_context_type": "schedule_created",
+    "strong": ["알림 받을래", "알람 받을래", "미리 알려줘", "응 알림", "예 받을게", "알림 설정"],
+    "weak": ["알려줘", "응", "좋아", "네", "예", "그래"],
+    "decline": ["아니", "괜찮아", "됐어", "싫어"]
+  },
+  "schedule_create": {
+    "strong": [
+      "일정 추가", "일정 등록", "일정 잡아", "캘린더에 추가", "캘린더에 넣어",
+      "일정 만들", "약속 잡"
+    ],
+    "weak": ["추가해", "등록해", "잡아줘"]
+  }
+}

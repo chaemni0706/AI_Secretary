@@ -1,26 +1,84 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Virtual Environment
-backend/AI_project/
-backend/venv/
+# Python virtual environments
+AI_project/
+.venv/
 venv/
+env/
+ENV/
 
-# Environment Variables
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Environment variables
 .env
+.env.*
+!.env.example
 
-# VS Code
+# IDE
 .vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test / cache
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
 
 # Flutter
 frontend/.dart_tool/
 frontend/build/
 
-# macOS
-.DS_Store
+# Runtime upload / temp files
+backend/temp_uploads/
+temp_uploads/
+resized_images/
 
-# Windows
-Thumbs.db
+# Runtime result / data & DB files
+runtime/
+backend/data/medicine_routines.json
+*.sqlite
+*.sqlite3
+*.db
+
+# OCR / model cache
+.paddleocr/
+.paddlex/
+*.pdparams
+*.pdmodel
+*.pdiparams
+
+# Large model / cache files
+rag/embeddings/
+rag/vector_db/
+*.pt
+*.pth
+*.onnx
+*.tflite*
+
+# Old test result folders
+raw_ocr_results/
+structured_results/
+debug_results/
+frontend/assets/models/*.zip
+
+# VLM fallback eval outputs (predictions/metrics/csv/logs) — large, not versioned
+local_eval/vlm_baseline/outputs/
+
+# On-device SmolVLM ONNX model assets (~356MB) — never versioned; loaded from app filesDir at runtime.
+*.ort
+frontend/android/app/src/main/assets/models/
+**/models/smolvlm/

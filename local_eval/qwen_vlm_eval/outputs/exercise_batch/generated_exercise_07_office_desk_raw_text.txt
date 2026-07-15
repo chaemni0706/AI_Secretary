@@ -1,0 +1,49 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "office desk with a laptop"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "office desk with a laptop"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "office desk with a laptop"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "gaming content"
+    },
+    {
+      "name": "entertainment video"
+    },
+    {
+      "name": "social media"
+    },
+    {
+      "name": "shopping content"
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "uncertain screen content"
+    }
+  ],
+  "text_observed": [
+    "office desk with a laptop"
+  ],
+  "confidence": 0.95
+}
+```

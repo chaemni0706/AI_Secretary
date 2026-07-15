@@ -1,0 +1,82 @@
+{
+  "verification_type": "study",
+  "activity_type": "null",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "open_textbook",
+      "description": "Open textbook with handwritten notes and highlighted text."
+    },
+    {
+      "name": "open_workbook",
+      "description": "Open workbook with handwritten notes and highlighted text."
+    },
+    {
+      "name": "handwritten_notes",
+      "description": "Handwritten notes on a notebook."
+    },
+    {
+      "name": "highlighted_text",
+      "description": "Highlighted text in a book."
+    }
+  ],
+  "scenes": [
+    {
+      "name": "study_area",
+      "description": "Study area with books, notebooks, and a cup of coffee."
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "open_textbook",
+      "description": "Open textbook with handwritten notes and highlighted text."
+    },
+    {
+      "name": "open_workbook",
+      "description": "Open workbook with handwritten notes and highlighted text."
+    },
+    {
+      "name": "handwritten_notes",
+      "description": "Handwritten notes on a notebook."
+    },
+    {
+      "name": "highlighted_text",
+      "description": "Highlighted text in a book."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "gaming_content",
+      "description": "No gaming content present."
+    },
+    {
+      "name": "entertainment_video",
+      "description": "No entertainment video present."
+    },
+    {
+      "name": "social_media",
+      "description": "No social media content present."
+    },
+    {
+      "name": "shopping_content",
+      "description": "No shopping content present."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "uncertain_screen_content",
+      "description": "No screen content present."
+    }
+  ],
+  "text_observed": [
+    "open_textbook",
+    "open_workbook",
+    "handwritten_notes",
+    "highlighted_text"
+  ],
+  "confidence": 0.95
+}

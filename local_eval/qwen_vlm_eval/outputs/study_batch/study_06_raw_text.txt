@@ -1,0 +1,34 @@
+```json
+{
+  "verification_type": "study",
+  "image_quality_usable": true,
+  "objects": [
+    {
+      "bbox_2d": [173, 231, 359, 376],
+      "label": "study_content_on_screen"
+    }
+  ],
+  "scenes": [
+    {
+      "bbox_2d": [0, 0, 532, 558],
+      "label": "study"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "bbox_2d": [173, 231, 359, 376],
+      "label": "study_content_on_screen"
+    }
+  ],
+  "negative_evidence": [
+    []
+  ],
+  "uncertain_evidence": [
+    []
+  ],
+  "text_observed": [
+    "不确定的文本内容"
+  ],
+  "confidence": 0.8
+}
+```

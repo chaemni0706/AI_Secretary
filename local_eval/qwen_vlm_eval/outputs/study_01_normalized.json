@@ -1,0 +1,32 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "study",
+  "objects": [
+    {
+      "label": "textbook",
+      "confidence": 0.9,
+      "evidence": "position=[38, 297, 331, 495]"
+    },
+    {
+      "label": "workbook",
+      "confidence": 0.9,
+      "evidence": "position=[260, 306, 540, 518]"
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [
+    "open_textbook",
+    "open_workbook"
+  ],
+  "study_visual_evidence": [
+    "open_textbook",
+    "open_workbook"
+  ],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": []
+}

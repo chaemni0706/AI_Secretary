@@ -1,0 +1,23 @@
+{
+  "overall": {
+    "count": 16,
+    "avg_ms": 1747.1,
+    "p50_ms": 1763.8,
+    "p95_ms": 1790.1,
+    "max_ms": 1863.6
+  },
+  "by_type": {
+    "water": {
+      "count": 7,
+      "avg_ms": 1753.9
+    },
+    "exercise": {
+      "count": 6,
+      "avg_ms": 1719.0
+    },
+    "study": {
+      "count": 3,
+      "avg_ms": 1787.4
+    }
+  }
+}

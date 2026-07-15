@@ -1,0 +1,36 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "gym",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "blue object",
+      "bbox_2d": [119, 283, 164, 327],
+      "label": "blue object"
+    },
+    {
+      "name": "red object",
+      "bbox_2d": [215, 182, 320, 237],
+      "label": "red object"
+    }
+  ],
+  "scenes": [
+    "food on a dining table"
+  ],
+  "visual_evidence": [
+    "blue object",
+    "red object"
+  ],
+  "negative_evidence": [
+    "food on a dining table"
+  ],
+  "uncertain_evidence": [],
+  "text_observed": [],
+  "confidence": 0.0
+}
+```

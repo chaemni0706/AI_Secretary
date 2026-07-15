@@ -1,0 +1,245 @@
+{
+  "_comment": "Category rule-base for the improved schedule parser (schedule_title_extractor). Categories are matched in the ORDER listed here (most specific first). Independent of the legacy category_rules.json used by /ai/schedule/parse.",
+  "categories": {
+    "health": {
+      "display_name": "건강/병원",
+      "location_required": true,
+      "default_duration_minutes": 60,
+      "priority_hint": "high",
+      "keywords": ["병원", "의원", "클리닉", "치과", "안과", "내과", "외과", "정형외과", "피부과", "이비인후과", "산부인과", "한의원", "약국", "진료", "검진", "건강검진", "예방접종", "치료", "상담치료", "물리치료"],
+      "title_rules": {
+        "병원": "병원 방문",
+        "의원": "병원 방문",
+        "클리닉": "병원 방문",
+        "치과": "치과 방문",
+        "약국": "약국 방문",
+        "건강검진": "건강검진",
+        "검진": "검진",
+        "진료": "진료",
+        "예방접종": "예방접종"
+      }
+    },
+    "beauty": {
+      "display_name": "미용/뷰티",
+      "location_required": true,
+      "default_duration_minutes": 90,
+      "priority_hint": "medium",
+      "keywords": ["미용실", "헤어샵", "머리", "커트", "염색", "펌", "네일", "네일샵", "피부관리", "마사지", "왁싱", "속눈썹", "눈썹"],
+      "title_rules": {
+        "미용실": "미용실 예약",
+        "헤어샵": "미용실 예약",
+        "커트": "커트 예약",
+        "염색": "염색 예약",
+        "펌": "펌 예약",
+        "네일": "네일 예약",
+        "네일샵": "네일샵 예약",
+        "피부관리": "피부관리 예약",
+        "마사지": "마사지 예약"
+      }
+    },
+    "meal": {
+      "display_name": "식사/약속",
+      "location_required": true,
+      "default_duration_minutes": 90,
+      "priority_hint": "medium",
+      "keywords": ["밥", "식사", "아침", "점심", "저녁", "브런치", "카페", "커피", "맛집", "식당", "레스토랑", "고기", "술", "술자리", "회식", "디저트", "약속"],
+      "title_rules": {
+        "점심": "점심 약속",
+        "저녁": "저녁 약속",
+        "밥": "식사 약속",
+        "식사": "식사 약속",
+        "카페": "카페 약속",
+        "커피": "카페 약속",
+        "회식": "회식",
+        "술자리": "술자리"
+      }
+    },
+    "meeting": {
+      "display_name": "회의/미팅",
+      "location_required": false,
+      "location_required_if_offline": true,
+      "default_duration_minutes": 60,
+      "priority_hint": "medium",
+      "keywords": ["회의", "미팅", "팀회의", "팀플", "팀플회의", "발표회의", "상담", "면담", "면접", "인터뷰", "멘토링", "코칭", "컨설팅", "보고", "회의실", "세미나", "워크숍", "워크샵"],
+      "title_rules": {
+        "회의": "회의",
+        "미팅": "미팅",
+        "팀회의": "팀 회의",
+        "팀플": "팀플 회의",
+        "팀플회의": "팀플 회의",
+        "발표회의": "발표 회의",
+        "상담": "상담",
+        "면담": "면담",
+        "면접": "면접",
+        "멘토링": "멘토링"
+      }
+    },
+    "study": {
+      "display_name": "공부/학습",
+      "location_required": false,
+      "default_duration_minutes": 120,
+      "priority_hint": "medium",
+      "keywords": ["공부", "스터디", "시험공부", "복습", "예습", "수업", "강의", "온라인강의", "인강", "교육", "특강", "자격증", "토익", "오픽", "코딩공부", "머신러닝공부", "프로젝트공부"],
+      "title_rules": {
+        "공부": "공부",
+        "스터디": "스터디",
+        "시험공부": "시험공부",
+        "복습": "복습",
+        "예습": "예습",
+        "수업": "수업",
+        "강의": "강의",
+        "인강": "온라인 강의"
+      }
+    },
+    "exercise": {
+      "display_name": "운동",
+      "location_required": false,
+      "location_required_if_place_keyword": true,
+      "default_duration_minutes": 60,
+      "priority_hint": "low",
+      "keywords": ["운동", "헬스", "헬스장", "PT", "피티", "요가", "필라테스", "러닝", "조깅", "산책", "수영", "축구", "농구", "테니스", "배드민턴", "등산", "홈트", "스트레칭"],
+      "title_rules": {
+        "운동": "운동",
+        "헬스": "헬스",
+        "헬스장": "헬스장 운동",
+        "PT": "PT",
+        "피티": "PT",
+        "요가": "요가",
+        "필라테스": "필라테스",
+        "러닝": "러닝",
+        "산책": "산책",
+        "수영": "수영"
+      }
+    },
+    "transport": {
+      "display_name": "이동/교통",
+      "location_required": true,
+      "default_duration_minutes": 30,
+      "priority_hint": "medium",
+      "keywords": ["출발", "이동", "버스", "기차", "KTX", "택시", "지하철", "공항", "비행기", "터미널", "역", "승차", "하차", "픽업", "데려다주기", "마중"],
+      "title_rules": {
+        "출발": "출발",
+        "이동": "이동",
+        "기차": "기차 탑승",
+        "KTX": "KTX 탑승",
+        "버스": "버스 탑승",
+        "공항": "공항 이동",
+        "비행기": "비행기 탑승",
+        "픽업": "픽업",
+        "마중": "마중"
+      }
+    },
+    "finance": {
+      "display_name": "금융/납부",
+      "location_required": false,
+      "default_duration_minutes": 30,
+      "priority_hint": "medium",
+      "keywords": ["은행", "입금", "출금", "이체", "결제", "납부", "카드값", "월세", "관리비", "공과금", "보험료", "구독료", "환불", "정산", "가계부"],
+      "title_rules": {
+        "은행": "은행 업무",
+        "입금": "입금",
+        "출금": "출금",
+        "이체": "이체",
+        "결제": "결제",
+        "납부": "납부",
+        "카드값": "카드값 납부",
+        "월세": "월세 납부",
+        "관리비": "관리비 납부",
+        "공과금": "공과금 납부",
+        "정산": "정산",
+        "가계부": "가계부 정리"
+      }
+    },
+    "shopping": {
+      "display_name": "쇼핑",
+      "location_required": false,
+      "default_duration_minutes": 60,
+      "priority_hint": "low",
+      "keywords": ["쇼핑", "장보기", "마트", "시장", "편의점", "백화점", "다이소", "구매", "사기", "주문", "픽업", "반품", "교환"],
+      "title_rules": {
+        "쇼핑": "쇼핑",
+        "장보기": "장보기",
+        "마트": "마트 장보기",
+        "시장": "시장 방문",
+        "편의점": "편의점 방문",
+        "구매": "구매",
+        "주문": "주문",
+        "반품": "반품",
+        "교환": "교환"
+      }
+    },
+    "home": {
+      "display_name": "집안일",
+      "location_required": false,
+      "default_duration_minutes": 60,
+      "priority_hint": "low",
+      "keywords": ["청소", "빨래", "설거지", "분리수거", "집정리", "방청소", "화장실청소", "요리", "반찬", "택배확인"],
+      "title_rules": {
+        "청소": "청소",
+        "빨래": "빨래",
+        "설거지": "설거지",
+        "분리수거": "분리수거",
+        "집정리": "집 정리",
+        "방청소": "방 청소",
+        "요리": "요리",
+        "택배확인": "택배 확인"
+      }
+    },
+    "todo": {
+      "display_name": "할 일",
+      "location_required": false,
+      "default_duration_minutes": null,
+      "priority_hint": "medium",
+      "keywords": ["과제", "레포트", "보고서", "제출", "마감", "신청", "지원", "작성", "정리", "확인", "체크", "메일보내기", "전화하기", "자료조사", "문서작성", "발표준비", "ppt", "피피티", "코드작성", "디버깅", "테스트"],
+      "title_rules": {
+        "과제": "과제",
+        "레포트": "레포트 작성",
+        "보고서": "보고서 작성",
+        "제출": "제출",
+        "발표준비": "발표 준비",
+        "자료조사": "자료 조사",
+        "문서작성": "문서 작성",
+        "메일보내기": "메일 보내기",
+        "전화하기": "전화하기",
+        "디버깅": "디버깅",
+        "테스트": "테스트"
+      }
+    },
+    "personal": {
+      "display_name": "개인/약속",
+      "location_required": true,
+      "default_duration_minutes": 60,
+      "priority_hint": "medium",
+      "keywords": ["방문", "가기", "만나기", "데이트", "친구", "가족", "부모님", "엄마", "아빠", "동생", "친척", "생일", "기념일", "파티", "행사"],
+      "title_rules": {
+        "약속": "약속",
+        "방문": "방문",
+        "데이트": "데이트",
+        "생일": "생일",
+        "기념일": "기념일",
+        "파티": "파티",
+        "행사": "행사"
+      }
+    },
+    "reservation": {
+      "display_name": "예약",
+      "location_required": true,
+      "default_duration_minutes": 60,
+      "priority_hint": "medium",
+      "keywords": ["예매", "부킹", "티켓팅"],
+      "title_rules": {
+        "예매": "예매",
+        "부킹": "예약",
+        "티켓팅": "티켓팅"
+      }
+    },
+    "unknown": {
+      "display_name": "기타",
+      "location_required": false,
+      "default_duration_minutes": 60,
+      "priority_hint": "medium",
+      "keywords": [],
+      "title_rules": {}
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container"
+  ],
+  "study_visual_evidence": [],
+  "exercise_visual_evidence": [],
+  "_raw_text": "The image presents a simple yet effective design for a water dispenser. The main element is a clear glass cup, which is filled with water. The cup is held in a hand, suggesting that it's ready for use. The cup"
+}

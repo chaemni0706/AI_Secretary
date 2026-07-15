@@ -1,0 +1,46 @@
+{
+  "ALL": {
+    "n": 50,
+    "tp": 29,
+    "tn": 21,
+    "fp": 0,
+    "fn": 0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_positive_rate": 0.0
+  },
+  "water": {
+    "n": 20,
+    "tp": 11,
+    "tn": 9,
+    "fp": 0,
+    "fn": 0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_positive_rate": 0.0
+  },
+  "exercise": {
+    "n": 15,
+    "tp": 8,
+    "tn": 7,
+    "fp": 0,
+    "fn": 0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_positive_rate": 0.0
+  },
+  "study": {
+    "n": 15,
+    "tp": 10,
+    "tn": 5,
+    "fp": 0,
+    "fn": 0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "false_positive_rate": 0.0
+  }
+}

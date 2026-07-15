@@ -1,0 +1,40 @@
+type: gym
+allowed_labels:
+  - dumbbell
+  - treadmill
+  - exercise_bike
+  - gym_machine
+  - yoga_mat
+mandatory:
+  quality_usable: true
+  min_allowed_objects: 1
+  any_of_objects:
+    - dumbbell
+    - treadmill
+    - exercise_bike
+    - gym_machine
+    - yoga_mat
+thresholds:
+  verified: 75
+  retake_required: 45
+scoring:
+  base_score: 20
+  object_scores:
+    dumbbell: 35
+    treadmill: 35
+    exercise_bike: 30
+    gym_machine: 35
+    yoga_mat: 20
+  scene_scores:
+    gym: 20
+    fitness_center: 20
+  text_keywords:
+    gym: 10
+    fitness: 10
+  similar_object_groups:
+    - labels: [dumbbell, gym_machine]
+      max_score: 40
+gps:
+  enabled: true
+  max_score: 5
+  radius_meters: 150

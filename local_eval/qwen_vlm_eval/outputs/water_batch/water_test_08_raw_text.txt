@@ -1,0 +1,38 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "water dispenser",
+      "position": [128, 0, 587, 392]
+    },
+    {
+      "name": "glass",
+      "position": [61, 184, 286, 392]
+    }
+  ],
+  "scenes": [
+    "water dispenser pouring water into a glass"
+  ],
+  "visual_evidence": [
+    "water_stream",
+    "filled_container"
+  ],
+  "negative_evidence": [
+    "non_water_beverage"
+  ],
+  "uncertain_evidence": [
+    "opaque_closed_container"
+  ],
+  "text_observed": [
+    "BRITA"
+  ],
+  "confidence": 0.9
+}
+```

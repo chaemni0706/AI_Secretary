@@ -1,0 +1,19 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "The image presents a simple yet effective exercise setup. Dominating the center of the image is a blue exercise mat, which is placed on a white background. The mat is positioned in such a way that it appears to be in the process",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "exercise_mat_present",
+    "home_workout_environment"
+  ],
+  "_raw_text": "The image presents a simple yet effective exercise setup. Dominating the center of the image is a blue exercise mat, which is placed on a white background. The mat is positioned in such a way that it appears to be in the process"
+}

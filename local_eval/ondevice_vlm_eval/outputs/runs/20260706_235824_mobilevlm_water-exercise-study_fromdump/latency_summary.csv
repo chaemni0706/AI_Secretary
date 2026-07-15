@@ -1,0 +1,4 @@
+model_name,verification_type,avg_latency_ms,p50_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms
+MobileVLM-V2-1.7B,water,1110.843,1148.057,1407.737,247.672,1407.737
+MobileVLM-V2-1.7B,exercise,1154.76,1152.971,1182.938,1131.995,1182.938
+MobileVLM-V2-1.7B,study,767.346,636.489,1171.492,272.281,1171.492

@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": null,
+  "objects": [
+    {
+      "label": "glass",
+      "confidence": 0.6,
+      "evidence": null
+    }
+  ],
+  "visible_text": [],
+  "visual_evidence": [],
+  "water_visual_evidence": [
+    "visible_water",
+    "filled_container",
+    "empty_container"
+  ],
+  "study_visual_evidence": [],
+  "exercise_visual_evidence": [],
+  "_raw_text": "The image presents a simple yet elegant scene of two glasses of water, each with a silver tray beneath them. The glass on the left is filled with water, while the one on the right is empty. The tray beneath them"
+}

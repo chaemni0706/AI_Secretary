@@ -1,0 +1,9 @@
+{
+  "_comment": "Policy deciding whether a schedule needs a location question. Rules (in order): already-extracted location -> never ask; online keyword -> never ask; required category -> ask; optional category with a place keyword -> ask; todo/home/unknown -> never ask.",
+  "location_required_categories": ["health", "beauty", "meal", "reservation", "transport", "personal"],
+  "location_optional_categories": ["meeting", "study", "exercise", "finance", "shopping"],
+  "location_not_required_categories": ["todo", "home"],
+  "online_keywords": ["온라인", "비대면", "줌", "zoom", "구글미트", "google meet", "디스코드", "디코", "화상", "원격"],
+  "place_required_keywords": ["병원", "치과", "약국", "미용실", "네일샵", "식당", "카페", "술집", "공항", "터미널", "역", "학교", "회사", "회의실", "헬스장", "필라테스", "요가원"],
+  "place_not_required_keywords": ["온라인", "비대면", "집에서", "홈트", "인강", "전화", "메일", "카톡", "문자"]
+}

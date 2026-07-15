@@ -1,0 +1,113 @@
+{
+  "verification_type": "study",
+  "result": "verified",
+  "score": 100,
+  "mandatory_passed": true,
+  "score_breakdown": {
+    "base_score": 0,
+    "object_score": 145,
+    "text_score": 0,
+    "scene_score": 0,
+    "gps_score": 0,
+    "total_score": 100
+  },
+  "vlm_analysis": {
+    "quality": {
+      "brightness": "normal",
+      "blur": "low",
+      "usable": true,
+      "issues": []
+    },
+    "scene": "lecture_video",
+    "objects": [
+      {
+        "label": "textbook",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "workbook",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "notebook",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "textbook",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "printed_document",
+        "confidence": 0.8,
+        "evidence": null
+      },
+      {
+        "label": "monitor",
+        "confidence": 0.8,
+        "evidence": null
+      }
+    ],
+    "visible_text": [
+      "不确定的文本内容"
+    ],
+    "visual_evidence": [
+      "open_textbook",
+      "open_workbook",
+      "handwritten_notes",
+      "highlighted_text",
+      "problem_solving_material",
+      "study_content_on_screen"
+    ],
+    "study_visual_evidence": [
+      "open_textbook",
+      "open_workbook",
+      "handwritten_notes",
+      "highlighted_text",
+      "problem_solving_material",
+      "study_content_on_screen"
+    ],
+    "water_visual_evidence": [],
+    "exercise_visual_evidence": []
+  },
+  "rule_evidence": [
+    {
+      "code": "object:monitor",
+      "message": "monitor 객체가 확인되었습니다.",
+      "score_delta": 10
+    },
+    {
+      "code": "study_evidence:highlighted_text",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 15
+    },
+    {
+      "code": "study_evidence:handwritten_notes",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 20
+    },
+    {
+      "code": "study_evidence:open_textbook",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 25
+    },
+    {
+      "code": "study_evidence:open_workbook",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 25
+    },
+    {
+      "code": "study_evidence:study_content_on_screen",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 30
+    },
+    {
+      "code": "study_evidence:problem_solving_material",
+      "message": "공부 관련 시각 근거가 확인되었습니다.",
+      "score_delta": 20
+    }
+  ]
+}

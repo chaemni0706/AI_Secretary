@@ -1,0 +1,18 @@
+{
+  "quality": {
+    "brightness": "normal",
+    "blur": "low",
+    "usable": true,
+    "issues": []
+  },
+  "scene": "The image presents a simple yet effective exercise setup. Dominating the center of the image is a bed, its white sheets contrasting with the purple headboard. The bed is positioned against a backdrop of a light blue sky,",
+  "objects": [],
+  "visible_text": [],
+  "visual_evidence": [],
+  "study_visual_evidence": [],
+  "water_visual_evidence": [],
+  "exercise_visual_evidence": [
+    "unrelated_environment"
+  ],
+  "_raw_text": "The image presents a simple yet effective exercise setup. Dominating the center of the image is a bed, its white sheets contrasting with the purple headboard. The bed is positioned against a backdrop of a light blue sky,"
+}

@@ -1,0 +1,38 @@
+```json
+{
+  "verification_type": "exercise",
+  "activity_type": "home_workout",
+  "water_amount": "none",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "bbox_2d": [198, 234, 295, 376],
+      "label": "person exercising"
+    }
+  ],
+  "scenes": [
+    {
+      "bbox_2d": [0, 0, 504, 504],
+      "label": "home workout: person exercising"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "bbox_2d": [198, 234, 295, 376],
+      "label": "person exercising"
+    }
+  ],
+  "negative_evidence": [
+    {
+      "bbox_2d": [0, 0, 504, 504],
+      "label": "home workout: person exercising"
+    }
+  ],
+  "uncertain_evidence": [],
+  "text_observed": [],
+  "confidence": 0.9
+}
+```

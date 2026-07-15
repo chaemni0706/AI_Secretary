@@ -1,0 +1,48 @@
+```json
+{
+  "verification_type": "water",
+  "activity_type": "null",
+  "water_amount": "partial",
+  "image_quality": {
+    "usable": true,
+    "issues": []
+  },
+  "objects": [
+    {
+      "name": "cup of coffee (colored beverage)",
+      "type": "container"
+    }
+  ],
+  "scenes": [
+    {
+      "name": "cup of coffee (colored beverage)",
+      "type": "scene"
+    }
+  ],
+  "visual_evidence": [
+    {
+      "name": "cup of coffee (colored beverage)",
+      "type": "visual_evidence",
+      "description": "A cup filled with a dark brown liquid."
+    }
+  ],
+  "negative_evidence": [
+    {
+      "name": "cup of coffee (colored beverage)",
+      "type": "negative_evidence",
+      "description": "The cup does not contain water."
+    }
+  ],
+  "uncertain_evidence": [
+    {
+      "name": "cup of coffee (colored beverage)",
+      "type": "uncertain_evidence",
+      "description": "The liquid inside the cup appears to be a colored beverage, not water."
+    }
+  ],
+  "text_observed": [
+    "cup of coffee (colored beverage)"
+  ],
+  "confidence": 0.8
+}
+```

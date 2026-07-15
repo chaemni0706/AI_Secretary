@@ -1,0 +1,155 @@
+{
+  "false_positives": [
+    {
+      "image": "water/fail/water_real_04.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "empty_container"
+      ],
+      "source": "real",
+      "pred_result": "verified",
+      "pred_label": "PASS",
+      "score": 65,
+      "mandatory_passed": true,
+      "rule_evidence": [
+        "object:glass",
+        "water_evidence:visible_liquid",
+        "water_evidence:filled_container"
+      ],
+      "got_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "quality_usable": true,
+      "error": "",
+      "is_false_positive": true,
+      "is_false_negative": false,
+      "correct": false
+    }
+  ],
+  "all_failures": [
+    {
+      "image": "water/pass/water_real_01.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "source": "real",
+      "pred_result": "rejected",
+      "pred_label": "FAIL",
+      "score": 0,
+      "mandatory_passed": false,
+      "rule_evidence": [
+        "water_pattern_missing"
+      ],
+      "got_evidence": [],
+      "quality_usable": true,
+      "error": "",
+      "is_false_positive": false,
+      "is_false_negative": true,
+      "correct": false
+    },
+    {
+      "image": "water/pass/water_real_02.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "source": "real",
+      "pred_result": "rejected",
+      "pred_label": "FAIL",
+      "score": 0,
+      "mandatory_passed": false,
+      "rule_evidence": [
+        "water_pattern_missing"
+      ],
+      "got_evidence": [],
+      "quality_usable": true,
+      "error": "",
+      "is_false_positive": false,
+      "is_false_negative": true,
+      "correct": false
+    },
+    {
+      "image": "water/fail/water_real_04.png",
+      "verification_type": "water",
+      "ground_truth": "FAIL",
+      "expected_evidence": [
+        "empty_container"
+      ],
+      "source": "real",
+      "pred_result": "verified",
+      "pred_label": "PASS",
+      "score": 65,
+      "mandatory_passed": true,
+      "rule_evidence": [
+        "object:glass",
+        "water_evidence:visible_liquid",
+        "water_evidence:filled_container"
+      ],
+      "got_evidence": [
+        "visible_water",
+        "filled_container"
+      ],
+      "quality_usable": true,
+      "error": "",
+      "is_false_positive": true,
+      "is_false_negative": false,
+      "correct": false
+    },
+    {
+      "image": "water/pass/water_real_06.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "water_stream",
+        "receiving_water",
+        "visible_water"
+      ],
+      "source": "real",
+      "pred_result": "rejected",
+      "pred_label": "FAIL",
+      "score": 0,
+      "mandatory_passed": false,
+      "rule_evidence": [
+        "water_pattern_missing"
+      ],
+      "got_evidence": [],
+      "quality_usable": true,
+      "error": "",
+      "is_false_positive": false,
+      "is_false_negative": true,
+      "correct": false
+    },
+    {
+      "image": "water/pass/water_real_08.png",
+      "verification_type": "water",
+      "ground_truth": "PASS",
+      "expected_evidence": [
+        "water_stream",
+        "receiving_water",
+        "visible_water",
+        "filled_container"
+      ],
+      "source": "real",
+      "pred_result": "rejected",
+      "pred_label": "FAIL",
+      "score": 0,
+      "mandatory_passed": false,
+      "rule_evidence": [
+        "water_pattern_missing"
+      ],
+      "got_evidence": [],
+      "quality_usable": true,
+      "error": "",
+      "is_false_positive": false,
+      "is_false_negative": true,
+      "correct": false
+    }
+  ]
+}
